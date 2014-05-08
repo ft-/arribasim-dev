@@ -92,6 +92,7 @@ namespace OpenSim.Capabilities.Handlers
                 ArrayList foldersrequested = (ArrayList)hash["folders"];
     
                 string response = "";
+                string bad_folders_response = "";
 
                 for (int i = 0; i < foldersrequested.Count; i++)
                 {
@@ -109,6 +110,10 @@ namespace OpenSim.Capabilities.Handlers
                         m_log.Debug("[WEB FETCH INV DESC HANDLER]: caught exception doing OSD deserialize" + e);
                     }
                     LLSDInventoryDescendents reply = FetchInventoryReply(llsdRequest);
+                    if(null == reply)
+                    {
+                        bad_folders_response += "<uuid>"+llsdRequest.folder_id.ToString()+"</uuid>";
+                    }
 
                     inventoryitemstr = LLSDHelpers.SerialiseLLSDReply(reply);
                     inventoryitemstr = inventoryitemstr.Replace("<llsd><map><key>folders</key><array>", "");
@@ -119,15 +124,26 @@ namespace OpenSim.Capabilities.Handlers
 
                 if (response.Length == 0)
                 {
-                    // Ter-guess: If requests fail a lot, the client seems to stop requesting descendants.
-                    // Therefore, I'm concluding that the client only has so many threads available to do requests
-                    // and when a thread stalls..   is stays stalled.
-                    // Therefore we need to return something valid
-                    response = "<llsd><map><key>folders</key><array /></map></llsd>";
+                    /* Viewers expect a bad_folders array when not available */
+                    if (bad_folders_response.Length != 0)
+                    {
+                        response = "<llsd><map><key>bad_folders</key><array>"+bad_folders_response+"</array></map></llsd>";
+                    }
+                    else
+                    {
+                        response = "<llsd><map><key>folders</key><array /></map></llsd>";
+                    }
                 }
                 else
                 {
-                    response = "<llsd><map><key>folders</key><array>" + response + "</array></map></llsd>";
+                    if (bad_folders_response.Length != 0)
+                    {
+                        response = "<llsd><map><key>folders</key><array>" + response + "</array><key>bad_folders</key><array>" + bad_folders_response + "</array></map></llsd>";
+                    }
+                    else
+                    {
+                        response = "<llsd><map><key>folders</key><array>" + response + "</array></map></llsd>";
+                    }
                 }
 
 //                m_log.DebugFormat("[WEB FETCH INV DESC HANDLER]: Replying to CAPS fetch inventory request");
@@ -152,9 +168,7 @@ namespace OpenSim.Capabilities.Handlers
             contents.folder_id = invFetch.folder_id;
 
             reply.folders.Array.Add(contents);
-            InventoryCollection inv = new InventoryCollection();
-            inv.Folders = new List<InventoryFolderBase>();
-            inv.Items = new List<InventoryItemBase>();
+            InventoryCollection inv;
             int version = 0;
             int descendents = 0;
 
@@ -163,6 +177,10 @@ namespace OpenSim.Capabilities.Handlers
                     invFetch.owner_id, invFetch.folder_id, invFetch.owner_id,
                     invFetch.fetch_folders, invFetch.fetch_items, invFetch.sort_order, out version, out descendents);
 
+            if(inv == null)
+            {
+                return null;
+            }
             if (inv != null && inv.Folders != null)
             {
                 foreach (InventoryFolderBase invFolder in inv.Folders)
@@ -243,7 +261,7 @@ namespace OpenSim.Capabilities.Handlers
                 if (fetchedContents == null)
                 {
                     m_log.WarnFormat("[WEB FETCH INV DESC HANDLER]: Could not get contents of folder {0} for user {1}", folderID, agentID);
-                    return contents;
+                    return null;
                 }
 
                 contents = fetchedContents;
