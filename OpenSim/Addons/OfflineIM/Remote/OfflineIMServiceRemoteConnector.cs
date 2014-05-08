@@ -46,7 +46,6 @@ namespace OpenSim.OfflineIM
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         private string m_ServerURI = string.Empty;
-        private object m_Lock = new object();
 
         public OfflineIMServiceRemoteConnector(string url)
         {
@@ -140,10 +139,9 @@ namespace OpenSim.OfflineIM
             sendData["METHOD"] = method;
 
             string reply = string.Empty;
-            lock (m_Lock)
-                reply = SynchronousRestFormsRequester.MakeRequest("POST",
-                         m_ServerURI + "/offlineim",
-                         ServerUtils.BuildQueryString(sendData));
+            reply = SynchronousRestFormsRequester.MakeRequest("POST",
+                        m_ServerURI + "/offlineim",
+                        ServerUtils.BuildQueryString(sendData));
 
             Dictionary<string, object> replyData = ServerUtils.ParseXmlResponse(
                     reply);
