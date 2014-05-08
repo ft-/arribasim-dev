@@ -28,6 +28,7 @@
 using System;
 using System.Reflection;
 using System.Collections.Generic;
+using System.Threading;
 using Nini.Config;
 using log4net;
 using OpenSim.Framework;
@@ -48,6 +49,7 @@ namespace OpenSim.Region.CoreModules.Scripting.ScriptModuleComms
         private static string LogHeader = "[MODULE COMMS]";
 
         private Dictionary<string,object> m_constants = new Dictionary<string,object>();
+        private ReaderWriterLock m_ConstantsLock = new ReaderWriterLock();
 
 #region ScriptInvocation
         protected class ScriptInvocationData
@@ -67,6 +69,7 @@ namespace OpenSim.Region.CoreModules.Scripting.ScriptModuleComms
         }
 
         private Dictionary<string,ScriptInvocationData> m_scriptInvocation = new Dictionary<string,ScriptInvocationData>();
+        private ReaderWriterLock m_ScriptInvocationRwLock = new ReaderWriterLock();
 #endregion
 
         private IScriptModule m_scriptModule = null;
@@ -195,7 +198,8 @@ namespace OpenSim.Region.CoreModules.Scripting.ScriptModuleComms
             else
                 fcall = Delegate.CreateDelegate(delegateType, (Type)target, mi.Name);
 
-            lock (m_scriptInvocation)
+            m_ScriptInvocationRwLock.AcquireWriterLock(-1);
+            try
             {
                 ParameterInfo[] parameters = fcall.Method.GetParameters();
                 if (parameters.Length < 2) // Must have two UUID params
@@ -206,6 +210,10 @@ namespace OpenSim.Region.CoreModules.Scripting.ScriptModuleComms
                 for (int i = 2; i < parameters.Length; i++)
                     parmTypes[i - 2] = parameters[i].ParameterType;
                 m_scriptInvocation[fcall.Method.Name] = new ScriptInvocationData(fcall.Method.Name, fcall, parmTypes, fcall.Method.ReturnType);
+            }
+            finally
+            {
+                m_ScriptInvocationRwLock.ReleaseWriterLock();
             }
         }
 
@@ -242,17 +250,23 @@ namespace OpenSim.Region.CoreModules.Scripting.ScriptModuleComms
         {
             List<Delegate> ret = new List<Delegate>();
 
-            lock (m_scriptInvocation)
+            m_ScriptInvocationRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (ScriptInvocationData d in m_scriptInvocation.Values)
                     ret.Add(d.ScriptInvocationDelegate);
+            }
+            finally
+            {
+                m_ScriptInvocationRwLock.ReleaseReaderLock();
             }
             return ret.ToArray();
         }
 
         public string LookupModInvocation(string fname)
         {
-            lock (m_scriptInvocation)
+            m_ScriptInvocationRwLock.AcquireReaderLock(-1);
+            try
             {
                 ScriptInvocationData sid;
                 if (m_scriptInvocation.TryGetValue(fname,out sid))
@@ -275,17 +289,26 @@ namespace OpenSim.Region.CoreModules.Scripting.ScriptModuleComms
                     m_log.WarnFormat("[MODULE COMMANDS] failed to find match for {0} with return type {1}",fname,sid.ReturnType.Name);
                 }
             }
+            finally
+            {
+                m_ScriptInvocationRwLock.ReleaseReaderLock();
+            }
 
             return null;
         }
 
         public Delegate LookupScriptInvocation(string fname)
         {
-            lock (m_scriptInvocation)
+            m_ScriptInvocationRwLock.AcquireReaderLock(-1);
+            try
             {
                 ScriptInvocationData sid;
                 if (m_scriptInvocation.TryGetValue(fname,out sid))
                     return sid.ScriptInvocationDelegate;
+            }
+            finally
+            {
+                m_ScriptInvocationRwLock.ReleaseReaderLock();
             }
 
             return null;
@@ -293,11 +316,16 @@ namespace OpenSim.Region.CoreModules.Scripting.ScriptModuleComms
 
         public Type[] LookupTypeSignature(string fname)
         {
-            lock (m_scriptInvocation)
+            m_ScriptInvocationRwLock.AcquireReaderLock(-1);
+            try
             {
                 ScriptInvocationData sid;
                 if (m_scriptInvocation.TryGetValue(fname,out sid))
                     return sid.TypeSignature;
+            }
+            finally
+            {
+                m_ScriptInvocationRwLock.ReleaseReaderLock();
             }
 
             return null;
@@ -305,11 +333,16 @@ namespace OpenSim.Region.CoreModules.Scripting.ScriptModuleComms
 
         public Type LookupReturnType(string fname)
         {
-            lock (m_scriptInvocation)
+            m_ScriptInvocationRwLock.AcquireReaderLock(-1);
+            try
             {
                 ScriptInvocationData sid;
                 if (m_scriptInvocation.TryGetValue(fname,out sid))
                     return sid.ReturnType;
+            }
+            finally
+            {
+                m_ScriptInvocationRwLock.ReleaseReaderLock();
             }
 
             return null;
@@ -333,9 +366,14 @@ namespace OpenSim.Region.CoreModules.Scripting.ScriptModuleComms
         public void RegisterConstant(string cname, object value)
         {
 //            m_log.DebugFormat("[MODULE COMMANDS] register constant <{0}> with value {1}",cname,value.ToString());
-            lock (m_constants)
+            m_ConstantsLock.AcquireWriterLock(-1);
+            try
             {
                 m_constants.Add(cname,value);
+            }
+            finally
+            {
+                m_ConstantsLock.ReleaseWriterLock();
             }
         }
 
@@ -359,12 +397,17 @@ namespace OpenSim.Region.CoreModules.Scripting.ScriptModuleComms
         public object LookupModConstant(string cname)
         {
             // m_log.DebugFormat("[MODULE COMMANDS] lookup constant <{0}>",cname);
-            
-            lock (m_constants)
+
+            m_ConstantsLock.AcquireReaderLock(-1);
+            try
             {
                 object value = null;
                 if (m_constants.TryGetValue(cname,out value))
                     return value;
+            }
+            finally
+            {
+                m_ConstantsLock.ReleaseReaderLock();
             }
             
             return null;
@@ -377,10 +420,15 @@ namespace OpenSim.Region.CoreModules.Scripting.ScriptModuleComms
         {
             Dictionary<string, object> ret = new Dictionary<string, object>();
 
-            lock (m_constants)
+            m_ConstantsLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (KeyValuePair<string, object> kvp in m_constants)
                     ret[kvp.Key] = kvp.Value;
+            }
+            finally
+            {
+                m_ConstantsLock.ReleaseReaderLock();
             }
 
             return ret;
