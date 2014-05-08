@@ -88,6 +88,8 @@ using OpenSim.Region.Framework.Scenes;
  *
  * **************************************************/
 
+using System.Threading;
+
 namespace OpenSim.Region.CoreModules.Scripting.WorldComm
 {
     [Extension(Path = "/OpenSim/RegionModules", NodeName = "RegionModule", Id = "WorldCommModule")]
@@ -521,6 +523,7 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
         private int m_maxlisteners;
         private int m_maxhandles;
         private int m_curlisteners;
+        private ReaderWriterLock m_ListenerRwLock = new ReaderWriterLock();
 
         /// <summary>
         /// Total number of listeners
@@ -529,8 +532,15 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
         {
             get
             {
-                lock (m_listeners)
+                m_ListenerRwLock.AcquireReaderLock(-1);
+                try
+                {
                     return m_listeners.Count;
+                }
+                finally
+                {
+                    m_ListenerRwLock.ReleaseReaderLock();
+                }
             }
         }
 
@@ -565,7 +575,8 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
 
             if (m_curlisteners < m_maxlisteners)
             {
-                lock (m_listeners)
+                m_ListenerRwLock.AcquireReaderLock(-1);
+                try
                 {
                     int newHandle = GetNewHandle(itemID);
 
@@ -575,18 +586,30 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
                                 itemID, hostID, channel, name, id, msg,
                                 regexBitfield);
 
-                        List<ListenerInfo> listeners;
-                        if (!m_listeners.TryGetValue(
-                                channel, out listeners))
+                        LockCookie lc = m_ListenerRwLock.UpgradeToWriterLock(-1);
+                        try
                         {
-                            listeners = new List<ListenerInfo>();
-                            m_listeners.Add(channel, listeners);
+                            List<ListenerInfo> listeners;
+                            if (!m_listeners.TryGetValue(
+                                    channel, out listeners))
+                            {
+                                listeners = new List<ListenerInfo>();
+                                m_listeners.Add(channel, listeners);
+                            }
+                            listeners.Add(li);
+                            m_curlisteners++;
                         }
-                        listeners.Add(li);
-                        m_curlisteners++;
+                        finally
+                        {
+                            m_ListenerRwLock.DowngradeFromWriterLock(ref lc);
+                        }
 
                         return newHandle;
                     }
+                }
+                finally
+                {
+                    m_ListenerRwLock.ReleaseReaderLock();
                 }
             }
             return -1;
@@ -594,7 +617,8 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
 
         public void Remove(UUID itemID, int handle)
         {
-            lock (m_listeners)
+            m_ListenerRwLock.AcquireWriterLock(-1);
+            try
             {
                 foreach (KeyValuePair<int, List<ListenerInfo>> lis
                         in m_listeners)
@@ -616,6 +640,10 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
                     }
                 }
             }
+            finally
+            {
+                m_ListenerRwLock.ReleaseWriterLock();
+            }
         }
 
         public void DeleteListener(UUID itemID)
@@ -623,7 +651,8 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
             List<int> emptyChannels = new List<int>();
             List<ListenerInfo> removedListeners = new List<ListenerInfo>();
 
-            lock (m_listeners)
+            m_ListenerRwLock.AcquireWriterLock(-1);
+            try
             {
                 foreach (KeyValuePair<int, List<ListenerInfo>> lis
                         in m_listeners)
@@ -654,11 +683,16 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
                     m_listeners.Remove(channel);
                 }
             }
+            finally
+            {
+                m_ListenerRwLock.ReleaseWriterLock();
+            }
         }
 
         public void Activate(UUID itemID, int handle)
         {
-            lock (m_listeners)
+            m_ListenerRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (KeyValuePair<int, List<ListenerInfo>> lis
                         in m_listeners)
@@ -675,11 +709,16 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
                     }
                 }
             }
+            finally
+            {
+                m_ListenerRwLock.ReleaseReaderLock();
+            }
         }
 
         public void Dectivate(UUID itemID, int handle)
         {
-            lock (m_listeners)
+            m_ListenerRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (KeyValuePair<int, List<ListenerInfo>> lis
                         in m_listeners)
@@ -695,6 +734,10 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
                         }
                     }
                 }
+            }
+            finally
+            {
+                m_ListenerRwLock.ReleaseReaderLock();
             }
         }
 
@@ -764,7 +807,8 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
         {
             List<ListenerInfo> collection = new List<ListenerInfo>();
 
-            lock (m_listeners)
+            m_ListenerRwLock.AcquireReaderLock(-1);
+            try
             {
                 List<ListenerInfo> listeners;
                 if (!m_listeners.TryGetValue(channel, out listeners))
@@ -804,6 +848,10 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
                     collection.Add(li);
                 }
             }
+            finally
+            {
+                m_ListenerRwLock.ReleaseReaderLock();
+            }
             return collection;
         }
 
@@ -811,7 +859,8 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
         {
             List<Object> data = new List<Object>();
 
-            lock (m_listeners)
+            m_ListenerRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (List<ListenerInfo> list in m_listeners.Values)
                 {
@@ -821,6 +870,10 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
                             data.AddRange(l.GetSerializationData());
                     }
                 }
+            }
+            finally
+            {
+                m_ListenerRwLock.ReleaseReaderLock();
             }
             return (Object[])data.ToArray();
         }
@@ -841,7 +894,8 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
                 ListenerInfo info =
                         ListenerInfo.FromData(localID, itemID, hostID, item);
 
-                lock (m_listeners)
+                m_ListenerRwLock.AcquireWriterLock(-1);
+                try
                 {
                     if (!m_listeners.ContainsKey((int)item[2]))
                     {
@@ -849,6 +903,10 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
                                 new List<ListenerInfo>());
                     }
                     m_listeners[(int)item[2]].Add(info);
+                }
+                finally
+                {
+                    m_ListenerRwLock.ReleaseWriterLock();
                 }
 
                 idx += dataItemLength;
