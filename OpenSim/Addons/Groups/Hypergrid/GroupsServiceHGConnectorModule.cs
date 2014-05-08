@@ -30,6 +30,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 
 using OpenSim.Framework;
 using OpenSim.Framework.Servers;
@@ -59,6 +60,7 @@ namespace OpenSim.Groups
         private ForeignImporter m_ForeignImporter;
         private string m_ServiceLocation;
         private IConfigSource m_Config;
+        private ReaderWriterLock m_RwLock = new ReaderWriterLock();
 
         private Dictionary<string, GroupsServiceHGConnector> m_NetworkConnectors = new Dictionary<string, GroupsServiceHGConnector>();
         private RemoteConnectorCacheWrapper m_CacheWrapper; // for caching info of external group services
@@ -690,16 +692,24 @@ namespace OpenSim.Groups
 
         private GroupsServiceHGConnector GetConnector(string url)
         {
-            lock (m_NetworkConnectors)
+            m_RwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_NetworkConnectors.ContainsKey(url))
+		{
                     return m_NetworkConnectors[url];
+		}
 
+                LockCookie lc = m_RwLock.UpgradeToWriterLock(-1);
                 GroupsServiceHGConnector c = new GroupsServiceHGConnector(url);
                 m_NetworkConnectors[url] = c;
+                m_RwLock.DowngradeFromWriterLock(ref lc);
+                return c;
             }
-
-            return m_NetworkConnectors[url];
+            finally
+            {
+                m_RwLock.ReleaseReaderLock();
+            }
         }
         #endregion
     }

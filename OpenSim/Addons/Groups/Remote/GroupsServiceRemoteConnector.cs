@@ -45,7 +45,6 @@ namespace OpenSim.Groups
 
         private string m_ServerURI;
         private string m_SecretKey;
-        private object m_Lock = new object();
 
         public GroupsServiceRemoteConnector(string url, string secret)
         {
@@ -660,8 +659,7 @@ namespace OpenSim.Groups
                 sendData["KEY"] = m_SecretKey;
 
             string reply = string.Empty;
-            lock (m_Lock)
-                reply = SynchronousRestFormsRequester.MakeRequest("POST",
+            reply = SynchronousRestFormsRequester.MakeRequest("POST",
                          m_ServerURI + "groups",
                          ServerUtils.BuildQueryString(sendData));
 

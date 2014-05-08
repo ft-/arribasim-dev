@@ -44,7 +44,6 @@ namespace OpenSim.Groups
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         private string m_ServerURI;
-        private object m_Lock = new object();
 
         public GroupsServiceHGConnector(string url)
         {
@@ -268,10 +267,9 @@ namespace OpenSim.Groups
             sendData["METHOD"] = method;
 
             string reply = string.Empty;
-            lock (m_Lock)
-                reply = SynchronousRestFormsRequester.MakeRequest("POST",
-                         m_ServerURI + "hg-groups",
-                         ServerUtils.BuildQueryString(sendData));
+	    reply = SynchronousRestFormsRequester.MakeRequest("POST",
+		m_ServerURI + "hg-groups",
+		ServerUtils.BuildQueryString(sendData));
 
             //m_log.DebugFormat("[XXX]: reply was {0}", reply);
 
