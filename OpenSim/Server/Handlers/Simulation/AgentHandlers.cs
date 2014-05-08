@@ -236,7 +236,8 @@ namespace OpenSim.Server.Handlers.Simulation
             httpResponse.KeepAlive = false;
             Encoding encoding = Encoding.UTF8;
 
-            if (httpRequest.ContentType != "application/json")
+            if (httpRequest.ContentType != "application/json" &&
+		httpRequest.ContentType != "application/x-gzip")
             {
                 httpResponse.StatusCode = 406;
                 return encoding.GetBytes("false");
