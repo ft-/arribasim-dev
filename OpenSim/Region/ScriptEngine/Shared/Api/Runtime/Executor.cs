@@ -179,6 +179,10 @@ namespace OpenSim.Region.ScriptEngine.Shared.ScriptBase
             {
                 ev.Invoke(m_Script, args);
             }
+            catch(EventAbortException e)
+            {
+
+            }
             catch (TargetInvocationException tie)
             {
                 // Grab the inner exception and rethrow it, unless the inner
