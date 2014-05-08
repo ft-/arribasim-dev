@@ -61,6 +61,7 @@ namespace OpenSim.Region.CoreModules.Framework.UserManagement
         protected IServiceThrottleModule m_ServiceThrottle;
         // The cache
         protected Dictionary<UUID, UserData> m_UserCache = new Dictionary<UUID, UserData>();
+        ReaderWriterLock m_UserCacheRwLock = new ReaderWriterLock();
 
         #region ISharedRegionModule
 
@@ -126,8 +127,15 @@ namespace OpenSim.Region.CoreModules.Framework.UserManagement
         {
             m_Scenes.Clear();
 
-            lock (m_UserCache)
+            m_UserCacheRwLock.AcquireWriterLock(-1);
+            try
+            {
                 m_UserCache.Clear();
+            }
+            finally
+            {
+                m_UserCacheRwLock.ReleaseWriterLock();
+            }
         }
 
         #endregion ISharedRegionModule
@@ -274,7 +282,8 @@ namespace OpenSim.Region.CoreModules.Framework.UserManagement
             }
 
             // search the local cache
-            lock (m_UserCache)
+            m_UserCacheRwLock.AcquireWriterLock(-1);
+            try
             {
                 foreach (UserData data in m_UserCache.Values)
                 {
@@ -283,6 +292,10 @@ namespace OpenSim.Region.CoreModules.Framework.UserManagement
                         (data.FirstName.ToLower().StartsWith(query.ToLower()) || data.LastName.ToLower().StartsWith(query.ToLower())))
                         users.Add(data);
                 }
+            }
+            finally
+            {
+                m_UserCacheRwLock.ReleaseWriterLock();
             }
 
             AddAdditionalUsers(query, users);
@@ -328,7 +341,8 @@ namespace OpenSim.Region.CoreModules.Framework.UserManagement
 
         private bool TryGetUserNamesFromCache(UUID uuid, string[] names)
         {
-            lock (m_UserCache)
+            m_UserCacheRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_UserCache.ContainsKey(uuid))
                 {
@@ -337,6 +351,10 @@ namespace OpenSim.Region.CoreModules.Framework.UserManagement
 
                     return true;
                 }
+            }
+            finally
+            {
+                m_UserCacheRwLock.ReleaseReaderLock();
             }
 
             return false;
@@ -361,8 +379,15 @@ namespace OpenSim.Region.CoreModules.Framework.UserManagement
                 user.FirstName = account.FirstName;
                 user.LastName = account.LastName;
 
-                lock (m_UserCache)
+                m_UserCacheRwLock.AcquireWriterLock(-1);
+                try
+                {
                     m_UserCache[uuid] = user;
+                }
+                finally
+                {
+                    m_UserCacheRwLock.ReleaseWriterLock();
+                }
 
                 return true;
             }
@@ -378,12 +403,20 @@ namespace OpenSim.Region.CoreModules.Framework.UserManagement
                     {
                         AddUser(uuid, first, last, url);
 
-                        if (m_UserCache.ContainsKey(uuid))
+                        m_UserCacheRwLock.AcquireReaderLock(-1);
+                        try
                         {
-                            names[0] = m_UserCache[uuid].FirstName;
-                            names[1] = m_UserCache[uuid].LastName;
+                            if (m_UserCache.ContainsKey(uuid))
+                            {
+                                names[0] = m_UserCache[uuid].FirstName;
+                                names[1] = m_UserCache[uuid].LastName;
 
-                            return true;
+                                return true;
+                            }
+                        }
+                        finally
+                        {
+                            m_UserCacheRwLock.ReleaseReaderLock();
                         }
                     }
                     else
@@ -415,13 +448,18 @@ namespace OpenSim.Region.CoreModules.Framework.UserManagement
         public UUID GetUserIdByName(string firstName, string lastName)
         {
             // TODO: Optimize for reverse lookup if this gets used by non-console commands.
-            lock (m_UserCache)
+            m_UserCacheRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (UserData user in m_UserCache.Values)
                 {
                     if (user.FirstName == firstName && user.LastName == lastName)
                         return user.Id;
                 }
+            }
+            finally
+            {
+                m_UserCacheRwLock.ReleaseReaderLock();
             }
 
             UserAccount account = m_Scenes[0].UserAccountService.GetUserAccount(UUID.Zero, firstName, lastName);
@@ -443,10 +481,15 @@ namespace OpenSim.Region.CoreModules.Framework.UserManagement
 
         public string GetUserHomeURL(UUID userID)
         {
-            lock (m_UserCache)
+            m_UserCacheRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_UserCache.ContainsKey(userID))
                     return m_UserCache[userID].HomeURL;
+            }
+            finally
+            {
+                m_UserCacheRwLock.ReleaseReaderLock();
             }
 
             return string.Empty;
@@ -455,8 +498,15 @@ namespace OpenSim.Region.CoreModules.Framework.UserManagement
         public string GetUserServerURL(UUID userID, string serverType)
         {
             UserData userdata;
-            lock (m_UserCache)
+            m_UserCacheRwLock.AcquireReaderLock(-1);
+            try
+            {
                 m_UserCache.TryGetValue(userID, out userdata);
+            }
+            finally
+            {
+                m_UserCacheRwLock.ReleaseReaderLock();
+            }
 
             if (userdata != null)
             {
@@ -495,8 +545,15 @@ namespace OpenSim.Region.CoreModules.Framework.UserManagement
         public string GetUserUUI(UUID userID)
         {
             UserData ud;
-            lock (m_UserCache)
+            m_UserCacheRwLock.AcquireReaderLock(-1);
+            try
+            {
                 m_UserCache.TryGetValue(userID, out ud);
+            }
+            finally
+            {
+                m_UserCacheRwLock.ReleaseReaderLock();
+            }
 
             if (ud == null) // It's not in the cache
             {
@@ -504,8 +561,15 @@ namespace OpenSim.Region.CoreModules.Framework.UserManagement
                 // This will pull the data from either UserAccounts or GridUser
                 // and stick it into the cache
                 TryGetUserNamesFromServices(userID, names);
-                lock (m_UserCache)
+                m_UserCacheRwLock.AcquireReaderLock(-1);
+                try
+                {
                     m_UserCache.TryGetValue(userID, out ud);
+                }
+                finally
+                {
+                    m_UserCacheRwLock.ReleaseReaderLock();
+                }
             }
 
             if (ud != null)
@@ -529,10 +593,15 @@ namespace OpenSim.Region.CoreModules.Framework.UserManagement
 
         public void AddUser(UUID uuid, string first, string last)
         {
-            lock (m_UserCache)
+            m_UserCacheRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_UserCache.ContainsKey(uuid))
                     return;
+            }
+            finally
+            {
+                m_UserCacheRwLock.ReleaseReaderLock();
             }
 
             UserData user = new UserData();
@@ -557,8 +626,15 @@ namespace OpenSim.Region.CoreModules.Framework.UserManagement
             //m_log.DebugFormat("[USER MANAGEMENT MODULE]: Adding user with id {0}, creatorData {1}", id, creatorData);
 
             UserData oldUser;
-            lock (m_UserCache)
+            m_UserCacheRwLock.AcquireReaderLock(-1);
+            try
+            {
                 m_UserCache.TryGetValue(id, out oldUser);
+            }
+            finally
+            {
+                m_UserCacheRwLock.ReleaseReaderLock();
+            }
 
             if (oldUser != null)
             {
@@ -571,8 +647,15 @@ namespace OpenSim.Region.CoreModules.Framework.UserManagement
                 //try update unknown users, but don't update anyone else
                 if (oldUser.FirstName == "Unknown" && !creatorData.Contains("Unknown")) 
                 {
-                    lock (m_UserCache)
+                    m_UserCacheRwLock.AcquireWriterLock(-1);
+                    try
+                    {
                         m_UserCache.Remove(id);
+                    }
+                    finally
+                    {
+                        m_UserCacheRwLock.ReleaseWriterLock();
+                    }
                     m_log.DebugFormat("[USER MANAGEMENT MODULE]: Re-adding user with id {0}, creatorData [{1}] and old HomeURL {2}", id, creatorData, oldUser.HomeURL);
                 }
                 else
@@ -632,8 +715,15 @@ namespace OpenSim.Region.CoreModules.Framework.UserManagement
 
         void AddUserInternal(UserData user)
         {
-            lock (m_UserCache)
+            m_UserCacheRwLock.AcquireWriterLock(-1);
+            try
+            {
                 m_UserCache[user.Id] = user;
+            }
+            finally
+            {
+                m_UserCacheRwLock.ReleaseWriterLock();
+            }
 
             //m_log.DebugFormat(
             //    "[USER MANAGEMENT MODULE]: Added user {0} {1} {2} {3}",
@@ -688,13 +778,18 @@ namespace OpenSim.Region.CoreModules.Framework.UserManagement
 
             UserData ud;
 
-            lock (m_UserCache)
+            m_UserCacheRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (!m_UserCache.TryGetValue(userId, out ud))
                 {
                     MainConsole.Instance.OutputFormat("No name known for user with id {0}", userId);
                     return;
                 }
+            }
+            finally
+            {
+                m_UserCacheRwLock.ReleaseReaderLock();
             }
 
             ConsoleDisplayTable cdt = new ConsoleDisplayTable();
@@ -713,10 +808,15 @@ namespace OpenSim.Region.CoreModules.Framework.UserManagement
             cdt.AddColumn("Name", 30);
             cdt.AddColumn("HomeURL", 40);
 
-            lock (m_UserCache)
+            m_UserCacheRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (KeyValuePair<UUID, UserData> kvp in m_UserCache)
                     cdt.AddRow(kvp.Key, string.Format("{0} {1}", kvp.Value.FirstName, kvp.Value.LastName), kvp.Value.HomeURL);
+            }
+            finally
+            {
+                m_UserCacheRwLock.ReleaseReaderLock();
             }
 
             MainConsole.Instance.Output(cdt.ToString());
