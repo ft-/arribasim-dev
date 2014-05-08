@@ -27,6 +27,7 @@
 
 using System.Collections.Generic;
 using System.Reflection;
+using System.Threading;
 using log4net;
 using OpenMetaverse;
 using OpenSim.Framework;
@@ -47,6 +48,7 @@ namespace OpenSim.Region.CoreModules.Agent.AssetTransaction
         // Fields
         private bool m_dumpAssetsToFile;
         private Scene m_Scene;
+        private ReaderWriterLock m_UploaderRwLock = new ReaderWriterLock();
         private Dictionary<UUID, AssetXferUploader> XferUploaders = new Dictionary<UUID, AssetXferUploader>();
 
         // Methods
@@ -70,21 +72,34 @@ namespace OpenSim.Region.CoreModules.Agent.AssetTransaction
         {
             AssetXferUploader uploader;
 
-            lock (XferUploaders)
+            m_UploaderRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (!XferUploaders.ContainsKey(transactionID))
                 {
-                    uploader = new AssetXferUploader(this, m_Scene, transactionID, m_dumpAssetsToFile);
+                    LockCookie lc = m_UploaderRwLock.UpgradeToWriterLock(-1);
+                    try
+                    {
+                        uploader = new AssetXferUploader(this, m_Scene, transactionID, m_dumpAssetsToFile);
 
-//                    m_log.DebugFormat(
-//                        "[AGENT ASSETS TRANSACTIONS]: Adding asset xfer uploader {0} since it didn't previously exist", transactionID);
+                        //                    m_log.DebugFormat(
+                        //                        "[AGENT ASSETS TRANSACTIONS]: Adding asset xfer uploader {0} since it didn't previously exist", transactionID);
 
-                    XferUploaders.Add(transactionID, uploader);
+                        XferUploaders.Add(transactionID, uploader);
+                    }
+                    finally
+                    {
+                        m_UploaderRwLock.DowngradeFromWriterLock(ref lc);
+                    }
                 }
                 else
                 {
                     uploader = XferUploaders[transactionID];
                 }
+            }
+            finally
+            {
+                m_UploaderRwLock.ReleaseReaderLock();
             }
 
             return uploader;
@@ -94,7 +109,8 @@ namespace OpenSim.Region.CoreModules.Agent.AssetTransaction
         {
             AssetXferUploader foundUploader = null;
 
-            lock (XferUploaders)
+            m_UploaderRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (AssetXferUploader uploader in XferUploaders.Values)
                 {
@@ -108,6 +124,10 @@ namespace OpenSim.Region.CoreModules.Agent.AssetTransaction
                         break;
                     }
                 }
+            }
+            finally
+            {
+                m_UploaderRwLock.ReleaseReaderLock();
             }
 
             if (foundUploader != null)
@@ -136,7 +156,8 @@ namespace OpenSim.Region.CoreModules.Agent.AssetTransaction
 
         public bool RemoveXferUploader(UUID transactionID)
         {
-            lock (XferUploaders)
+            m_UploaderRwLock.AcquireWriterLock(-1);
+            try
             {
                 bool removed = XferUploaders.Remove(transactionID);
 
@@ -149,6 +170,10 @@ namespace OpenSim.Region.CoreModules.Agent.AssetTransaction
 //                        "[AGENT ASSET TRANSACTIONS]: Removed xfer uploader with transaction ID {0}", transactionID);
 
                 return removed;
+            }
+            finally
+            {
+                m_UploaderRwLock.ReleaseWriterLock();
             }
         }
 

@@ -28,6 +28,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Threading;
 using log4net;
 using Nini.Config;
 using OpenMetaverse;
@@ -46,6 +47,7 @@ namespace OpenSim.Region.CoreModules.Agent.AssetTransaction
         
         protected Scene m_Scene;
         private bool m_dumpAssetsToFile = false;
+        private ReaderWriterLock m_RwLock = new ReaderWriterLock();
         private int  m_levelUpload = 0;
 
         /// <summary>
@@ -111,7 +113,8 @@ namespace OpenSim.Region.CoreModules.Agent.AssetTransaction
         /// <returns></returns>
         private AgentAssetTransactions GetUserTransactions(UUID userID)
         {
-            lock (AgentTransactions)
+            m_RwLock.AcquireReaderLock(-1);
+            try
             {
                 if (!AgentTransactions.ContainsKey(userID))
                 {
@@ -119,10 +122,22 @@ namespace OpenSim.Region.CoreModules.Agent.AssetTransaction
                             new AgentAssetTransactions(userID, m_Scene,
                             m_dumpAssetsToFile);
 
-                    AgentTransactions.Add(userID, transactions);
+                    LockCookie lc = m_RwLock.UpgradeToWriterLock(-1);
+                    try
+                    {
+                        AgentTransactions.Add(userID, transactions);
+                    }
+                    finally
+                    {
+                        m_RwLock.DowngradeFromWriterLock(ref lc);
+                    }
                 }
 
                 return AgentTransactions[userID];
+            }
+            finally
+            {
+                m_RwLock.ReleaseReaderLock();
             }
         }
 
@@ -136,9 +151,14 @@ namespace OpenSim.Region.CoreModules.Agent.AssetTransaction
         {
             // m_log.DebugFormat("Removing agent asset transactions structure for agent {0}", userID);
 
-            lock (AgentTransactions)
+            m_RwLock.AcquireWriterLock(-1);
+            try
             {
                 AgentTransactions.Remove(userID);
+            }
+            finally
+            {
+                m_RwLock.ReleaseWriterLock();
             }
         }
 
