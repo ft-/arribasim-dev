@@ -47,11 +47,6 @@ namespace OpenSim.Data.PGSQL
             get; set;
         }
 
-        protected object Lock
-        {
-            get; set;
-        }
-        
         protected virtual Assembly Assembly
         {
             get { return GetType().Assembly; }
@@ -237,10 +232,7 @@ namespace OpenSim.Data.PGSQL
                     {
                         cmd.Parameters.AddWithValue("ClassifiedId", recordId.ToString());
                         
-                        lock(Lock)
-                        {
-                            cmd.ExecuteNonQuery();
-                        }
+                        cmd.ExecuteNonQuery();
                     }
                 }
             }
@@ -909,10 +901,7 @@ namespace OpenSim.Data.PGSQL
                                     query = "INSERT INTO usersettings VALUES ";
                                     query += "(:Id,'false','false', '')";
                                     
-                                    lock(Lock)
-                                    {
-                                        put.ExecuteNonQuery();
-                                    }
+                                    put.ExecuteNonQuery();
                                 }
                             }
                         }
@@ -948,10 +937,7 @@ namespace OpenSim.Data.PGSQL
                         cmd.Parameters.AddWithValue("Visible", pref.Visible.ToString().ToLower ());
                         cmd.Parameters.AddWithValue("uuid", pref.UserId.ToString());
                         
-                        lock(Lock)
-                        {
-                            cmd.ExecuteNonQuery();
-                        }
+                        cmd.ExecuteNonQuery();
                     }
                 }
             }
@@ -1008,10 +994,7 @@ namespace OpenSim.Data.PGSQL
                                     put.Parameters.AddWithValue("DataKey", props.DataKey.ToString());
                                     put.Parameters.AddWithValue("DataVal", props.DataVal.ToString());
                                     
-                                    lock(Lock)
-                                    {
-                                        put.ExecuteNonQuery();
-                                    }
+                                    put.ExecuteNonQuery();
                                 }
                             }
                         }
@@ -1051,10 +1034,7 @@ namespace OpenSim.Data.PGSQL
                         cmd.Parameters.AddWithValue("DataKey", props.DataKey.ToString ());
                         cmd.Parameters.AddWithValue("DataVal", props.DataKey.ToString ());
                         
-                        lock(Lock)
-                        {
-                            cmd.ExecuteNonQuery();
-                        }
+                        cmd.ExecuteNonQuery();
                     }
                 }
             }

@@ -46,7 +46,6 @@ namespace OpenSim.Data.PGSQL
                 System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
         protected string m_connectionString;
-        protected object m_dbLock = new object();
 
         protected PGSqlFramework(string connectionString)
         {
@@ -88,22 +87,19 @@ namespace OpenSim.Data.PGSQL
         //
         protected int ExecuteNonQuery(NpgsqlCommand cmd)
         {
-            lock (m_dbLock)
+            using (NpgsqlConnection dbcon = new NpgsqlConnection(m_connectionString))
             {
-                using (NpgsqlConnection dbcon = new NpgsqlConnection(m_connectionString))
-                {
-                    dbcon.Open();
-                    cmd.Connection = dbcon;
+                dbcon.Open();
+                cmd.Connection = dbcon;
 
-                    try
-                    {
-                        return cmd.ExecuteNonQuery();
-                    }
-                    catch (Exception e)
-                    {
-                        m_log.Error(e.Message, e);
-                        return 0;
-                    }
+                try
+                {
+                    return cmd.ExecuteNonQuery();
+                }
+                catch (Exception e)
+                {
+                    m_log.Error(e.Message, e);
+                    return 0;
                 }
             }
         }

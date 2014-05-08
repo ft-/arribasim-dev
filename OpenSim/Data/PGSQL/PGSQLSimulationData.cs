@@ -449,24 +449,21 @@ namespace OpenSim.Data.PGSQL
             string sqlPrimItems = @"DELETE FROM PRIMITEMS WHERE ""primID"" in (SELECT ""UUID"" FROM PRIMS WHERE ""SceneGroupID"" = :objectID)";
             string sqlPrimShapes = @"DELETE FROM PRIMSHAPES WHERE ""UUID"" in (SELECT ""UUID"" FROM PRIMS WHERE ""SceneGroupID"" = :objectID)";
 
-            lock (_Database)
+            //Using the non transaction mode.
+            using (NpgsqlConnection conn = new NpgsqlConnection(m_connectionString))
+            using (NpgsqlCommand cmd = new NpgsqlCommand())
             {
-                //Using the non transaction mode.
-                using (NpgsqlConnection conn = new NpgsqlConnection(m_connectionString))
-                using (NpgsqlCommand cmd = new NpgsqlCommand())
-                {
-                    cmd.Connection = conn;
-                    cmd.CommandText = sqlPrimShapes;
-                    conn.Open();
-                    cmd.Parameters.Add(_Database.CreateParameter("objectID", objectID));
-                    cmd.ExecuteNonQuery();
+                cmd.Connection = conn;
+                cmd.CommandText = sqlPrimShapes;
+                conn.Open();
+                cmd.Parameters.Add(_Database.CreateParameter("objectID", objectID));
+                cmd.ExecuteNonQuery();
 
-                    cmd.CommandText = sqlPrimItems;
-                    cmd.ExecuteNonQuery();
+                cmd.CommandText = sqlPrimItems;
+                cmd.ExecuteNonQuery();
 
-                    cmd.CommandText = sqlPrims;
-                    cmd.ExecuteNonQuery();
-                }
+                cmd.CommandText = sqlPrims;
+                cmd.ExecuteNonQuery();
             }
         }
 
