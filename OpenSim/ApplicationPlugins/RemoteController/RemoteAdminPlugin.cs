@@ -61,7 +61,6 @@ namespace OpenSim.ApplicationPlugins.RemoteController
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         private static bool m_defaultAvatarsLoaded = false;
-        private static Object   m_requestLock = new Object();
         private static Object   m_saveOarLock = new Object();
 
         private OpenSimBase m_application;
@@ -431,10 +430,7 @@ namespace OpenSim.ApplicationPlugins.RemoteController
             System.Timers.Timer shutdownTimer = new System.Timers.Timer(timeout); // Wait before firing
             shutdownTimer.AutoReset = false;
             shutdownTimer.Elapsed += new ElapsedEventHandler(shutdownTimer_Elapsed);
-            lock (shutdownTimer)
-            {
-                shutdownTimer.Start();
-            }
+            shutdownTimer.Start();
 
             responseData["success"] = true;
             
@@ -516,243 +512,240 @@ namespace OpenSim.ApplicationPlugins.RemoteController
             Hashtable responseData = (Hashtable)response.Value;
             Hashtable requestData = (Hashtable)request.Params[0];
 
-            lock (m_requestLock)
+            int  m_regionLimit = m_config.GetInt("region_limit", 0);
+            bool m_enableVoiceForNewRegions = m_config.GetBoolean("create_region_enable_voice", false);
+            bool m_publicAccess = m_config.GetBoolean("create_region_public", true);
+
+            CheckStringParameters(requestData, responseData, new string[]
+                                                {
+                                                    "region_name",
+                                                    "listen_ip", "external_address",
+                                                    "estate_name"
+                                                });
+            CheckIntegerParams(requestData, responseData, new string[] {"region_x", "region_y", "listen_port"});
+
+            // check whether we still have space left (iff we are using limits)
+            if (m_regionLimit != 0 && m_application.SceneManager.Scenes.Count >= m_regionLimit)
+                throw new Exception(String.Format("cannot instantiate new region, server capacity {0} already reached; delete regions first",
+                                                    m_regionLimit));
+            // extract or generate region ID now
+            Scene scene = null;
+            UUID regionID = UUID.Zero;
+            if (requestData.ContainsKey("region_id") &&
+                !String.IsNullOrEmpty((string) requestData["region_id"]))
             {
-                int  m_regionLimit = m_config.GetInt("region_limit", 0);
-                bool m_enableVoiceForNewRegions = m_config.GetBoolean("create_region_enable_voice", false);
-                bool m_publicAccess = m_config.GetBoolean("create_region_public", true);
+                regionID = (UUID) (string) requestData["region_id"];
+                if (m_application.SceneManager.TryGetScene(regionID, out scene))
+                    throw new Exception(
+                        String.Format("region UUID already in use by region {0}, UUID {1}, <{2},{3}>",
+                                        scene.RegionInfo.RegionName, scene.RegionInfo.RegionID,
+                                        scene.RegionInfo.RegionLocX, scene.RegionInfo.RegionLocY));
+            }
+            else
+            {
+                regionID = UUID.Random();
+                m_log.DebugFormat("[RADMIN] CreateRegion: new region UUID {0}", regionID);
+            }
 
-                CheckStringParameters(requestData, responseData, new string[]
-                                                   {
-                                                       "region_name",
-                                                       "listen_ip", "external_address",
-                                                       "estate_name"
-                                                   });
-                CheckIntegerParams(requestData, responseData, new string[] {"region_x", "region_y", "listen_port"});
+            // create volatile or persistent region info
+            RegionInfo region = new RegionInfo();
 
-                // check whether we still have space left (iff we are using limits)
-                if (m_regionLimit != 0 && m_application.SceneManager.Scenes.Count >= m_regionLimit)
-                    throw new Exception(String.Format("cannot instantiate new region, server capacity {0} already reached; delete regions first",
-                                                      m_regionLimit));
-                // extract or generate region ID now
-                Scene scene = null;
-                UUID regionID = UUID.Zero;
-                if (requestData.ContainsKey("region_id") &&
-                    !String.IsNullOrEmpty((string) requestData["region_id"]))
+            region.RegionID = regionID;
+            region.originRegionID = regionID;
+            region.RegionName = (string) requestData["region_name"];
+            region.RegionLocX = Convert.ToUInt32(requestData["region_x"]);
+            region.RegionLocY = Convert.ToUInt32(requestData["region_y"]);
+
+            // check for collisions: region name, region UUID,
+            // region location
+            if (m_application.SceneManager.TryGetScene(region.RegionName, out scene))
+                throw new Exception(
+                    String.Format("region name already in use by region {0}, UUID {1}, <{2},{3}>",
+                                    scene.RegionInfo.RegionName, scene.RegionInfo.RegionID,
+                                    scene.RegionInfo.RegionLocX, scene.RegionInfo.RegionLocY));
+
+            if (m_application.SceneManager.TryGetScene(region.RegionLocX, region.RegionLocY, out scene))
+                throw new Exception(
+                    String.Format("region location <{0},{1}> already in use by region {2}, UUID {3}, <{4},{5}>",
+                                    region.RegionLocX, region.RegionLocY,
+                                    scene.RegionInfo.RegionName, scene.RegionInfo.RegionID,
+                                    scene.RegionInfo.RegionLocX, scene.RegionInfo.RegionLocY));
+
+            region.InternalEndPoint =
+                new IPEndPoint(IPAddress.Parse((string) requestData["listen_ip"]), 0);
+
+            region.InternalEndPoint.Port = Convert.ToInt32(requestData["listen_port"]);
+            if (0 == region.InternalEndPoint.Port) throw new Exception("listen_port is 0");
+            if (m_application.SceneManager.TryGetScene(region.InternalEndPoint, out scene))
+                throw new Exception(
+                    String.Format(
+                        "region internal IP {0} and port {1} already in use by region {2}, UUID {3}, <{4},{5}>",
+                        region.InternalEndPoint.Address,
+                        region.InternalEndPoint.Port,
+                        scene.RegionInfo.RegionName, scene.RegionInfo.RegionID,
+                        scene.RegionInfo.RegionLocX, scene.RegionInfo.RegionLocY));
+
+            region.ExternalHostName = (string) requestData["external_address"];
+
+            bool persist = Convert.ToBoolean(requestData["persist"]);
+            if (persist)
+            {
+                // default place for region configuration files is in the
+                // Regions directory of the config dir (aka /bin)
+                string regionConfigPath = Path.Combine(Util.configDir(), "Regions");
+                try
                 {
-                    regionID = (UUID) (string) requestData["region_id"];
-                    if (m_application.SceneManager.TryGetScene(regionID, out scene))
-                        throw new Exception(
-                            String.Format("region UUID already in use by region {0}, UUID {1}, <{2},{3}>",
-                                          scene.RegionInfo.RegionName, scene.RegionInfo.RegionID,
-                                          scene.RegionInfo.RegionLocX, scene.RegionInfo.RegionLocY));
+                    // OpenSim.ini can specify a different regions dir
+                    IConfig startupConfig = (IConfig) m_configSource.Configs["Startup"];
+                    regionConfigPath = startupConfig.GetString("regionload_regionsdir", regionConfigPath).Trim();
                 }
-                else
+                catch (Exception)
                 {
-                    regionID = UUID.Random();
-                    m_log.DebugFormat("[RADMIN] CreateRegion: new region UUID {0}", regionID);
+                    // No INI setting recorded.
                 }
-
-                // create volatile or persistent region info
-                RegionInfo region = new RegionInfo();
-
-                region.RegionID = regionID;
-                region.originRegionID = regionID;
-                region.RegionName = (string) requestData["region_name"];
-                region.RegionLocX = Convert.ToUInt32(requestData["region_x"]);
-                region.RegionLocY = Convert.ToUInt32(requestData["region_y"]);
-
-                // check for collisions: region name, region UUID,
-                // region location
-                if (m_application.SceneManager.TryGetScene(region.RegionName, out scene))
-                    throw new Exception(
-                        String.Format("region name already in use by region {0}, UUID {1}, <{2},{3}>",
-                                      scene.RegionInfo.RegionName, scene.RegionInfo.RegionID,
-                                      scene.RegionInfo.RegionLocX, scene.RegionInfo.RegionLocY));
-
-                if (m_application.SceneManager.TryGetScene(region.RegionLocX, region.RegionLocY, out scene))
-                    throw new Exception(
-                        String.Format("region location <{0},{1}> already in use by region {2}, UUID {3}, <{4},{5}>",
-                                      region.RegionLocX, region.RegionLocY,
-                                      scene.RegionInfo.RegionName, scene.RegionInfo.RegionID,
-                                      scene.RegionInfo.RegionLocX, scene.RegionInfo.RegionLocY));
-
-                region.InternalEndPoint =
-                    new IPEndPoint(IPAddress.Parse((string) requestData["listen_ip"]), 0);
-
-                region.InternalEndPoint.Port = Convert.ToInt32(requestData["listen_port"]);
-                if (0 == region.InternalEndPoint.Port) throw new Exception("listen_port is 0");
-                if (m_application.SceneManager.TryGetScene(region.InternalEndPoint, out scene))
-                    throw new Exception(
-                        String.Format(
-                            "region internal IP {0} and port {1} already in use by region {2}, UUID {3}, <{4},{5}>",
-                            region.InternalEndPoint.Address,
-                            region.InternalEndPoint.Port,
-                            scene.RegionInfo.RegionName, scene.RegionInfo.RegionID,
-                            scene.RegionInfo.RegionLocX, scene.RegionInfo.RegionLocY));
-
-                region.ExternalHostName = (string) requestData["external_address"];
-
-                bool persist = Convert.ToBoolean(requestData["persist"]);
-                if (persist)
+                    
+                string regionIniPath;
+                    
+                if (requestData.Contains("region_file"))
                 {
-                    // default place for region configuration files is in the
-                    // Regions directory of the config dir (aka /bin)
-                    string regionConfigPath = Path.Combine(Util.configDir(), "Regions");
-                    try
-                    {
-                        // OpenSim.ini can specify a different regions dir
-                        IConfig startupConfig = (IConfig) m_configSource.Configs["Startup"];
-                        regionConfigPath = startupConfig.GetString("regionload_regionsdir", regionConfigPath).Trim();
-                    }
-                    catch (Exception)
-                    {
-                        // No INI setting recorded.
-                    }
-                    
-                    string regionIniPath;
-                    
-                    if (requestData.Contains("region_file"))
-                    {
-                        // Make sure that the file to be created is in a subdirectory of the region storage directory.
-                        string requestedFilePath = Path.Combine(regionConfigPath, (string) requestData["region_file"]);
-                        string requestedDirectory = Path.GetDirectoryName(Path.GetFullPath(requestedFilePath));
-                        if (requestedDirectory.StartsWith(Path.GetFullPath(regionConfigPath)))
-                            regionIniPath = requestedFilePath;
-                        else
-                            throw new Exception("Invalid location for region file.");
-                    }
+                    // Make sure that the file to be created is in a subdirectory of the region storage directory.
+                    string requestedFilePath = Path.Combine(regionConfigPath, (string) requestData["region_file"]);
+                    string requestedDirectory = Path.GetDirectoryName(Path.GetFullPath(requestedFilePath));
+                    if (requestedDirectory.StartsWith(Path.GetFullPath(regionConfigPath)))
+                        regionIniPath = requestedFilePath;
                     else
-                    {
-                        regionIniPath = Path.Combine(regionConfigPath,
-                                                        String.Format(
-                                                            m_config.GetString("region_file_template",
-                                                                               "{0}x{1}-{2}.ini"),
-                                                            region.RegionLocX.ToString(),
-                                                            region.RegionLocY.ToString(),
-                                                            regionID.ToString(),
-                                                            region.InternalEndPoint.Port.ToString(),
-                                                            region.RegionName.Replace(" ", "_").Replace(":", "_").
-                                                                Replace("/", "_")));
-                    }
-                    
-                    m_log.DebugFormat("[RADMIN] CreateRegion: persisting region {0} to {1}",
-                                      region.RegionID, regionIniPath);
-                    region.SaveRegionToFile("dynamic region", regionIniPath);
+                        throw new Exception("Invalid location for region file.");
                 }
                 else
                 {
-                    region.Persistent = false;
+                    regionIniPath = Path.Combine(regionConfigPath,
+                                                    String.Format(
+                                                        m_config.GetString("region_file_template",
+                                                                            "{0}x{1}-{2}.ini"),
+                                                        region.RegionLocX.ToString(),
+                                                        region.RegionLocY.ToString(),
+                                                        regionID.ToString(),
+                                                        region.InternalEndPoint.Port.ToString(),
+                                                        region.RegionName.Replace(" ", "_").Replace(":", "_").
+                                                            Replace("/", "_")));
                 }
                     
-                // Set the estate
+                m_log.DebugFormat("[RADMIN] CreateRegion: persisting region {0} to {1}",
+                                    region.RegionID, regionIniPath);
+                region.SaveRegionToFile("dynamic region", regionIniPath);
+            }
+            else
+            {
+                region.Persistent = false;
+            }
+                    
+            // Set the estate
                 
-                // Check for an existing estate
-                List<int> estateIDs = m_application.EstateDataService.GetEstates((string) requestData["estate_name"]);
-                if (estateIDs.Count < 1)
+            // Check for an existing estate
+            List<int> estateIDs = m_application.EstateDataService.GetEstates((string) requestData["estate_name"]);
+            if (estateIDs.Count < 1)
+            {
+                UUID userID = UUID.Zero;
+                if (requestData.ContainsKey("estate_owner_uuid"))
                 {
-                    UUID userID = UUID.Zero;
-                    if (requestData.ContainsKey("estate_owner_uuid"))
-                    {
-                        // ok, client wants us to use an explicit UUID
-                        // regardless of what the avatar name provided
-                        userID = new UUID((string) requestData["estate_owner_uuid"]);
+                    // ok, client wants us to use an explicit UUID
+                    // regardless of what the avatar name provided
+                    userID = new UUID((string) requestData["estate_owner_uuid"]);
                         
-                        // Check that the specified user exists
-                        Scene currentOrFirst = m_application.SceneManager.CurrentOrFirstScene;
-                        IUserAccountService accountService = currentOrFirst.UserAccountService;
-                        UserAccount user = accountService.GetUserAccount(currentOrFirst.RegionInfo.ScopeID, userID);
+                    // Check that the specified user exists
+                    Scene currentOrFirst = m_application.SceneManager.CurrentOrFirstScene;
+                    IUserAccountService accountService = currentOrFirst.UserAccountService;
+                    UserAccount user = accountService.GetUserAccount(currentOrFirst.RegionInfo.ScopeID, userID);
                         
-                        if (user == null)
-                            throw new Exception("Specified user was not found.");
-                    }
-                    else if (requestData.ContainsKey("estate_owner_first") & requestData.ContainsKey("estate_owner_last"))
-                    {
-                        // We need to look up the UUID for the avatar with the provided name.
-                        string ownerFirst = (string) requestData["estate_owner_first"];
-                        string ownerLast = (string) requestData["estate_owner_last"];
+                    if (user == null)
+                        throw new Exception("Specified user was not found.");
+                }
+                else if (requestData.ContainsKey("estate_owner_first") & requestData.ContainsKey("estate_owner_last"))
+                {
+                    // We need to look up the UUID for the avatar with the provided name.
+                    string ownerFirst = (string) requestData["estate_owner_first"];
+                    string ownerLast = (string) requestData["estate_owner_last"];
                         
-                        Scene currentOrFirst = m_application.SceneManager.CurrentOrFirstScene;
-                        IUserAccountService accountService = currentOrFirst.UserAccountService;
-                        UserAccount user = accountService.GetUserAccount(currentOrFirst.RegionInfo.ScopeID,
-                                                                           ownerFirst, ownerLast);
+                    Scene currentOrFirst = m_application.SceneManager.CurrentOrFirstScene;
+                    IUserAccountService accountService = currentOrFirst.UserAccountService;
+                    UserAccount user = accountService.GetUserAccount(currentOrFirst.RegionInfo.ScopeID,
+                                                                        ownerFirst, ownerLast);
                         
-                        // Check that the specified user exists
-                        if (user == null)
-                            throw new Exception("Specified user was not found.");
+                    // Check that the specified user exists
+                    if (user == null)
+                        throw new Exception("Specified user was not found.");
                         
-                        userID = user.PrincipalID;
-                    }
-                    else
-                    {
-                        throw new Exception("Estate owner details not provided.");
-                    }
+                    userID = user.PrincipalID;
+                }
+                else
+                {
+                    throw new Exception("Estate owner details not provided.");
+                }
                     
-                    // Create a new estate with the name provided
-                    region.EstateSettings = m_application.EstateDataService.CreateNewEstate();
+                // Create a new estate with the name provided
+                region.EstateSettings = m_application.EstateDataService.CreateNewEstate();
 
-                    region.EstateSettings.EstateName = (string) requestData["estate_name"];
-                    region.EstateSettings.EstateOwner = userID;
-                    // Persistence does not seem to effect the need to save a new estate
-                    region.EstateSettings.Save();
+                region.EstateSettings.EstateName = (string) requestData["estate_name"];
+                region.EstateSettings.EstateOwner = userID;
+                // Persistence does not seem to effect the need to save a new estate
+                region.EstateSettings.Save();
 
-                    if (!m_application.EstateDataService.LinkRegion(region.RegionID, (int) region.EstateSettings.EstateID))
+                if (!m_application.EstateDataService.LinkRegion(region.RegionID, (int) region.EstateSettings.EstateID))
+                    throw new Exception("Failed to join estate.");
+            }
+            else
+            {
+                int estateID = estateIDs[0];
+
+                region.EstateSettings = m_application.EstateDataService.LoadEstateSettings(region.RegionID, false);
+
+                if (region.EstateSettings.EstateID != estateID)
+                {
+                    // The region is already part of an estate, but not the one we want.
+                    region.EstateSettings = m_application.EstateDataService.LoadEstateSettings(estateID);
+
+                    if (!m_application.EstateDataService.LinkRegion(region.RegionID, estateID))
                         throw new Exception("Failed to join estate.");
                 }
-                else
-                {
-                    int estateID = estateIDs[0];
-
-                    region.EstateSettings = m_application.EstateDataService.LoadEstateSettings(region.RegionID, false);
-
-                    if (region.EstateSettings.EstateID != estateID)
-                    {
-                        // The region is already part of an estate, but not the one we want.
-                        region.EstateSettings = m_application.EstateDataService.LoadEstateSettings(estateID);
-
-                        if (!m_application.EstateDataService.LinkRegion(region.RegionID, estateID))
-                            throw new Exception("Failed to join estate.");
-                    }
-                }
-                
-                // Create the region and perform any initial initialization
-
-                IScene newScene;
-                m_application.CreateRegion(region, out newScene);
-                newScene.Start();
-
-                // If an access specification was provided, use it.
-                // Otherwise accept the default.
-                newScene.RegionInfo.EstateSettings.PublicAccess = GetBoolean(requestData, "public", m_publicAccess);
-                newScene.RegionInfo.EstateSettings.Save();
-
-                // enable voice on newly created region if
-                // requested by either the XmlRpc request or the
-                // configuration
-                if (GetBoolean(requestData, "enable_voice", m_enableVoiceForNewRegions))
-                {
-                    List<ILandObject> parcels = ((Scene)newScene).LandChannel.AllParcels();
-
-                    foreach (ILandObject parcel in parcels)
-                    {
-                        parcel.LandData.Flags |= (uint) ParcelFlags.AllowVoiceChat;
-                        parcel.LandData.Flags |= (uint) ParcelFlags.UseEstateVoiceChan;
-                        ((Scene)newScene).LandChannel.UpdateLandObject(parcel.LandData.LocalID, parcel.LandData);
-                    }
-                }
-
-                //Load Heightmap if specified to new region
-                if (requestData.Contains("heightmap_file"))
-                {
-                    LoadHeightmap((string)requestData["heightmap_file"], region.RegionID);
-                }
-
-                responseData["success"] = true;
-                responseData["region_name"] = region.RegionName;
-                responseData["region_id"] = region.RegionID.ToString();
-
-                m_log.Info("[RADMIN]: CreateRegion: request complete");
             }
+                
+            // Create the region and perform any initial initialization
+
+            IScene newScene;
+            m_application.CreateRegion(region, out newScene);
+            newScene.Start();
+
+            // If an access specification was provided, use it.
+            // Otherwise accept the default.
+            newScene.RegionInfo.EstateSettings.PublicAccess = GetBoolean(requestData, "public", m_publicAccess);
+            newScene.RegionInfo.EstateSettings.Save();
+
+            // enable voice on newly created region if
+            // requested by either the XmlRpc request or the
+            // configuration
+            if (GetBoolean(requestData, "enable_voice", m_enableVoiceForNewRegions))
+            {
+                List<ILandObject> parcels = ((Scene)newScene).LandChannel.AllParcels();
+
+                foreach (ILandObject parcel in parcels)
+                {
+                    parcel.LandData.Flags |= (uint) ParcelFlags.AllowVoiceChat;
+                    parcel.LandData.Flags |= (uint) ParcelFlags.UseEstateVoiceChan;
+                    ((Scene)newScene).LandChannel.UpdateLandObject(parcel.LandData.LocalID, parcel.LandData);
+                }
+            }
+
+            //Load Heightmap if specified to new region
+            if (requestData.Contains("heightmap_file"))
+            {
+                LoadHeightmap((string)requestData["heightmap_file"], region.RegionID);
+            }
+
+            responseData["success"] = true;
+            responseData["region_name"] = region.RegionName;
+            responseData["region_id"] = region.RegionID.ToString();
+
+            m_log.Info("[RADMIN]: CreateRegion: request complete");
         }
 
         /// <summary>
@@ -788,22 +781,19 @@ namespace OpenSim.ApplicationPlugins.RemoteController
             Hashtable responseData = (Hashtable)response.Value;
             Hashtable requestData = (Hashtable)request.Params[0];
 
-            lock (m_requestLock)
-            {
-                CheckStringParameters(requestData, responseData, new string[] {"region_name"});
-                CheckRegionParams(requestData, responseData);
+            CheckStringParameters(requestData, responseData, new string[] {"region_name"});
+            CheckRegionParams(requestData, responseData);
 
-                Scene scene = null;
-                GetSceneFromRegionParams(requestData, responseData, out scene);
+            Scene scene = null;
+            GetSceneFromRegionParams(requestData, responseData, out scene);
 
-                m_application.RemoveRegion(scene, true);
+            m_application.RemoveRegion(scene, true);
 
-                responseData["success"] = true;
-                responseData["region_name"] = scene.RegionInfo.RegionName;
-                responseData["region_id"] = scene.RegionInfo.RegionID;
+            responseData["success"] = true;
+            responseData["region_name"] = scene.RegionInfo.RegionName;
+            responseData["region_id"] = scene.RegionInfo.RegionID;
 
-                m_log.Info("[RADMIN]: DeleteRegion: request complete");
-            }
+            m_log.Info("[RADMIN]: DeleteRegion: request complete");
         }
 
         /// <summary>
@@ -841,23 +831,20 @@ namespace OpenSim.ApplicationPlugins.RemoteController
             Hashtable responseData = (Hashtable)response.Value;
             Hashtable requestData = (Hashtable)request.Params[0];
 
-            lock (m_requestLock)
-            {
-                CheckRegionParams(requestData, responseData);
+            CheckRegionParams(requestData, responseData);
 
-                Scene scene = null;
-                GetSceneFromRegionParams(requestData, responseData, out scene);
+            Scene scene = null;
+            GetSceneFromRegionParams(requestData, responseData, out scene);
 
-                m_application.CloseRegion(scene);
+            m_application.CloseRegion(scene);
 
-                responseData["success"] = true;
-                responseData["region_name"] = scene.RegionInfo.RegionName;
-                responseData["region_id"] = scene.RegionInfo.RegionID;
+            responseData["success"] = true;
+            responseData["region_name"] = scene.RegionInfo.RegionName;
+            responseData["region_id"] = scene.RegionInfo.RegionID;
 
-                response.Value = responseData;
+            response.Value = responseData;
 
-                m_log.Info("[RADMIN]: CloseRegion: request complete");
-            }
+            m_log.Info("[RADMIN]: CloseRegion: request complete");
         }
 
         /// <summary>
@@ -899,46 +886,43 @@ namespace OpenSim.ApplicationPlugins.RemoteController
             Hashtable responseData = (Hashtable)response.Value;
             Hashtable requestData = (Hashtable)request.Params[0];
 
-            lock (m_requestLock)
+            CheckRegionParams(requestData, responseData);
+
+            Scene scene = null;
+            GetSceneFromRegionParams(requestData, responseData, out scene);
+
+            // Modify access
+            scene.RegionInfo.EstateSettings.PublicAccess =
+                GetBoolean(requestData,"public", scene.RegionInfo.EstateSettings.PublicAccess);
+            if (scene.RegionInfo.Persistent)
+                scene.RegionInfo.EstateSettings.Save();
+
+            if (requestData.ContainsKey("enable_voice"))
             {
-                CheckRegionParams(requestData, responseData);
+                bool enableVoice = GetBoolean(requestData, "enable_voice", true);
+                List<ILandObject> parcels = ((Scene)scene).LandChannel.AllParcels();
 
-                Scene scene = null;
-                GetSceneFromRegionParams(requestData, responseData, out scene);
-
-                // Modify access
-                scene.RegionInfo.EstateSettings.PublicAccess =
-                    GetBoolean(requestData,"public", scene.RegionInfo.EstateSettings.PublicAccess);
-                if (scene.RegionInfo.Persistent)
-                    scene.RegionInfo.EstateSettings.Save();
-
-                if (requestData.ContainsKey("enable_voice"))
+                foreach (ILandObject parcel in parcels)
                 {
-                    bool enableVoice = GetBoolean(requestData, "enable_voice", true);
-                    List<ILandObject> parcels = ((Scene)scene).LandChannel.AllParcels();
-
-                    foreach (ILandObject parcel in parcels)
+                    if (enableVoice)
                     {
-                        if (enableVoice)
-                        {
-                            parcel.LandData.Flags |= (uint)ParcelFlags.AllowVoiceChat;
-                            parcel.LandData.Flags |= (uint)ParcelFlags.UseEstateVoiceChan;
-                        }
-                        else
-                        {
-                            parcel.LandData.Flags &= ~(uint)ParcelFlags.AllowVoiceChat;
-                            parcel.LandData.Flags &= ~(uint)ParcelFlags.UseEstateVoiceChan;
-                        }
-                        scene.LandChannel.UpdateLandObject(parcel.LandData.LocalID, parcel.LandData);
+                        parcel.LandData.Flags |= (uint)ParcelFlags.AllowVoiceChat;
+                        parcel.LandData.Flags |= (uint)ParcelFlags.UseEstateVoiceChan;
                     }
+                    else
+                    {
+                        parcel.LandData.Flags &= ~(uint)ParcelFlags.AllowVoiceChat;
+                        parcel.LandData.Flags &= ~(uint)ParcelFlags.UseEstateVoiceChan;
+                    }
+                    scene.LandChannel.UpdateLandObject(parcel.LandData.LocalID, parcel.LandData);
                 }
-
-                responseData["success"] = true;
-                responseData["region_name"] = scene.RegionInfo.RegionName;
-                responseData["region_id"] = scene.RegionInfo.RegionID;
-
-                m_log.Info("[RADMIN]: ModifyRegion: request complete");
             }
+
+            responseData["success"] = true;
+            responseData["region_name"] = scene.RegionInfo.RegionName;
+            responseData["region_id"] = scene.RegionInfo.RegionID;
+
+            m_log.Info("[RADMIN]: ModifyRegion: request complete");
         }
 
         /// <summary>
@@ -986,71 +970,68 @@ namespace OpenSim.ApplicationPlugins.RemoteController
             Hashtable responseData = (Hashtable)response.Value;
             Hashtable requestData = (Hashtable)request.Params[0];
 
-            lock (m_requestLock)
+            try
             {
-                try
+                // check completeness
+                CheckStringParameters(requestData, responseData, new string[]
+                                                    {
+                                                        "user_firstname",
+                                                        "user_lastname", "user_password",
+                                                    });
+                CheckIntegerParams(requestData, responseData, new string[] {"start_region_x", "start_region_y"});
+
+                // do the job
+                string firstName = (string) requestData["user_firstname"];
+                string lastName = (string) requestData["user_lastname"];
+                string password = (string) requestData["user_password"];
+
+                uint regionXLocation = Convert.ToUInt32(requestData["start_region_x"]);
+                uint regionYLocation = Convert.ToUInt32(requestData["start_region_y"]);
+
+                string email = ""; // empty string for email
+                if (requestData.Contains("user_email"))
+                    email = (string)requestData["user_email"];
+
+                Scene scene = m_application.SceneManager.CurrentOrFirstScene;
+                UUID scopeID = scene.RegionInfo.ScopeID;
+
+                UserAccount account = CreateUser(scopeID, firstName, lastName, password, email);
+
+                if (null == account)
+                    throw new Exception(String.Format("failed to create new user {0} {1}",
+                                                        firstName, lastName));
+
+                // Set home position
+
+                GridRegion home = scene.GridService.GetRegionByPosition(scopeID, 
+                                    (int)Util.RegionToWorldLoc(regionXLocation), (int)Util.RegionToWorldLoc(regionYLocation));
+                if (null == home)
                 {
-                    // check completeness
-                    CheckStringParameters(requestData, responseData, new string[]
-                                                       {
-                                                           "user_firstname",
-                                                           "user_lastname", "user_password",
-                                                       });
-                    CheckIntegerParams(requestData, responseData, new string[] {"start_region_x", "start_region_y"});
-
-                    // do the job
-                    string firstName = (string) requestData["user_firstname"];
-                    string lastName = (string) requestData["user_lastname"];
-                    string password = (string) requestData["user_password"];
-
-                    uint regionXLocation = Convert.ToUInt32(requestData["start_region_x"]);
-                    uint regionYLocation = Convert.ToUInt32(requestData["start_region_y"]);
-
-                    string email = ""; // empty string for email
-                    if (requestData.Contains("user_email"))
-                        email = (string)requestData["user_email"];
-
-                    Scene scene = m_application.SceneManager.CurrentOrFirstScene;
-                    UUID scopeID = scene.RegionInfo.ScopeID;
-
-                    UserAccount account = CreateUser(scopeID, firstName, lastName, password, email);
-
-                    if (null == account)
-                        throw new Exception(String.Format("failed to create new user {0} {1}",
-                                                          firstName, lastName));
-
-                    // Set home position
-
-                    GridRegion home = scene.GridService.GetRegionByPosition(scopeID, 
-                                        (int)Util.RegionToWorldLoc(regionXLocation), (int)Util.RegionToWorldLoc(regionYLocation));
-                    if (null == home)
-                    {
-                        m_log.WarnFormat("[RADMIN]: Unable to set home region for newly created user account {0} {1}", firstName, lastName);
-                    }
-                    else
-                    {
-                        scene.GridUserService.SetHome(account.PrincipalID.ToString(), home.RegionID, new Vector3(128, 128, 0), new Vector3(0, 1, 0));
-                        m_log.DebugFormat("[RADMIN]: Set home region {0} for updated user account {1} {2}", home.RegionID, firstName, lastName);
-                    }
-
-                    // Establish the avatar's initial appearance
-
-                    UpdateUserAppearance(responseData, requestData, account.PrincipalID);
-
-                    responseData["success"] = true;
-                    responseData["avatar_uuid"] = account.PrincipalID.ToString();
-
-                    m_log.InfoFormat("[RADMIN]: CreateUser: User {0} {1} created, UUID {2}", firstName, lastName, account.PrincipalID);
+                    m_log.WarnFormat("[RADMIN]: Unable to set home region for newly created user account {0} {1}", firstName, lastName);
                 }
-                catch (Exception e)
+                else
                 {
-                    responseData["avatar_uuid"] = UUID.Zero.ToString();
-
-                    throw e;
+                    scene.GridUserService.SetHome(account.PrincipalID.ToString(), home.RegionID, new Vector3(128, 128, 0), new Vector3(0, 1, 0));
+                    m_log.DebugFormat("[RADMIN]: Set home region {0} for updated user account {1} {2}", home.RegionID, firstName, lastName);
                 }
 
-                m_log.Info("[RADMIN]: CreateUser: request complete");
+                // Establish the avatar's initial appearance
+
+                UpdateUserAppearance(responseData, requestData, account.PrincipalID);
+
+                responseData["success"] = true;
+                responseData["avatar_uuid"] = account.PrincipalID.ToString();
+
+                m_log.InfoFormat("[RADMIN]: CreateUser: User {0} {1} created, UUID {2}", firstName, lastName, account.PrincipalID);
             }
+            catch (Exception e)
+            {
+                responseData["avatar_uuid"] = UUID.Zero.ToString();
+
+                throw e;
+            }
+
+            m_log.Info("[RADMIN]: CreateUser: request complete");
         }
 
         /// <summary>
@@ -1174,113 +1155,110 @@ namespace OpenSim.ApplicationPlugins.RemoteController
             Hashtable responseData = (Hashtable)response.Value;
             Hashtable requestData = (Hashtable)request.Params[0];
 
-            lock (m_requestLock)
+            try
             {
-                try
+                // check completeness
+                CheckStringParameters(requestData, responseData, new string[] {
+                        "user_firstname",
+                        "user_lastname"});
+
+                // do the job
+                string firstName = (string) requestData["user_firstname"];
+                string lastName = (string) requestData["user_lastname"];
+
+                string password = String.Empty;
+                uint? regionXLocation = null;
+                uint? regionYLocation = null;
+        //        uint? ulaX = null;
+        //        uint? ulaY = null;
+        //        uint? ulaZ = null;
+        //        uint? usaX = null;
+        //        uint? usaY = null;
+        //        uint? usaZ = null;
+        //        string aboutFirstLive = String.Empty;
+        //        string aboutAvatar = String.Empty;
+
+                if (requestData.ContainsKey("user_password")) password = (string) requestData["user_password"];
+                if (requestData.ContainsKey("start_region_x"))
+                    regionXLocation = Convert.ToUInt32(requestData["start_region_x"]);
+                if (requestData.ContainsKey("start_region_y"))
+                    regionYLocation = Convert.ToUInt32(requestData["start_region_y"]);
+
+        //        if (requestData.ContainsKey("start_lookat_x"))
+        //            ulaX = Convert.ToUInt32((Int32) requestData["start_lookat_x"]);
+        //        if (requestData.ContainsKey("start_lookat_y"))
+        //            ulaY = Convert.ToUInt32((Int32) requestData["start_lookat_y"]);
+        //        if (requestData.ContainsKey("start_lookat_z"))
+        //            ulaZ = Convert.ToUInt32((Int32) requestData["start_lookat_z"]);
+
+        //        if (requestData.ContainsKey("start_standat_x"))
+        //            usaX = Convert.ToUInt32((Int32) requestData["start_standat_x"]);
+        //        if (requestData.ContainsKey("start_standat_y"))
+        //            usaY = Convert.ToUInt32((Int32) requestData["start_standat_y"]);
+        //        if (requestData.ContainsKey("start_standat_z"))
+        //            usaZ = Convert.ToUInt32((Int32) requestData["start_standat_z"]);
+        //        if (requestData.ContainsKey("about_real_world"))
+        //            aboutFirstLive = (string)requestData["about_real_world"];
+        //        if (requestData.ContainsKey("about_virtual_world"))
+        //            aboutAvatar = (string)requestData["about_virtual_world"];
+
+                Scene scene = m_application.SceneManager.CurrentOrFirstScene;
+                UUID scopeID = scene.RegionInfo.ScopeID;
+                UserAccount account = scene.UserAccountService.GetUserAccount(scopeID, firstName, lastName);
+
+                if (null == account)
+                    throw new Exception(String.Format("avatar {0} {1} does not exist", firstName, lastName));
+
+                if (!String.IsNullOrEmpty(password))
                 {
-                    // check completeness
-                    CheckStringParameters(requestData, responseData, new string[] {
-                            "user_firstname",
-                            "user_lastname"});
-
-                    // do the job
-                    string firstName = (string) requestData["user_firstname"];
-                    string lastName = (string) requestData["user_lastname"];
-
-                    string password = String.Empty;
-                    uint? regionXLocation = null;
-                    uint? regionYLocation = null;
-            //        uint? ulaX = null;
-            //        uint? ulaY = null;
-            //        uint? ulaZ = null;
-            //        uint? usaX = null;
-            //        uint? usaY = null;
-            //        uint? usaZ = null;
-            //        string aboutFirstLive = String.Empty;
-            //        string aboutAvatar = String.Empty;
-
-                    if (requestData.ContainsKey("user_password")) password = (string) requestData["user_password"];
-                    if (requestData.ContainsKey("start_region_x"))
-                        regionXLocation = Convert.ToUInt32(requestData["start_region_x"]);
-                    if (requestData.ContainsKey("start_region_y"))
-                        regionYLocation = Convert.ToUInt32(requestData["start_region_y"]);
-
-            //        if (requestData.ContainsKey("start_lookat_x"))
-            //            ulaX = Convert.ToUInt32((Int32) requestData["start_lookat_x"]);
-            //        if (requestData.ContainsKey("start_lookat_y"))
-            //            ulaY = Convert.ToUInt32((Int32) requestData["start_lookat_y"]);
-            //        if (requestData.ContainsKey("start_lookat_z"))
-            //            ulaZ = Convert.ToUInt32((Int32) requestData["start_lookat_z"]);
-
-            //        if (requestData.ContainsKey("start_standat_x"))
-            //            usaX = Convert.ToUInt32((Int32) requestData["start_standat_x"]);
-            //        if (requestData.ContainsKey("start_standat_y"))
-            //            usaY = Convert.ToUInt32((Int32) requestData["start_standat_y"]);
-            //        if (requestData.ContainsKey("start_standat_z"))
-            //            usaZ = Convert.ToUInt32((Int32) requestData["start_standat_z"]);
-            //        if (requestData.ContainsKey("about_real_world"))
-            //            aboutFirstLive = (string)requestData["about_real_world"];
-            //        if (requestData.ContainsKey("about_virtual_world"))
-            //            aboutAvatar = (string)requestData["about_virtual_world"];
-
-                    Scene scene = m_application.SceneManager.CurrentOrFirstScene;
-                    UUID scopeID = scene.RegionInfo.ScopeID;
-                    UserAccount account = scene.UserAccountService.GetUserAccount(scopeID, firstName, lastName);
-
-                    if (null == account)
-                        throw new Exception(String.Format("avatar {0} {1} does not exist", firstName, lastName));
-
-                    if (!String.IsNullOrEmpty(password))
-                    {
-                        m_log.DebugFormat("[RADMIN]: UpdateUserAccount: updating password for avatar {0} {1}", firstName, lastName);
-                        ChangeUserPassword(firstName, lastName, password);
-                    }
-
-            //        if (null != usaX) userProfile.HomeLocationX = (uint) usaX;
-            //        if (null != usaY) userProfile.HomeLocationY = (uint) usaY;
-            //        if (null != usaZ) userProfile.HomeLocationZ = (uint) usaZ;
-
-            //        if (null != ulaX) userProfile.HomeLookAtX = (uint) ulaX;
-            //        if (null != ulaY) userProfile.HomeLookAtY = (uint) ulaY;
-            //        if (null != ulaZ) userProfile.HomeLookAtZ = (uint) ulaZ;
-
-            //        if (String.Empty != aboutFirstLive) userProfile.FirstLifeAboutText = aboutFirstLive;
-            //        if (String.Empty != aboutAvatar) userProfile.AboutText = aboutAvatar;
-
-                    // Set home position
-
-                    if ((null != regionXLocation) && (null != regionYLocation))
-                    {
-                        GridRegion home = scene.GridService.GetRegionByPosition(scopeID, 
-                                        (int)Util.RegionToWorldLoc((uint)regionXLocation), (int)Util.RegionToWorldLoc((uint)regionYLocation));
-                        if (null == home) {
-                            m_log.WarnFormat("[RADMIN]: Unable to set home region for updated user account {0} {1}", firstName, lastName);
-                        } else {
-                            scene.GridUserService.SetHome(account.PrincipalID.ToString(), home.RegionID, new Vector3(128, 128, 0), new Vector3(0, 1, 0));
-                            m_log.DebugFormat("[RADMIN]: Set home region {0} for updated user account {1} {2}", home.RegionID, firstName, lastName);
-                        }
-                    }
-
-                    // User has been created. Now establish gender and appearance.
-
-                    UpdateUserAppearance(responseData, requestData, account.PrincipalID);
-
-                    responseData["success"] = true;
-                    responseData["avatar_uuid"] = account.PrincipalID.ToString();
-
-                    m_log.InfoFormat("[RADMIN]: UpdateUserAccount: account for user {0} {1} updated, UUID {2}",
-                                     firstName, lastName,
-                                     account.PrincipalID);
+                    m_log.DebugFormat("[RADMIN]: UpdateUserAccount: updating password for avatar {0} {1}", firstName, lastName);
+                    ChangeUserPassword(firstName, lastName, password);
                 }
-                catch (Exception e)
+
+        //        if (null != usaX) userProfile.HomeLocationX = (uint) usaX;
+        //        if (null != usaY) userProfile.HomeLocationY = (uint) usaY;
+        //        if (null != usaZ) userProfile.HomeLocationZ = (uint) usaZ;
+
+        //        if (null != ulaX) userProfile.HomeLookAtX = (uint) ulaX;
+        //        if (null != ulaY) userProfile.HomeLookAtY = (uint) ulaY;
+        //        if (null != ulaZ) userProfile.HomeLookAtZ = (uint) ulaZ;
+
+        //        if (String.Empty != aboutFirstLive) userProfile.FirstLifeAboutText = aboutFirstLive;
+        //        if (String.Empty != aboutAvatar) userProfile.AboutText = aboutAvatar;
+
+                // Set home position
+
+                if ((null != regionXLocation) && (null != regionYLocation))
                 {
-                    responseData["avatar_uuid"] = UUID.Zero.ToString();
-
-                    throw e;
+                    GridRegion home = scene.GridService.GetRegionByPosition(scopeID, 
+                                    (int)Util.RegionToWorldLoc((uint)regionXLocation), (int)Util.RegionToWorldLoc((uint)regionYLocation));
+                    if (null == home) {
+                        m_log.WarnFormat("[RADMIN]: Unable to set home region for updated user account {0} {1}", firstName, lastName);
+                    } else {
+                        scene.GridUserService.SetHome(account.PrincipalID.ToString(), home.RegionID, new Vector3(128, 128, 0), new Vector3(0, 1, 0));
+                        m_log.DebugFormat("[RADMIN]: Set home region {0} for updated user account {1} {2}", home.RegionID, firstName, lastName);
+                    }
                 }
-                
-                m_log.Info("[RADMIN]: UpdateUserAccount: request complete");
+
+                // User has been created. Now establish gender and appearance.
+
+                UpdateUserAppearance(responseData, requestData, account.PrincipalID);
+
+                responseData["success"] = true;
+                responseData["avatar_uuid"] = account.PrincipalID.ToString();
+
+                m_log.InfoFormat("[RADMIN]: UpdateUserAccount: account for user {0} {1} updated, UUID {2}",
+                                    firstName, lastName,
+                                    account.PrincipalID);
             }
+            catch (Exception e)
+            {
+                responseData["avatar_uuid"] = UUID.Zero.ToString();
+
+                throw e;
+            }
+                
+            m_log.Info("[RADMIN]: UpdateUserAccount: request complete");
         }
 
         /// <summary>
@@ -1323,97 +1301,94 @@ namespace OpenSim.ApplicationPlugins.RemoteController
             var responseData = (Hashtable)response.Value;
             var requestData = (Hashtable)request.Params[0];
 
-            lock (m_requestLock)
+            try
             {
-                try
+                CheckStringParameters(requestData, responseData, new[]
+                                                                        {
+                                                                            "user_firstname",
+                                                                            "user_lastname",
+                                                                            "user_password",
+                                                                            "token_lifetime"
+                                                                        });
+
+                var firstName = (string)requestData["user_firstname"];
+                var lastName = (string)requestData["user_lastname"];
+                var password = (string)requestData["user_password"];
+
+                var scene = m_application.SceneManager.CurrentOrFirstScene;
+
+                if (scene.Equals(null))
                 {
-                    CheckStringParameters(requestData, responseData, new[]
-                                                                         {
-                                                                             "user_firstname",
-                                                                             "user_lastname",
-                                                                             "user_password",
-                                                                             "token_lifetime"
-                                                                         });
-
-                    var firstName = (string)requestData["user_firstname"];
-                    var lastName = (string)requestData["user_lastname"];
-                    var password = (string)requestData["user_password"];
-
-                    var scene = m_application.SceneManager.CurrentOrFirstScene;
-
-                    if (scene.Equals(null))
-                    {
-                        m_log.Debug("scene does not exist");
-                        throw new Exception("Scene does not exist.");
-                    }
-
-                    var scopeID = scene.RegionInfo.ScopeID;
-                    var account = scene.UserAccountService.GetUserAccount(scopeID, firstName, lastName);
-
-                    if (account.Equals(null) || account.PrincipalID.Equals(UUID.Zero))
-                    {
-                        m_log.DebugFormat("avatar {0} {1} does not exist", firstName, lastName);
-                        throw new Exception(String.Format("avatar {0} {1} does not exist", firstName, lastName));
-                    }
-
-                    if (String.IsNullOrEmpty(password))
-                    {
-                        m_log.DebugFormat("[RADMIN]: AuthenticateUser: no password provided for {0} {1}", firstName,
-                                          lastName);
-                        throw new Exception(String.Format("no password provided for {0} {1}", firstName,
-                                          lastName));
-                    }
-
-                    int lifetime;
-                    if (int.TryParse((string)requestData["token_lifetime"], NumberStyles.Integer, CultureInfo.InvariantCulture, out lifetime) == false)
-                    {
-                        m_log.DebugFormat("[RADMIN]: AuthenticateUser: no token lifetime provided for {0} {1}", firstName,
-                                          lastName);
-                        throw new Exception(String.Format("no token lifetime provided for {0} {1}", firstName,
-                                          lastName));
-                    }
-
-                    // Upper bound on lifetime set to 30s.
-                    if (lifetime > 30)
-                    {
-                        m_log.DebugFormat("[RADMIN]: AuthenticateUser: token lifetime longer than 30s for {0} {1}", firstName,
-                                          lastName);
-                        throw new Exception(String.Format("token lifetime longer than 30s for {0} {1}", firstName,
-                                          lastName));
-                    }
-
-                    var authModule = scene.RequestModuleInterface<IAuthenticationService>();
-                    if (authModule == null)
-                    {
-                        m_log.Debug("[RADMIN]: AuthenticateUser: no authentication module loded");
-                        throw new Exception("no authentication module loaded");
-                    }
-
-                    var token = authModule.Authenticate(account.PrincipalID, password, lifetime);
-                    if (String.IsNullOrEmpty(token))
-                    {
-                        m_log.DebugFormat("[RADMIN]: AuthenticateUser: authentication failed for {0} {1}", firstName,
-                            lastName);
-                        throw new Exception(String.Format("authentication failed for {0} {1}", firstName,
-                            lastName));
-                    }
-
-                    m_log.DebugFormat("[RADMIN]: AuthenticateUser: account for user {0} {1} identified with token {2}",
-                        firstName, lastName, token);
-
-                    responseData["token"] = token;
-                    responseData["success"] = true;
-
-                }
-                catch (Exception e)
-                {
-                    responseData["success"] = false;
-                    responseData["error"] = e.Message;
-                    throw e;
+                    m_log.Debug("scene does not exist");
+                    throw new Exception("Scene does not exist.");
                 }
 
-                m_log.Info("[RADMIN]: AuthenticateUser: request complete");
+                var scopeID = scene.RegionInfo.ScopeID;
+                var account = scene.UserAccountService.GetUserAccount(scopeID, firstName, lastName);
+
+                if (account.Equals(null) || account.PrincipalID.Equals(UUID.Zero))
+                {
+                    m_log.DebugFormat("avatar {0} {1} does not exist", firstName, lastName);
+                    throw new Exception(String.Format("avatar {0} {1} does not exist", firstName, lastName));
+                }
+
+                if (String.IsNullOrEmpty(password))
+                {
+                    m_log.DebugFormat("[RADMIN]: AuthenticateUser: no password provided for {0} {1}", firstName,
+                                        lastName);
+                    throw new Exception(String.Format("no password provided for {0} {1}", firstName,
+                                        lastName));
+                }
+
+                int lifetime;
+                if (int.TryParse((string)requestData["token_lifetime"], NumberStyles.Integer, CultureInfo.InvariantCulture, out lifetime) == false)
+                {
+                    m_log.DebugFormat("[RADMIN]: AuthenticateUser: no token lifetime provided for {0} {1}", firstName,
+                                        lastName);
+                    throw new Exception(String.Format("no token lifetime provided for {0} {1}", firstName,
+                                        lastName));
+                }
+
+                // Upper bound on lifetime set to 30s.
+                if (lifetime > 30)
+                {
+                    m_log.DebugFormat("[RADMIN]: AuthenticateUser: token lifetime longer than 30s for {0} {1}", firstName,
+                                        lastName);
+                    throw new Exception(String.Format("token lifetime longer than 30s for {0} {1}", firstName,
+                                        lastName));
+                }
+
+                var authModule = scene.RequestModuleInterface<IAuthenticationService>();
+                if (authModule == null)
+                {
+                    m_log.Debug("[RADMIN]: AuthenticateUser: no authentication module loded");
+                    throw new Exception("no authentication module loaded");
+                }
+
+                var token = authModule.Authenticate(account.PrincipalID, password, lifetime);
+                if (String.IsNullOrEmpty(token))
+                {
+                    m_log.DebugFormat("[RADMIN]: AuthenticateUser: authentication failed for {0} {1}", firstName,
+                        lastName);
+                    throw new Exception(String.Format("authentication failed for {0} {1}", firstName,
+                        lastName));
+                }
+
+                m_log.DebugFormat("[RADMIN]: AuthenticateUser: account for user {0} {1} identified with token {2}",
+                    firstName, lastName, token);
+
+                responseData["token"] = token;
+                responseData["success"] = true;
+
             }
+            catch (Exception e)
+            {
+                responseData["success"] = false;
+                responseData["error"] = e.Message;
+                throw e;
+            }
+
+            m_log.Info("[RADMIN]: AuthenticateUser: request complete");
         }
 
         /// <summary>
@@ -1459,50 +1434,47 @@ namespace OpenSim.ApplicationPlugins.RemoteController
             Hashtable responseData = (Hashtable)response.Value;
             Hashtable requestData = (Hashtable)request.Params[0];
 
-            lock (m_requestLock)
+            try
             {
-                try
-                {
-                    CheckStringParameters(requestData, responseData, new string[] {"filename"});
-                    CheckRegionParams(requestData, responseData);
+                CheckStringParameters(requestData, responseData, new string[] {"filename"});
+                CheckRegionParams(requestData, responseData);
 
-                    Scene scene = null;
-                    GetSceneFromRegionParams(requestData, responseData, out scene);
+                Scene scene = null;
+                GetSceneFromRegionParams(requestData, responseData, out scene);
 
-                    string filename = (string) requestData["filename"];
+                string filename = (string) requestData["filename"];
                     
-                    bool mergeOar = false;
-                    bool skipAssets = false;
+                bool mergeOar = false;
+                bool skipAssets = false;
 
-                    if ((string)requestData["merge"] == "true")
-                    {
-                        mergeOar = true;
-                    }
-                    if ((string)requestData["skip-assets"] == "true")
-                    {
-                        skipAssets = true;
-                    }
-
-                    IRegionArchiverModule archiver = scene.RequestModuleInterface<IRegionArchiverModule>();
-                    Dictionary<string, object> archiveOptions = new Dictionary<string,object>();
-                    if (mergeOar) archiveOptions.Add("merge", null);
-                    if (skipAssets) archiveOptions.Add("skipAssets", null);
-                    if (archiver != null)
-                        archiver.DearchiveRegion(filename, Guid.Empty, archiveOptions);
-                    else
-                        throw new Exception("Archiver module not present for scene");
-
-                    responseData["loaded"] = true;
-                }
-                catch (Exception e)
+                if ((string)requestData["merge"] == "true")
                 {
-                    responseData["loaded"] = false;
-
-                    throw e;
+                    mergeOar = true;
+                }
+                if ((string)requestData["skip-assets"] == "true")
+                {
+                    skipAssets = true;
                 }
 
-                m_log.Info("[RADMIN]: Load OAR Administrator Request complete");
+                IRegionArchiverModule archiver = scene.RequestModuleInterface<IRegionArchiverModule>();
+                Dictionary<string, object> archiveOptions = new Dictionary<string,object>();
+                if (mergeOar) archiveOptions.Add("merge", null);
+                if (skipAssets) archiveOptions.Add("skipAssets", null);
+                if (archiver != null)
+                    archiver.DearchiveRegion(filename, Guid.Empty, archiveOptions);
+                else
+                    throw new Exception("Archiver module not present for scene");
+
+                responseData["loaded"] = true;
             }
+            catch (Exception e)
+            {
+                responseData["loaded"] = false;
+
+                throw e;
+            }
+
+            m_log.Info("[RADMIN]: Load OAR Administrator Request complete");
         }
 
         /// <summary>
@@ -1642,52 +1614,49 @@ namespace OpenSim.ApplicationPlugins.RemoteController
             Hashtable responseData = (Hashtable)response.Value;
             Hashtable requestData = (Hashtable)request.Params[0];
 
-            lock (m_requestLock)
+            try
             {
-                try
+                CheckStringParameters(requestData, responseData, new string[] {"filename"});
+                CheckRegionParams(requestData, responseData);
+
+                Scene scene = null;
+                GetSceneFromRegionParams(requestData, responseData, out scene);
+
+                string filename = (string) requestData["filename"];
+
+                responseData["switched"] = true;
+
+                string xml_version = "1";
+                if (requestData.Contains("xml_version"))
                 {
-                    CheckStringParameters(requestData, responseData, new string[] {"filename"});
-                    CheckRegionParams(requestData, responseData);
-
-                    Scene scene = null;
-                    GetSceneFromRegionParams(requestData, responseData, out scene);
-
-                    string filename = (string) requestData["filename"];
-
-                    responseData["switched"] = true;
-
-                    string xml_version = "1";
-                    if (requestData.Contains("xml_version"))
-                    {
-                        xml_version = (string) requestData["xml_version"];
-                    }
-
-                    switch (xml_version)
-                    {
-                        case "1":
-                            m_application.SceneManager.LoadCurrentSceneFromXml(filename, true, new Vector3(0, 0, 0));
-                            break;
-
-                        case "2":
-                            m_application.SceneManager.LoadCurrentSceneFromXml2(filename);
-                            break;
-
-                        default:
-                            throw new Exception(String.Format("unknown Xml{0} format", xml_version));
-                    }
-
-                    responseData["loaded"] = true;
-                }
-                catch (Exception e)
-                {
-                    responseData["loaded"] = false;
-                    responseData["switched"] = false;
-
-                    throw e;
+                    xml_version = (string) requestData["xml_version"];
                 }
 
-                m_log.Info("[RADMIN]: Load XML Administrator Request complete");
+                switch (xml_version)
+                {
+                    case "1":
+                        m_application.SceneManager.LoadCurrentSceneFromXml(filename, true, new Vector3(0, 0, 0));
+                        break;
+
+                    case "2":
+                        m_application.SceneManager.LoadCurrentSceneFromXml2(filename);
+                        break;
+
+                    default:
+                        throw new Exception(String.Format("unknown Xml{0} format", xml_version));
+                }
+
+                responseData["loaded"] = true;
             }
+            catch (Exception e)
+            {
+                responseData["loaded"] = false;
+                responseData["switched"] = false;
+
+                throw e;
+            }
+
+            m_log.Info("[RADMIN]: Load XML Administrator Request complete");
         }
 
         private void XmlRpcSaveXMLMethod(XmlRpcRequest request, XmlRpcResponse response, IPEndPoint remoteClient)
