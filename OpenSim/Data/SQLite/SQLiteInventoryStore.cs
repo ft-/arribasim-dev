@@ -231,30 +231,27 @@ namespace OpenSim.Data.SQLite
         /// <remarks>nasty</remarks>
         private void addFolder(InventoryFolderBase folder, bool add)
         {
-            lock (ds)
+            DataTable inventoryFolderTable = ds.Tables["inventoryfolders"];
+
+            DataRow inventoryRow = inventoryFolderTable.Rows.Find(folder.ID.ToString());
+            if (inventoryRow == null)
             {
-                DataTable inventoryFolderTable = ds.Tables["inventoryfolders"];
+                if (! add)
+                    m_log.ErrorFormat("Interface Misuse: Attempting to Update non-existant inventory folder: {0}", folder.ID);
 
-                DataRow inventoryRow = inventoryFolderTable.Rows.Find(folder.ID.ToString());
-                if (inventoryRow == null)
-                {
-                    if (! add)
-                        m_log.ErrorFormat("Interface Misuse: Attempting to Update non-existant inventory folder: {0}", folder.ID);
-
-                    inventoryRow = inventoryFolderTable.NewRow();
-                    fillFolderRow(inventoryRow, folder);
-                    inventoryFolderTable.Rows.Add(inventoryRow);
-                }
-                else
-                {
-                    if (add)
-                        m_log.ErrorFormat("Interface Misuse: Attempting to Add inventory folder that already exists: {0}", folder.ID);
-
-                    fillFolderRow(inventoryRow, folder);
-                }
-
-                invFoldersDa.Update(ds, "inventoryfolders");
+                inventoryRow = inventoryFolderTable.NewRow();
+                fillFolderRow(inventoryRow, folder);
+                inventoryFolderTable.Rows.Add(inventoryRow);
             }
+            else
+            {
+                if (add)
+                    m_log.ErrorFormat("Interface Misuse: Attempting to Add inventory folder that already exists: {0}", folder.ID);
+
+                fillFolderRow(inventoryRow, folder);
+            }
+
+            invFoldersDa.Update(ds, "inventoryfolders");
         }
 
         /// <summary>
@@ -263,24 +260,21 @@ namespace OpenSim.Data.SQLite
         /// <param name="folder">folder base</param>
         private void moveFolder(InventoryFolderBase folder)
         {
-            lock (ds)
+            DataTable inventoryFolderTable = ds.Tables["inventoryfolders"];
+
+            DataRow inventoryRow = inventoryFolderTable.Rows.Find(folder.ID.ToString());
+            if (inventoryRow == null)
             {
-                DataTable inventoryFolderTable = ds.Tables["inventoryfolders"];
-
-                DataRow inventoryRow = inventoryFolderTable.Rows.Find(folder.ID.ToString());
-                if (inventoryRow == null)
-                {
-                    inventoryRow = inventoryFolderTable.NewRow();
-                    fillFolderRow(inventoryRow, folder);
-                    inventoryFolderTable.Rows.Add(inventoryRow);
-                }
-                else
-                {
-                    moveFolderRow(inventoryRow, folder);
-                }
-
-                invFoldersDa.Update(ds, "inventoryfolders");
+                inventoryRow = inventoryFolderTable.NewRow();
+                fillFolderRow(inventoryRow, folder);
+                inventoryFolderTable.Rows.Add(inventoryRow);
             }
+            else
+            {
+                moveFolderRow(inventoryRow, folder);
+            }
+
+            invFoldersDa.Update(ds, "inventoryfolders");
         }
 
         /// <summary>
@@ -290,38 +284,35 @@ namespace OpenSim.Data.SQLite
         /// <param name="add">true=add item ; false=update existing item</param>
         private void addItem(InventoryItemBase item, bool add)
         {
-            lock (ds)
+            DataTable inventoryItemTable = ds.Tables["inventoryitems"];
+
+            DataRow inventoryRow = inventoryItemTable.Rows.Find(item.ID.ToString());
+            if (inventoryRow == null)
             {
-                DataTable inventoryItemTable = ds.Tables["inventoryitems"];
+                if (!add)
+                    m_log.ErrorFormat("[INVENTORY DB]: Interface Misuse: Attempting to Update non-existant inventory item: {0}", item.ID);
 
-                DataRow inventoryRow = inventoryItemTable.Rows.Find(item.ID.ToString());
-                if (inventoryRow == null)
-                {
-                    if (!add)
-                        m_log.ErrorFormat("[INVENTORY DB]: Interface Misuse: Attempting to Update non-existant inventory item: {0}", item.ID);
-
-                    inventoryRow = inventoryItemTable.NewRow();
-                    fillItemRow(inventoryRow, item);
-                    inventoryItemTable.Rows.Add(inventoryRow);
-                }
-                else
-                {
-                    if (add)
-                        m_log.ErrorFormat("[INVENTORY DB]: Interface Misuse: Attempting to Add inventory item that already exists: {0}", item.ID);
-
-                    fillItemRow(inventoryRow, item);
-                }
-
-                invItemsDa.Update(ds, "inventoryitems");
-
-                DataTable inventoryFolderTable = ds.Tables["inventoryfolders"];
-
-                inventoryRow = inventoryFolderTable.Rows.Find(item.Folder.ToString());
-                if (inventoryRow != null) //MySQL doesn't throw an exception here, so sqlite shouldn't either.
-                    inventoryRow["version"] = (int)inventoryRow["version"] + 1;
-
-                invFoldersDa.Update(ds, "inventoryfolders");
+                inventoryRow = inventoryItemTable.NewRow();
+                fillItemRow(inventoryRow, item);
+                inventoryItemTable.Rows.Add(inventoryRow);
             }
+            else
+            {
+                if (add)
+                    m_log.ErrorFormat("[INVENTORY DB]: Interface Misuse: Attempting to Add inventory item that already exists: {0}", item.ID);
+
+                fillItemRow(inventoryRow, item);
+            }
+
+            invItemsDa.Update(ds, "inventoryitems");
+
+            DataTable inventoryFolderTable = ds.Tables["inventoryfolders"];
+
+            inventoryRow = inventoryFolderTable.Rows.Find(item.Folder.ToString());
+            if (inventoryRow != null) //MySQL doesn't throw an exception here, so sqlite shouldn't either.
+                inventoryRow["version"] = (int)inventoryRow["version"] + 1;
+
+            invFoldersDa.Update(ds, "inventoryfolders");
         }
 
         /// <summary>
@@ -367,19 +358,16 @@ namespace OpenSim.Data.SQLite
         /// <returns>A List of InventoryItemBase items</returns>
         public List<InventoryItemBase> getInventoryInFolder(UUID folderID)
         {
-            lock (ds)
+            List<InventoryItemBase> retval = new List<InventoryItemBase>();
+            DataTable inventoryItemTable = ds.Tables["inventoryitems"];
+            string selectExp = "parentFolderID = '" + folderID + "'";
+            DataRow[] rows = inventoryItemTable.Select(selectExp);
+            foreach (DataRow row in rows)
             {
-                List<InventoryItemBase> retval = new List<InventoryItemBase>();
-                DataTable inventoryItemTable = ds.Tables["inventoryitems"];
-                string selectExp = "parentFolderID = '" + folderID + "'";
-                DataRow[] rows = inventoryItemTable.Select(selectExp);
-                foreach (DataRow row in rows)
-                {
-                    retval.Add(buildItem(row));
-                }
-
-                return retval;
+                retval.Add(buildItem(row));
             }
+
+            return retval;
         }
 
         /// <summary>
@@ -395,29 +383,26 @@ namespace OpenSim.Data.SQLite
         // see InventoryItemBase.getUserRootFolder
         public InventoryFolderBase getUserRootFolder(UUID user)
         {
-            lock (ds)
+            List<InventoryFolderBase> folders = new List<InventoryFolderBase>();
+            DataTable inventoryFolderTable = ds.Tables["inventoryfolders"];
+            string selectExp = "agentID = '" + user + "' AND parentID = '" + UUID.Zero + "'";
+            DataRow[] rows = inventoryFolderTable.Select(selectExp);
+            foreach (DataRow row in rows)
             {
-                List<InventoryFolderBase> folders = new List<InventoryFolderBase>();
-                DataTable inventoryFolderTable = ds.Tables["inventoryfolders"];
-                string selectExp = "agentID = '" + user + "' AND parentID = '" + UUID.Zero + "'";
-                DataRow[] rows = inventoryFolderTable.Select(selectExp);
-                foreach (DataRow row in rows)
-                {
-                    folders.Add(buildFolder(row));
-                }
-
-                // There should only ever be one root folder for a user.  However, if there's more
-                // than one we'll simply use the first one rather than failing.  It would be even
-                // nicer to print some message to this effect, but this feels like it's too low a
-                // to put such a message out, and it's too minor right now to spare the time to
-                // suitably refactor.
-                if (folders.Count > 0)
-                {
-                    return folders[0];
-                }
-
-                return null;
+                folders.Add(buildFolder(row));
             }
+
+            // There should only ever be one root folder for a user.  However, if there's more
+            // than one we'll simply use the first one rather than failing.  It would be even
+            // nicer to print some message to this effect, but this feels like it's too low a
+            // to put such a message out, and it's too minor right now to spare the time to
+            // suitably refactor.
+            if (folders.Count > 0)
+            {
+                return folders[0];
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -427,16 +412,12 @@ namespace OpenSim.Data.SQLite
         /// <param name="parentID">ID of parent</param>
         protected void getInventoryFolders(ref List<InventoryFolderBase> folders, UUID parentID)
         {
-            lock (ds)
+            DataTable inventoryFolderTable = ds.Tables["inventoryfolders"];
+            string selectExp = "parentID = '" + parentID + "'";
+            DataRow[] rows = inventoryFolderTable.Select(selectExp);
+            foreach (DataRow row in rows)
             {
-                DataTable inventoryFolderTable = ds.Tables["inventoryfolders"];
-                string selectExp = "parentID = '" + parentID + "'";
-                DataRow[] rows = inventoryFolderTable.Select(selectExp);
-                foreach (DataRow row in rows)
-                {
-                    folders.Add(buildFolder(row));
-                }
-
+                folders.Add(buildFolder(row));
             }
         }
 
@@ -477,83 +458,78 @@ namespace OpenSim.Data.SQLite
             List<InventoryFolderBase> folders = new List<InventoryFolderBase>();
             DataRow[] folderRows = null, parentRow;
             InventoryFolderBase parentFolder = null;
-            lock (ds)
+
+            /* Fetch the parent folder from the database to determine the agent ID.
+                * Then fetch all inventory folders for that agent from the agent ID.
+                */
+            DataTable inventoryFolderTable = ds.Tables["inventoryfolders"];
+            string selectExp = "UUID = '" + parentID + "'";
+            parentRow = inventoryFolderTable.Select(selectExp); // Assume at most 1 result
+            if (parentRow.GetLength(0) >= 1)                    // No result means parent folder does not exist
             {
-                /* Fetch the parent folder from the database to determine the agent ID.
-                 * Then fetch all inventory folders for that agent from the agent ID.
-                 */
-                DataTable inventoryFolderTable = ds.Tables["inventoryfolders"];
-                string selectExp = "UUID = '" + parentID + "'";
-                parentRow = inventoryFolderTable.Select(selectExp); // Assume at most 1 result
-                if (parentRow.GetLength(0) >= 1)                    // No result means parent folder does not exist
+                parentFolder = buildFolder(parentRow[0]);
+                UUID agentID = parentFolder.Owner;
+                selectExp = "agentID = '" + agentID + "'";
+                folderRows = inventoryFolderTable.Select(selectExp);
+            }
+
+            if (folderRows != null && folderRows.GetLength(0) >= 1)   // No result means parent folder does not exist
+            {                                                       // or has no children
+                /* if we're querying the root folder, just return an unordered list of all folders in the user's
+                    * inventory
+                    */
+                if (parentFolder.ParentID == UUID.Zero)
                 {
-                    parentFolder = buildFolder(parentRow[0]);
-                    UUID agentID = parentFolder.Owner;
-                    selectExp = "agentID = '" + agentID + "'";
-                    folderRows = inventoryFolderTable.Select(selectExp);
-                }
-
-                if (folderRows != null && folderRows.GetLength(0) >= 1)   // No result means parent folder does not exist
-                {                                                       // or has no children
-                    /* if we're querying the root folder, just return an unordered list of all folders in the user's
-                     * inventory
-                     */
-                    if (parentFolder.ParentID == UUID.Zero)
+                    foreach (DataRow row in folderRows)
                     {
-                        foreach (DataRow row in folderRows)
-                        {
-                            InventoryFolderBase curFolder = buildFolder(row);
-                            if (curFolder.ID != parentID)   // Return all folders except the parent folder of heirarchy
-                                folders.Add(buildFolder(row));
-                        }
-                    } // If requesting root folder
-                    /* else we are querying a non-root folder. We currently have a list of all of the user's folders,
-                     * we must construct a list of all folders in the heirarchy below parentID.
-                     * Our first step will be to construct a hash table of all folders, indexed by parent ID.
-                     * Once we have constructed the hash table, we will do a breadth-first traversal on the tree using the
-                     * hash table to find child folders.
-                     */
-                    else
-                    {                                                         // Querying a non-root folder
+                        InventoryFolderBase curFolder = buildFolder(row);
+                        if (curFolder.ID != parentID)   // Return all folders except the parent folder of heirarchy
+                            folders.Add(buildFolder(row));
+                    }
+                } // If requesting root folder
+                /* else we are querying a non-root folder. We currently have a list of all of the user's folders,
+                    * we must construct a list of all folders in the heirarchy below parentID.
+                    * Our first step will be to construct a hash table of all folders, indexed by parent ID.
+                    * Once we have constructed the hash table, we will do a breadth-first traversal on the tree using the
+                    * hash table to find child folders.
+                    */
+                else
+                {                                                         // Querying a non-root folder
 
-                        // Build a hash table of all user's inventory folders, indexed by each folder's parent ID
-                        Dictionary<UUID, List<InventoryFolderBase>> hashtable =
-                            new Dictionary<UUID, List<InventoryFolderBase>>(folderRows.GetLength(0));
+                    // Build a hash table of all user's inventory folders, indexed by each folder's parent ID
+                    Dictionary<UUID, List<InventoryFolderBase>> hashtable =
+                        new Dictionary<UUID, List<InventoryFolderBase>>(folderRows.GetLength(0));
 
-                        foreach (DataRow row in folderRows)
+                    foreach (DataRow row in folderRows)
+                    {
+                        InventoryFolderBase curFolder = buildFolder(row);
+                        if (curFolder.ParentID != UUID.Zero) // Discard root of tree - not needed
                         {
-                            InventoryFolderBase curFolder = buildFolder(row);
-                            if (curFolder.ParentID != UUID.Zero) // Discard root of tree - not needed
+                            if (hashtable.ContainsKey(curFolder.ParentID))
                             {
-                                if (hashtable.ContainsKey(curFolder.ParentID))
-                                {
-                                    // Current folder already has a sibling - append to sibling list
-                                    hashtable[curFolder.ParentID].Add(curFolder);
-                                }
-                                else
-                                {
-                                    List<InventoryFolderBase> siblingList = new List<InventoryFolderBase>();
-                                    siblingList.Add(curFolder);
-                                    // Current folder has no known (yet) siblings
-                                    hashtable.Add(curFolder.ParentID, siblingList);
-                                }
+                                // Current folder already has a sibling - append to sibling list
+                                hashtable[curFolder.ParentID].Add(curFolder);
                             }
-                        } // For all inventory folders
+                            else
+                            {
+                                List<InventoryFolderBase> siblingList = new List<InventoryFolderBase>();
+                                siblingList.Add(curFolder);
+                                // Current folder has no known (yet) siblings
+                                hashtable.Add(curFolder.ParentID, siblingList);
+                            }
+                        }
+                    } // For all inventory folders
 
-                        // Note: Could release the ds lock here - we don't access folderRows or the database anymore.
-                        // This is somewhat of a moot point as the callers of this function usually lock db anyways.
+                    if (hashtable.ContainsKey(parentID)) // if requested folder does have children
+                        folders.AddRange(hashtable[parentID]);
 
-                        if (hashtable.ContainsKey(parentID)) // if requested folder does have children
-                            folders.AddRange(hashtable[parentID]);
+                    // BreadthFirstSearch build inventory tree **Note: folders.Count is *not* static
+                    for (int i = 0; i < folders.Count; i++)
+                        if (hashtable.ContainsKey(folders[i].ID))
+                            folders.AddRange(hashtable[folders[i].ID]);
 
-                        // BreadthFirstSearch build inventory tree **Note: folders.Count is *not* static
-                        for (int i = 0; i < folders.Count; i++)
-                            if (hashtable.ContainsKey(folders[i].ID))
-                                folders.AddRange(hashtable[folders[i].ID]);
-
-                    } // if requesting a subfolder heirarchy
-                } // if folder parentID exists and has children
-            } // lock ds
+                } // if requesting a subfolder heirarchy
+            } // if folder parentID exists and has children
             return folders;
         }
 
@@ -564,17 +540,14 @@ namespace OpenSim.Data.SQLite
         /// <returns>A class containing item information</returns>
         public InventoryItemBase getInventoryItem(UUID item)
         {
-            lock (ds)
+            DataRow row = ds.Tables["inventoryitems"].Rows.Find(item.ToString());
+            if (row != null)
             {
-                DataRow row = ds.Tables["inventoryitems"].Rows.Find(item.ToString());
-                if (row != null)
-                {
-                    return buildItem(row);
-                }
-                else
-                {
-                    return null;
-                }
+                return buildItem(row);
+            }
+            else
+            {
+                return null;
             }
         }
 
@@ -590,17 +563,14 @@ namespace OpenSim.Data.SQLite
             // better to leave multi region at this point.  It does mean
             // that you don't get to see system textures why creating
             // clothes and the like. :(
-            lock (ds)
+            DataRow row = ds.Tables["inventoryfolders"].Rows.Find(folder.ToString());
+            if (row != null)
             {
-                DataRow row = ds.Tables["inventoryfolders"].Rows.Find(folder.ToString());
-                if (row != null)
-                {
-                    return buildFolder(row);
-                }
-                else
-                {
-                    return null;
-                }
+                return buildFolder(row);
+            }
+            else
+            {
+                return null;
             }
         }
 
@@ -628,18 +598,15 @@ namespace OpenSim.Data.SQLite
         /// <param name="item">The item UUID</param>
         public void deleteInventoryItem(UUID itemID)
         {
-            lock (ds)
+            DataTable inventoryItemTable = ds.Tables["inventoryitems"];
+
+            DataRow inventoryRow = inventoryItemTable.Rows.Find(itemID.ToString());
+            if (inventoryRow != null)
             {
-                DataTable inventoryItemTable = ds.Tables["inventoryitems"];
-
-                DataRow inventoryRow = inventoryItemTable.Rows.Find(itemID.ToString());
-                if (inventoryRow != null)
-                {
-                    inventoryRow.Delete();
-                }
-
-                invItemsDa.Update(ds, "inventoryitems");
+                inventoryRow.Delete();
             }
+
+            invItemsDa.Update(ds, "inventoryitems");
         }
 
         public InventoryItemBase queryInventoryItem(UUID itemID)
@@ -701,34 +668,31 @@ namespace OpenSim.Data.SQLite
         /// <param name="folderID">the folder UUID</param>
         public void deleteInventoryFolder(UUID folderID)
         {
-            lock (ds)
+            List<InventoryFolderBase> subFolders = getFolderHierarchy(folderID);
+
+            DataTable inventoryFolderTable = ds.Tables["inventoryfolders"];
+            DataRow inventoryRow;
+
+            //Delete all sub-folders
+            foreach (InventoryFolderBase f in subFolders)
             {
-                List<InventoryFolderBase> subFolders = getFolderHierarchy(folderID);
-
-                DataTable inventoryFolderTable = ds.Tables["inventoryfolders"];
-                DataRow inventoryRow;
-
-                //Delete all sub-folders
-                foreach (InventoryFolderBase f in subFolders)
-                {
-                    inventoryRow = inventoryFolderTable.Rows.Find(f.ID.ToString());
-                    if (inventoryRow != null)
-                    {
-                        deleteItemsInFolder(f.ID);
-                        inventoryRow.Delete();
-                    }
-                }
-
-                //Delete the actual row
-                inventoryRow = inventoryFolderTable.Rows.Find(folderID.ToString());
+                inventoryRow = inventoryFolderTable.Rows.Find(f.ID.ToString());
                 if (inventoryRow != null)
                 {
-                    deleteItemsInFolder(folderID);
+                    deleteItemsInFolder(f.ID);
                     inventoryRow.Delete();
                 }
-
-                invFoldersDa.Update(ds, "inventoryfolders");
             }
+
+            //Delete the actual row
+            inventoryRow = inventoryFolderTable.Rows.Find(folderID.ToString());
+            if (inventoryRow != null)
+            {
+                deleteItemsInFolder(folderID);
+                inventoryRow.Delete();
+            }
+
+            invFoldersDa.Update(ds, "inventoryfolders");
         }
 
         /***********************************************************************
@@ -814,19 +778,16 @@ namespace OpenSim.Data.SQLite
         /// <param name="conn"></param>
         private void setupItemsCommands(SqliteDataAdapter da, SqliteConnection conn)
         {
-            lock (ds)
-            {
-                da.InsertCommand = createInsertCommand("inventoryitems", ds.Tables["inventoryitems"]);
-                da.InsertCommand.Connection = conn;
+            da.InsertCommand = createInsertCommand("inventoryitems", ds.Tables["inventoryitems"]);
+            da.InsertCommand.Connection = conn;
 
-                da.UpdateCommand = createUpdateCommand("inventoryitems", "UUID=:UUID", ds.Tables["inventoryitems"]);
-                da.UpdateCommand.Connection = conn;
+            da.UpdateCommand = createUpdateCommand("inventoryitems", "UUID=:UUID", ds.Tables["inventoryitems"]);
+            da.UpdateCommand.Connection = conn;
 
-                SqliteCommand delete = new SqliteCommand("delete from inventoryitems where UUID = :UUID");
-                delete.Parameters.Add(createSqliteParameter("UUID", typeof(String)));
-                delete.Connection = conn;
-                da.DeleteCommand = delete;
-            }
+            SqliteCommand delete = new SqliteCommand("delete from inventoryitems where UUID = :UUID");
+            delete.Parameters.Add(createSqliteParameter("UUID", typeof(String)));
+            delete.Connection = conn;
+            da.DeleteCommand = delete;
         }
 
         /// <summary>
@@ -836,19 +797,16 @@ namespace OpenSim.Data.SQLite
         /// <param name="conn"></param>
         private void setupFoldersCommands(SqliteDataAdapter da, SqliteConnection conn)
         {
-            lock (ds)
-            {
-                da.InsertCommand = createInsertCommand("inventoryfolders", ds.Tables["inventoryfolders"]);
-                da.InsertCommand.Connection = conn;
+            da.InsertCommand = createInsertCommand("inventoryfolders", ds.Tables["inventoryfolders"]);
+            da.InsertCommand.Connection = conn;
 
-                da.UpdateCommand = createUpdateCommand("inventoryfolders", "UUID=:UUID", ds.Tables["inventoryfolders"]);
-                da.UpdateCommand.Connection = conn;
+            da.UpdateCommand = createUpdateCommand("inventoryfolders", "UUID=:UUID", ds.Tables["inventoryfolders"]);
+            da.UpdateCommand.Connection = conn;
 
-                SqliteCommand delete = new SqliteCommand("delete from inventoryfolders where UUID = :UUID");
-                delete.Parameters.Add(createSqliteParameter("UUID", typeof(String)));
-                delete.Connection = conn;
-                da.DeleteCommand = delete;
-            }
+            SqliteCommand delete = new SqliteCommand("delete from inventoryfolders where UUID = :UUID");
+            delete.Parameters.Add(createSqliteParameter("UUID", typeof(String)));
+            delete.Connection = conn;
+            da.DeleteCommand = delete;
         }
 
         /// <summary>
@@ -896,21 +854,18 @@ namespace OpenSim.Data.SQLite
 
         public List<InventoryItemBase> fetchActiveGestures (UUID avatarID)
         {
-            lock (ds)
-            {
-                List<InventoryItemBase> items = new List<InventoryItemBase>();
+            List<InventoryItemBase> items = new List<InventoryItemBase>();
 
-                DataTable inventoryItemTable = ds.Tables["inventoryitems"];
-                string selectExp 
-                    = "avatarID = '" + avatarID + "' AND assetType = " + (int)AssetType.Gesture + " AND flags = 1";
-                //m_log.DebugFormat("[SQL]: sql = " + selectExp);
-                DataRow[] rows = inventoryItemTable.Select(selectExp);
-                foreach (DataRow row in rows)
-                {
-                    items.Add(buildItem(row));
-                }
-                return items;
+            DataTable inventoryItemTable = ds.Tables["inventoryitems"];
+            string selectExp 
+                = "avatarID = '" + avatarID + "' AND assetType = " + (int)AssetType.Gesture + " AND flags = 1";
+            //m_log.DebugFormat("[SQL]: sql = " + selectExp);
+            DataRow[] rows = inventoryItemTable.Select(selectExp);
+            foreach (DataRow row in rows)
+            {
+                items.Add(buildItem(row));
             }
+            return items;
         }
     }
 }

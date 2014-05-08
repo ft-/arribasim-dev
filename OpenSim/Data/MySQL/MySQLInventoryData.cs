@@ -45,7 +45,6 @@ namespace OpenSim.Data.MySQL
             = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         private string m_connectionString;
-        private object m_dbLock = new object();
 
         public string Version { get { return "1.0.0.0"; } }
 
@@ -108,30 +107,27 @@ namespace OpenSim.Data.MySQL
         {
             try
             {
-                lock (m_dbLock)
+                List<InventoryItemBase> items = new List<InventoryItemBase>();
+
+                using (MySqlConnection dbcon = new MySqlConnection(m_connectionString))
                 {
-                    List<InventoryItemBase> items = new List<InventoryItemBase>();
+                    dbcon.Open();
 
-                    using (MySqlConnection dbcon = new MySqlConnection(m_connectionString))
+                    using (MySqlCommand result = new MySqlCommand("SELECT * FROM inventoryitems WHERE parentFolderID = ?uuid", dbcon))
                     {
-                        dbcon.Open();
+                        result.Parameters.AddWithValue("?uuid", folderID.ToString());
 
-                        using (MySqlCommand result = new MySqlCommand("SELECT * FROM inventoryitems WHERE parentFolderID = ?uuid", dbcon))
+                        using (MySqlDataReader reader = result.ExecuteReader())
                         {
-                            result.Parameters.AddWithValue("?uuid", folderID.ToString());
-
-                            using (MySqlDataReader reader = result.ExecuteReader())
+                            while (reader.Read())
                             {
-                                while (reader.Read())
-                                {
-                                    // A null item (because something went wrong) breaks everything in the folder
-                                    InventoryItemBase item = readInventoryItem(reader);
-                                    if (item != null)
-                                        items.Add(item);
-                                }
-
-                                return items;
+                                // A null item (because something went wrong) breaks everything in the folder
+                                InventoryItemBase item = readInventoryItem(reader);
+                                if (item != null)
+                                    items.Add(item);
                             }
+
+                            return items;
                         }
                     }
                 }
@@ -152,26 +148,23 @@ namespace OpenSim.Data.MySQL
         {
             try
             {
-                lock (m_dbLock)
+                using (MySqlConnection dbcon = new MySqlConnection(m_connectionString))
                 {
-                    using (MySqlConnection dbcon = new MySqlConnection(m_connectionString))
+                    dbcon.Open();
+
+                    using (MySqlCommand result = new MySqlCommand(
+                        "SELECT * FROM inventoryfolders WHERE parentFolderID = ?zero AND agentID = ?uuid", dbcon))
                     {
-                        dbcon.Open();
+                        result.Parameters.AddWithValue("?uuid", user.ToString());
+                        result.Parameters.AddWithValue("?zero", UUID.Zero.ToString());
 
-                        using (MySqlCommand result = new MySqlCommand(
-                            "SELECT * FROM inventoryfolders WHERE parentFolderID = ?zero AND agentID = ?uuid", dbcon))
+                        using (MySqlDataReader reader = result.ExecuteReader())
                         {
-                            result.Parameters.AddWithValue("?uuid", user.ToString());
-                            result.Parameters.AddWithValue("?zero", UUID.Zero.ToString());
+                            List<InventoryFolderBase> items = new List<InventoryFolderBase>();
+                            while (reader.Read())
+                                items.Add(readInventoryFolder(reader));
 
-                            using (MySqlDataReader reader = result.ExecuteReader())
-                            {
-                                List<InventoryFolderBase> items = new List<InventoryFolderBase>();
-                                while (reader.Read())
-                                    items.Add(readInventoryFolder(reader));
-
-                                return items;
-                            }
+                            return items;
                         }
                     }
                 }
@@ -193,36 +186,33 @@ namespace OpenSim.Data.MySQL
         {
             try
             {
-                lock (m_dbLock)
+                using (MySqlConnection dbcon = new MySqlConnection(m_connectionString))
                 {
-                    using (MySqlConnection dbcon = new MySqlConnection(m_connectionString))
+                    dbcon.Open();
+
+                    using (MySqlCommand result = new MySqlCommand(
+                        "SELECT * FROM inventoryfolders WHERE parentFolderID = ?zero AND agentID = ?uuid", dbcon))
                     {
-                        dbcon.Open();
+                        result.Parameters.AddWithValue("?uuid", user.ToString());
+                        result.Parameters.AddWithValue("?zero", UUID.Zero.ToString());
 
-                        using (MySqlCommand result = new MySqlCommand(
-                            "SELECT * FROM inventoryfolders WHERE parentFolderID = ?zero AND agentID = ?uuid", dbcon))
+                        using (MySqlDataReader reader = result.ExecuteReader())
                         {
-                            result.Parameters.AddWithValue("?uuid", user.ToString());
-                            result.Parameters.AddWithValue("?zero", UUID.Zero.ToString());
+                            List<InventoryFolderBase> items = new List<InventoryFolderBase>();
+                            while (reader.Read())
+                                items.Add(readInventoryFolder(reader));
 
-                            using (MySqlDataReader reader = result.ExecuteReader())
-                            {
-                                List<InventoryFolderBase> items = new List<InventoryFolderBase>();
-                                while (reader.Read())
-                                    items.Add(readInventoryFolder(reader));
+                            InventoryFolderBase rootFolder = null;
 
-                                InventoryFolderBase rootFolder = null;
+                            // There should only ever be one root folder for a user.  However, if there's more
+                            // than one we'll simply use the first one rather than failing.  It would be even
+                            // nicer to print some message to this effect, but this feels like it's too low a
+                            // to put such a message out, and it's too minor right now to spare the time to
+                            // suitably refactor.
+                            if (items.Count > 0)
+                                rootFolder = items[0];
 
-                                // There should only ever be one root folder for a user.  However, if there's more
-                                // than one we'll simply use the first one rather than failing.  It would be even
-                                // nicer to print some message to this effect, but this feels like it's too low a
-                                // to put such a message out, and it's too minor right now to spare the time to
-                                // suitably refactor.
-                                if (items.Count > 0)
-                                    rootFolder = items[0];
-
-                                return rootFolder;
-                            }
+                            return rootFolder;
                         }
                     }
                 }
@@ -245,24 +235,21 @@ namespace OpenSim.Data.MySQL
         {
             try
             {
-                lock (m_dbLock)
+                using (MySqlConnection dbcon = new MySqlConnection(m_connectionString))
                 {
-                    using (MySqlConnection dbcon = new MySqlConnection(m_connectionString))
+                    dbcon.Open();
+
+                    using (MySqlCommand result = new MySqlCommand("SELECT * FROM inventoryfolders WHERE parentFolderID = ?uuid", dbcon))
                     {
-                        dbcon.Open();
-
-                        using (MySqlCommand result = new MySqlCommand("SELECT * FROM inventoryfolders WHERE parentFolderID = ?uuid", dbcon))
+                        result.Parameters.AddWithValue("?uuid", parentID.ToString());
+                        using (MySqlDataReader reader = result.ExecuteReader())
                         {
-                            result.Parameters.AddWithValue("?uuid", parentID.ToString());
-                            using (MySqlDataReader reader = result.ExecuteReader())
-                            {
-                                List<InventoryFolderBase> items = new List<InventoryFolderBase>();
+                            List<InventoryFolderBase> items = new List<InventoryFolderBase>();
 
-                                while (reader.Read())
-                                    items.Add(readInventoryFolder(reader));
+                            while (reader.Read())
+                                items.Add(readInventoryFolder(reader));
 
-                                return items;
-                            }
+                            return items;
                         }
                     }
                 }
@@ -336,24 +323,21 @@ namespace OpenSim.Data.MySQL
         {
             try
             {
-                lock (m_dbLock)
+                using (MySqlConnection dbcon = new MySqlConnection(m_connectionString))
                 {
-                    using (MySqlConnection dbcon = new MySqlConnection(m_connectionString))
+                    dbcon.Open();
+
+                    using (MySqlCommand result = new MySqlCommand("SELECT * FROM inventoryitems WHERE inventoryID = ?uuid", dbcon))
                     {
-                        dbcon.Open();
+                        result.Parameters.AddWithValue("?uuid", itemID.ToString());
 
-                        using (MySqlCommand result = new MySqlCommand("SELECT * FROM inventoryitems WHERE inventoryID = ?uuid", dbcon))
+                        using (MySqlDataReader reader = result.ExecuteReader())
                         {
-                            result.Parameters.AddWithValue("?uuid", itemID.ToString());
+                            InventoryItemBase item = null;
+                            if (reader.Read())
+                                item = readInventoryItem(reader);
 
-                            using (MySqlDataReader reader = result.ExecuteReader())
-                            {
-                                InventoryItemBase item = null;
-                                if (reader.Read())
-                                    item = readInventoryItem(reader);
-
-                                return item;
-                            }
+                            return item;
                         }
                     }
                 }
@@ -401,24 +385,21 @@ namespace OpenSim.Data.MySQL
         {
             try
             {
-                lock (m_dbLock)
+                using (MySqlConnection dbcon = new MySqlConnection(m_connectionString))
                 {
-                    using (MySqlConnection dbcon = new MySqlConnection(m_connectionString))
+                    dbcon.Open();
+
+                    using (MySqlCommand result = new MySqlCommand("SELECT * FROM inventoryfolders WHERE folderID = ?uuid", dbcon))
                     {
-                        dbcon.Open();
+                        result.Parameters.AddWithValue("?uuid", folderID.ToString());
 
-                        using (MySqlCommand result = new MySqlCommand("SELECT * FROM inventoryfolders WHERE folderID = ?uuid", dbcon))
+                        using (MySqlDataReader reader = result.ExecuteReader())
                         {
-                            result.Parameters.AddWithValue("?uuid", folderID.ToString());
+                            InventoryFolderBase folder = null;
+                            if (reader.Read())
+                                folder = readInventoryFolder(reader);
 
-                            using (MySqlDataReader reader = result.ExecuteReader())
-                            {
-                                InventoryFolderBase folder = null;
-                                if (reader.Read())
-                                    folder = readInventoryFolder(reader);
-
-                                return folder;
-                            }
+                            return folder;
                         }
                     }
                 }
@@ -491,8 +472,7 @@ namespace OpenSim.Data.MySQL
                         result.Parameters.AddWithValue("?groupOwned", item.GroupOwned);
                         result.Parameters.AddWithValue("?flags", item.Flags);
     
-                        lock (m_dbLock)
-                            result.ExecuteNonQuery();
+                        result.ExecuteNonQuery();
     
                         result.Dispose();
                     }
@@ -501,8 +481,7 @@ namespace OpenSim.Data.MySQL
                     {
                         result.Parameters.AddWithValue("?folderID", item.Folder.ToString());
 
-                        lock (m_dbLock)
-                            result.ExecuteNonQuery();
+                        result.ExecuteNonQuery();
                     }
                 }
             }
@@ -537,8 +516,7 @@ namespace OpenSim.Data.MySQL
                     {
                         cmd.Parameters.AddWithValue("?uuid", itemID.ToString());
 
-                        lock (m_dbLock)
-                            cmd.ExecuteNonQuery();
+                        cmd.ExecuteNonQuery();
                     }
                 }
             }
@@ -590,10 +568,7 @@ namespace OpenSim.Data.MySQL
 
                     try
                     {
-                        lock (m_dbLock)
-                        {
-                            cmd.ExecuteNonQuery();
-                        }
+                        cmd.ExecuteNonQuery();
                     }
                     catch (Exception e)
                     {
@@ -633,10 +608,7 @@ namespace OpenSim.Data.MySQL
     
                     try
                     {
-                        lock (m_dbLock)
-                        {
-                            cmd.ExecuteNonQuery();
-                        }
+                        cmd.ExecuteNonQuery();
                     }
                     catch (Exception e)
                     {
@@ -690,92 +662,89 @@ namespace OpenSim.Data.MySQL
                 List<InventoryFolderBase> parentFolder = new List<InventoryFolderBase>();
                 bool buildResultsFromHashTable = false;
 
-                lock (m_dbLock)
+                using (MySqlConnection dbcon = new MySqlConnection(m_connectionString))
                 {
-                    using (MySqlConnection dbcon = new MySqlConnection(m_connectionString))
+                    dbcon.Open();
+
+                    /* Fetch the parent folder from the database to determine the agent ID, and if
+                        * we're querying the root of the inventory folder tree */
+                    using (MySqlCommand result = new MySqlCommand("SELECT * FROM inventoryfolders WHERE folderID = ?uuid", dbcon))
                     {
-                        dbcon.Open();
+                        result.Parameters.AddWithValue("?uuid", parentID.ToString());
 
-                        /* Fetch the parent folder from the database to determine the agent ID, and if
-                         * we're querying the root of the inventory folder tree */
-                        using (MySqlCommand result = new MySqlCommand("SELECT * FROM inventoryfolders WHERE folderID = ?uuid", dbcon))
+                        using (MySqlDataReader reader = result.ExecuteReader())
                         {
-                            result.Parameters.AddWithValue("?uuid", parentID.ToString());
-
-                            using (MySqlDataReader reader = result.ExecuteReader())
-                            {
-                                // Should be at most 1 result
-                                while (reader.Read())
-                                    parentFolder.Add(readInventoryFolder(reader));
-                            }
-                        }
-
-                        if (parentFolder.Count >= 1)   // No result means parent folder does not exist
-                        {
-                            if (parentFolder[0].ParentID == UUID.Zero) // We are querying the root folder
-                            {
-                                /* Get all of the agent's folders from the database, put them in a list and return it */
-                                using (MySqlCommand result = new MySqlCommand("SELECT * FROM inventoryfolders WHERE agentID = ?uuid", dbcon))
-                                {
-                                    result.Parameters.AddWithValue("?uuid", parentFolder[0].Owner.ToString());
-
-                                    using (MySqlDataReader reader = result.ExecuteReader())
-                                    {
-                                        while (reader.Read())
-                                        {
-                                            InventoryFolderBase curFolder = readInventoryFolder(reader);
-                                            if (curFolder.ID != parentID) // Do not need to add the root node of the tree to the list
-                                                folders.Add(curFolder);
-                                        }
-                                    }
-                                }
-                            } // if we are querying the root folder
-                            else // else we are querying a subtree of the inventory folder tree
-                            {
-                                /* Get all of the agent's folders from the database, put them all in a hash table
-                                 * indexed by their parent ID */
-                                using (MySqlCommand result = new MySqlCommand("SELECT * FROM inventoryfolders WHERE agentID = ?uuid", dbcon))
-                                {
-                                    result.Parameters.AddWithValue("?uuid", parentFolder[0].Owner.ToString());
-
-                                    using (MySqlDataReader reader = result.ExecuteReader())
-                                    {
-                                        while (reader.Read())
-                                        {
-                                            InventoryFolderBase curFolder = readInventoryFolder(reader);
-                                            if (hashtable.ContainsKey(curFolder.ParentID))      // Current folder already has a sibling
-                                                hashtable[curFolder.ParentID].Add(curFolder);   // append to sibling list
-                                            else // else current folder has no known (yet) siblings
-                                            {
-                                                List<InventoryFolderBase> siblingList = new List<InventoryFolderBase>();
-                                                siblingList.Add(curFolder);
-                                                // Current folder has no known (yet) siblings
-                                                hashtable.Add(curFolder.ParentID, siblingList);
-                                            }
-                                        } // while more items to read from the database
-                                    }
-                                }
-
-                                // Set flag so we know we need to build the results from the hash table after
-                                // we unlock the database
-                                buildResultsFromHashTable = true;
-
-                            } // else we are querying a subtree of the inventory folder tree
-                        } // if folder parentID exists
-
-                        if (buildResultsFromHashTable)
-                        {
-                            /* We have all of the user's folders stored in a hash table indexed by their parent ID
-                             * and we need to return the requested subtree. We will build the requested subtree
-                             * by performing a breadth-first-search on the hash table */
-                            if (hashtable.ContainsKey(parentID))
-                                folders.AddRange(hashtable[parentID]);
-                            for (int i = 0; i < folders.Count; i++) // **Note: folders.Count is *not* static
-                                if (hashtable.ContainsKey(folders[i].ID))
-                                    folders.AddRange(hashtable[folders[i].ID]);
+                            // Should be at most 1 result
+                            while (reader.Read())
+                                parentFolder.Add(readInventoryFolder(reader));
                         }
                     }
-                } // lock (database)
+
+                    if (parentFolder.Count >= 1)   // No result means parent folder does not exist
+                    {
+                        if (parentFolder[0].ParentID == UUID.Zero) // We are querying the root folder
+                        {
+                            /* Get all of the agent's folders from the database, put them in a list and return it */
+                            using (MySqlCommand result = new MySqlCommand("SELECT * FROM inventoryfolders WHERE agentID = ?uuid", dbcon))
+                            {
+                                result.Parameters.AddWithValue("?uuid", parentFolder[0].Owner.ToString());
+
+                                using (MySqlDataReader reader = result.ExecuteReader())
+                                {
+                                    while (reader.Read())
+                                    {
+                                        InventoryFolderBase curFolder = readInventoryFolder(reader);
+                                        if (curFolder.ID != parentID) // Do not need to add the root node of the tree to the list
+                                            folders.Add(curFolder);
+                                    }
+                                }
+                            }
+                        } // if we are querying the root folder
+                        else // else we are querying a subtree of the inventory folder tree
+                        {
+                            /* Get all of the agent's folders from the database, put them all in a hash table
+                                * indexed by their parent ID */
+                            using (MySqlCommand result = new MySqlCommand("SELECT * FROM inventoryfolders WHERE agentID = ?uuid", dbcon))
+                            {
+                                result.Parameters.AddWithValue("?uuid", parentFolder[0].Owner.ToString());
+
+                                using (MySqlDataReader reader = result.ExecuteReader())
+                                {
+                                    while (reader.Read())
+                                    {
+                                        InventoryFolderBase curFolder = readInventoryFolder(reader);
+                                        if (hashtable.ContainsKey(curFolder.ParentID))      // Current folder already has a sibling
+                                            hashtable[curFolder.ParentID].Add(curFolder);   // append to sibling list
+                                        else // else current folder has no known (yet) siblings
+                                        {
+                                            List<InventoryFolderBase> siblingList = new List<InventoryFolderBase>();
+                                            siblingList.Add(curFolder);
+                                            // Current folder has no known (yet) siblings
+                                            hashtable.Add(curFolder.ParentID, siblingList);
+                                        }
+                                    } // while more items to read from the database
+                                }
+                            }
+
+                            // Set flag so we know we need to build the results from the hash table after
+                            // we unlock the database
+                            buildResultsFromHashTable = true;
+
+                        } // else we are querying a subtree of the inventory folder tree
+                    } // if folder parentID exists
+
+                    if (buildResultsFromHashTable)
+                    {
+                        /* We have all of the user's folders stored in a hash table indexed by their parent ID
+                            * and we need to return the requested subtree. We will build the requested subtree
+                            * by performing a breadth-first-search on the hash table */
+                        if (hashtable.ContainsKey(parentID))
+                            folders.AddRange(hashtable[parentID]);
+                        for (int i = 0; i < folders.Count; i++) // **Note: folders.Count is *not* static
+                            if (hashtable.ContainsKey(folders[i].ID))
+                                folders.AddRange(hashtable[folders[i].ID]);
+                    }
+                }
 
                 return folders;
             }
@@ -803,8 +772,7 @@ namespace OpenSim.Data.MySQL
                     {
                         cmd.Parameters.AddWithValue("?uuid", folderID.ToString());
 
-                        lock (m_dbLock)
-                            cmd.ExecuteNonQuery();
+                        cmd.ExecuteNonQuery();
                     }
                 }
             }
@@ -830,8 +798,7 @@ namespace OpenSim.Data.MySQL
                     {
                         cmd.Parameters.AddWithValue("?uuid", folderID.ToString());
 
-                        lock (m_dbLock)
-                            cmd.ExecuteNonQuery();
+                        cmd.ExecuteNonQuery();
                     }
                 }
             }
@@ -863,39 +830,36 @@ namespace OpenSim.Data.MySQL
         
         public List<InventoryItemBase> fetchActiveGestures(UUID avatarID)
         {
-            lock (m_dbLock)
+            try
             {
-                try
+                using (MySqlConnection dbcon = new MySqlConnection(m_connectionString))
                 {
-                    using (MySqlConnection dbcon = new MySqlConnection(m_connectionString))
+                    dbcon.Open();
+
+                    using (MySqlCommand sqlCmd = new MySqlCommand(
+                        "SELECT * FROM inventoryitems WHERE avatarId = ?uuid AND assetType = ?type and flags & 1", dbcon))
                     {
-                        dbcon.Open();
+                        sqlCmd.Parameters.AddWithValue("?uuid", avatarID.ToString());
+                        sqlCmd.Parameters.AddWithValue("?type", (int)AssetType.Gesture);
 
-                        using (MySqlCommand sqlCmd = new MySqlCommand(
-                            "SELECT * FROM inventoryitems WHERE avatarId = ?uuid AND assetType = ?type and flags & 1", dbcon))
+                        using (MySqlDataReader result = sqlCmd.ExecuteReader())
                         {
-                            sqlCmd.Parameters.AddWithValue("?uuid", avatarID.ToString());
-                            sqlCmd.Parameters.AddWithValue("?type", (int)AssetType.Gesture);
-
-                            using (MySqlDataReader result = sqlCmd.ExecuteReader())
+                            List<InventoryItemBase> list = new List<InventoryItemBase>();
+                            while (result.Read())
                             {
-                                List<InventoryItemBase> list = new List<InventoryItemBase>();
-                                while (result.Read())
-                                {
-                                    InventoryItemBase item = readInventoryItem(result);
-                                    if (item != null)
-                                        list.Add(item);
-                                }
-                                return list;
+                                InventoryItemBase item = readInventoryItem(result);
+                                if (item != null)
+                                    list.Add(item);
                             }
+                            return list;
                         }
                     }
                 }
-                catch (Exception e)
-                {
-                    m_log.Error(e.Message, e);
-                    return null;
-                }
+            }
+            catch (Exception e)
+            {
+                m_log.Error(e.Message, e);
+                return null;
             }
         }
     }

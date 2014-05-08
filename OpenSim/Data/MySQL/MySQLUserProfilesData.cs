@@ -47,11 +47,6 @@ namespace OpenSim.Data.MySQL
             get; set;
         }
 
-        protected object Lock
-        {
-            get; set;
-        }
-        
         protected virtual Assembly Assembly
         {
             get { return GetType().Assembly; }
@@ -262,10 +257,7 @@ namespace OpenSim.Data.MySQL
                     {
                         cmd.Parameters.AddWithValue("?ClassifiedId", recordId.ToString());
                         
-                        lock(Lock)
-                        {
-                            cmd.ExecuteNonQuery();
-                        }
+                        cmd.ExecuteNonQuery();
                     }
                 }
             }
@@ -1030,10 +1022,7 @@ namespace OpenSim.Data.MySQL
                                     put.Parameters.AddWithValue("?DataKey", props.DataKey.ToString());
                                     put.Parameters.AddWithValue("?DataVal", props.DataVal.ToString());
                                     
-                                    lock(Lock)
-                                    {
-                                        put.ExecuteNonQuery();
-                                    }
+                                    put.ExecuteNonQuery();
                                 }
                             }
                         }
@@ -1073,10 +1062,7 @@ namespace OpenSim.Data.MySQL
                         cmd.Parameters.AddWithValue("?DataKey", props.DataKey.ToString ());
                         cmd.Parameters.AddWithValue("?DataVal", props.DataKey.ToString ());
                         
-                        lock(Lock)
-                        {
-                            cmd.ExecuteNonQuery();
-                        }
+                        cmd.ExecuteNonQuery();
                     }
                 }
             }

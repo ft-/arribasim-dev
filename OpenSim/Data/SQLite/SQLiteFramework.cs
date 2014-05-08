@@ -44,7 +44,6 @@ namespace OpenSim.Data.SQLite
     /// </summary>
     public class SQLiteFramework
     {
-        protected Object m_lockObject = new Object();
 
         protected SQLiteFramework(string connectionString)
         {
@@ -59,36 +58,14 @@ namespace OpenSim.Data.SQLite
         //
         protected int ExecuteNonQuery(SqliteCommand cmd, SqliteConnection connection)
         {
-            lock (connection)
-            {
-/*
-                SqliteConnection newConnection =
-                        (SqliteConnection)((ICloneable)connection).Clone();
-                newConnection.Open();
-
-                cmd.Connection = newConnection;
-*/
-                cmd.Connection = connection;
-                //Console.WriteLine("XXX " + cmd.CommandText);
-
-                return cmd.ExecuteNonQuery();
-            }
+            cmd.Connection = connection;
+            return cmd.ExecuteNonQuery();
         }
 
         protected IDataReader ExecuteReader(SqliteCommand cmd, SqliteConnection connection)
         {
-            lock (connection)
-            {
-                //SqliteConnection newConnection =
-                //        (SqliteConnection)((ICloneable)connection).Clone();
-                //newConnection.Open();
-
-                //cmd.Connection = newConnection;
-                cmd.Connection = connection;
-                //Console.WriteLine("XXX " + cmd.CommandText);
-
-                return cmd.ExecuteReader();
-            }
+            cmd.Connection = connection;
+            return cmd.ExecuteReader();
         }
     }
 }
