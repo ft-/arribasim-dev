@@ -29,6 +29,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Reflection;
+using System.Threading;
 using OpenMetaverse;
 using log4net;
 using OpenSim.Framework;
@@ -100,10 +101,22 @@ namespace OpenSim.Region.Framework.Scenes
         }
 
         private readonly List<Scene> m_localScenes = new List<Scene>();
+        private ReaderWriterLock m_localScenesRwLock = new ReaderWriterLock();
 
         public List<Scene> Scenes
         {
-            get { return new List<Scene>(m_localScenes); }
+            get 
+            {
+                m_localScenesRwLock.AcquireReaderLock(-1);
+                try
+                {
+                    return new List<Scene>(m_localScenes);
+                }
+                finally
+                {
+                    m_localScenesRwLock.ReleaseReaderLock();
+                }
+            }
         }
 
         /// <summary>
@@ -120,12 +133,17 @@ namespace OpenSim.Region.Framework.Scenes
             {
                 if (CurrentScene == null)
                 {
-                    lock (m_localScenes)
+                    m_localScenesRwLock.AcquireReaderLock(-1);
+                    try
                     {
                         if (m_localScenes.Count > 0)
                             return m_localScenes[0];
                         else
                             return null;
+                    }
+                    finally
+                    {
+                        m_localScenesRwLock.ReleaseReaderLock();
                     }
                 }
                 else
@@ -143,18 +161,24 @@ namespace OpenSim.Region.Framework.Scenes
 
         public void Close()
         {
-            lock (m_localScenes)
+            m_localScenesRwLock.AcquireReaderLock(-1);
+            try
             {
                 for (int i = 0; i < m_localScenes.Count; i++)
                 {
                     m_localScenes[i].Close();
                 }
             }
+            finally
+            {
+                m_localScenesRwLock.ReleaseReaderLock();
+            }
         }
 
         public void Close(Scene cscene)
         {
-            lock (m_localScenes)
+            m_localScenesRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_localScenes.Contains(cscene))
                 {
@@ -167,12 +191,23 @@ namespace OpenSim.Region.Framework.Scenes
                     }
                 }
             }
+            finally
+            {
+                m_localScenesRwLock.ReleaseReaderLock();
+            }
         }
 
         public void Add(Scene scene)
         {
-            lock (m_localScenes)
+            m_localScenesRwLock.AcquireWriterLock(-1);
+            try
+            {
                 m_localScenes.Add(scene);
+            }
+            finally
+            {
+                m_localScenesRwLock.ReleaseWriterLock();
+            }
 
             scene.OnRestart += HandleRestart;
             scene.EventManager.OnRegionReadyStatusChange += HandleRegionReadyStatusChange;
@@ -182,7 +217,8 @@ namespace OpenSim.Region.Framework.Scenes
         {
             Scene restartedScene = null;
 
-            lock (m_localScenes)
+            m_localScenesRwLock.AcquireWriterLock(-1);
+            try
             {
                 for (int i = 0; i < m_localScenes.Count; i++)
                 {
@@ -193,6 +229,10 @@ namespace OpenSim.Region.Framework.Scenes
                         break;
                     }
                 }
+            }
+            finally
+            {
+                m_localScenesRwLock.ReleaseWriterLock();
             }
 
             // If the currently selected scene has been restarted, then we can't reselect here since we the scene
@@ -206,15 +246,23 @@ namespace OpenSim.Region.Framework.Scenes
 
         private void HandleRegionReadyStatusChange(IScene scene)
         {
-            lock (m_localScenes)
+            m_localScenesRwLock.AcquireReaderLock(-1);
+            try
+            {
                 AllRegionsReady = m_localScenes.TrueForAll(s => s.Ready);
+            }
+            finally
+            {
+                m_localScenesRwLock.ReleaseReaderLock();
+            }
         }
 
         public void SendSimOnlineNotification(ulong regionHandle)
         {
             RegionInfo Result = null;
 
-            lock (m_localScenes)
+            m_localScenesRwLock.AcquireReaderLock(-1);
+            try
             {
                 for (int i = 0; i < m_localScenes.Count; i++)
                 {
@@ -240,6 +288,10 @@ namespace OpenSim.Region.Framework.Scenes
                 {
                     m_log.Error("[REGION]: Unable to notify Other regions of this Region coming up");
                 }
+            }
+            finally
+            {
+                m_localScenesRwLock.ReleaseReaderLock();
             }
         }
 
@@ -368,7 +420,8 @@ namespace OpenSim.Region.Framework.Scenes
             }
             else
             {
-                lock (m_localScenes)
+                m_localScenesRwLock.AcquireReaderLock(-1);
+                try
                 {
                     foreach (Scene scene in m_localScenes)
                     {
@@ -379,6 +432,10 @@ namespace OpenSim.Region.Framework.Scenes
                         }
                     }
                 }
+                finally
+                {
+                    m_localScenesRwLock.ReleaseReaderLock();
+                }
 
                 return false;
             }
@@ -388,7 +445,8 @@ namespace OpenSim.Region.Framework.Scenes
         {
             m_log.Debug("Searching for Region: '" + regionID + "'");
 
-            lock (m_localScenes)
+            m_localScenesRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (Scene scene in m_localScenes)
                 {
@@ -399,13 +457,18 @@ namespace OpenSim.Region.Framework.Scenes
                     }
                 }
             }
+            finally
+            {
+                m_localScenesRwLock.ReleaseReaderLock();
+            }
 
             return false;
         }
 
         public bool TryGetScene(string regionName, out Scene scene)
         {
-            lock (m_localScenes)
+            m_localScenesRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (Scene mscene in m_localScenes)
                 {
@@ -416,6 +479,10 @@ namespace OpenSim.Region.Framework.Scenes
                     }
                 }
             }
+            finally
+            {
+                m_localScenesRwLock.ReleaseReaderLock();
+            }
 
             scene = null;
             return false;
@@ -423,7 +490,8 @@ namespace OpenSim.Region.Framework.Scenes
 
         public bool TryGetScene(UUID regionID, out Scene scene)
         {
-            lock (m_localScenes)
+            m_localScenesRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (Scene mscene in m_localScenes)
                 {
@@ -434,6 +502,10 @@ namespace OpenSim.Region.Framework.Scenes
                     }
                 }
             }
+            finally
+            {
+                m_localScenesRwLock.ReleaseReaderLock();
+            }
             
             scene = null;
             return false;
@@ -441,7 +513,8 @@ namespace OpenSim.Region.Framework.Scenes
 
         public bool TryGetScene(uint locX, uint locY, out Scene scene)
         {
-            lock (m_localScenes)
+            m_localScenesRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (Scene mscene in m_localScenes)
                 {
@@ -453,6 +526,10 @@ namespace OpenSim.Region.Framework.Scenes
                     }
                 }
             }
+            finally
+            {
+                m_localScenesRwLock.ReleaseReaderLock();
+            }
             
             scene = null;
             return false;
@@ -460,7 +537,8 @@ namespace OpenSim.Region.Framework.Scenes
 
         public bool TryGetScene(IPEndPoint ipEndPoint, out Scene scene)
         {
-            lock (m_localScenes)
+            m_localScenesRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (Scene mscene in m_localScenes)
                 {
@@ -471,6 +549,10 @@ namespace OpenSim.Region.Framework.Scenes
                         return true;
                     }
                 }
+            }
+            finally
+            {
+                m_localScenesRwLock.ReleaseReaderLock();
             }
             
             scene = null;
@@ -511,7 +593,8 @@ namespace OpenSim.Region.Framework.Scenes
 
         public RegionInfo GetRegionInfo(UUID regionID)
         {
-            lock (m_localScenes)
+            m_localScenesRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (Scene scene in m_localScenes)
                 {
@@ -520,6 +603,10 @@ namespace OpenSim.Region.Framework.Scenes
                         return scene.RegionInfo;
                     }
                 }
+            }
+            finally
+            {
+                m_localScenesRwLock.ReleaseReaderLock();
             }
 
             return null;
@@ -537,7 +624,8 @@ namespace OpenSim.Region.Framework.Scenes
 
         public bool TryGetScenePresence(UUID avatarId, out ScenePresence avatar)
         {
-            lock (m_localScenes)
+            m_localScenesRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (Scene scene in m_localScenes)
                 {
@@ -547,6 +635,10 @@ namespace OpenSim.Region.Framework.Scenes
                     }
                 }
             }
+            finally
+            {
+                m_localScenesRwLock.ReleaseReaderLock();
+            }
 
             avatar = null;
             return false;
@@ -554,7 +646,8 @@ namespace OpenSim.Region.Framework.Scenes
 
         public bool TryGetRootScenePresence(UUID avatarId, out ScenePresence avatar)
         {
-            lock (m_localScenes)
+            m_localScenesRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (Scene scene in m_localScenes)
                 {
@@ -564,6 +657,10 @@ namespace OpenSim.Region.Framework.Scenes
                         return true;
                 }
             }
+            finally
+            {
+                m_localScenesRwLock.ReleaseReaderLock();
+            }
 
             avatar = null;
             return false;
@@ -571,15 +668,23 @@ namespace OpenSim.Region.Framework.Scenes
 
         public void CloseScene(Scene scene)
         {
-            lock (m_localScenes)
+            m_localScenesRwLock.AcquireWriterLock(-1);
+            try
+            {
                 m_localScenes.Remove(scene);
+            }
+            finally
+            {
+                m_localScenesRwLock.ReleaseWriterLock();
+            }
 
             scene.Close();
         }
 
         public bool TryGetAvatarByName(string avatarName, out ScenePresence avatar)
         {
-            lock (m_localScenes)
+            m_localScenesRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (Scene scene in m_localScenes)
                 {
@@ -589,6 +694,10 @@ namespace OpenSim.Region.Framework.Scenes
                     }
                 }
             }
+            finally
+            {
+                m_localScenesRwLock.ReleaseReaderLock();
+            }
 
             avatar = null;
             return false;
@@ -596,7 +705,8 @@ namespace OpenSim.Region.Framework.Scenes
 
         public bool TryGetRootScenePresenceByName(string firstName, string lastName, out ScenePresence sp)
         {
-            lock (m_localScenes)
+            m_localScenesRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (Scene scene in m_localScenes)
                 {
@@ -605,6 +715,10 @@ namespace OpenSim.Region.Framework.Scenes
                         return true;
                 }
             }
+            finally
+            {
+                m_localScenesRwLock.ReleaseReaderLock();
+            }
 
             sp = null;
             return false;
@@ -612,8 +726,15 @@ namespace OpenSim.Region.Framework.Scenes
 
         public void ForEachScene(Action<Scene> action)
         {
-            lock (m_localScenes)
+            m_localScenesRwLock.AcquireReaderLock(-1);
+            try
+            {
                 m_localScenes.ForEach(action);
+            }
+            finally
+            {
+                m_localScenesRwLock.ReleaseReaderLock();
+            }
         }
     }
 }
