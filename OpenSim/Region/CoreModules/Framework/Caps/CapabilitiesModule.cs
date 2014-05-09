@@ -31,6 +31,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using log4net;
 using Nini.Config;
 using Mono.Addins;
@@ -57,12 +58,15 @@ namespace OpenSim.Region.CoreModules.Framework
         /// <summary>
         /// Each agent has its own capabilities handler.
         /// </summary>
-        protected Dictionary<UUID, Caps> m_capsObjects = new Dictionary<UUID, Caps>();
+        private Dictionary<UUID, Caps> m_capsObjects = new Dictionary<UUID, Caps>();
+        private ReaderWriterLock m_capsObjectsRwLock = new ReaderWriterLock();
         
-        protected Dictionary<UUID, string> m_capsPaths = new Dictionary<UUID, string>();
+        private Dictionary<UUID, string> m_capsPaths = new Dictionary<UUID, string>();
+        private ReaderWriterLock m_capsPathsRwLock = new ReaderWriterLock();
 
-        protected Dictionary<UUID, Dictionary<ulong, string>> m_childrenSeeds 
+        private Dictionary<UUID, Dictionary<ulong, string>> m_childrenSeeds 
             = new Dictionary<UUID, Dictionary<ulong, string>>();
+        private ReaderWriterLock m_childrenSeedsRwLock = new ReaderWriterLock();
         
         public void Initialise(IConfigSource source)
         {
@@ -126,7 +130,8 @@ namespace OpenSim.Region.CoreModules.Framework
             Caps caps;
             String capsObjectPath = GetCapsPath(agentId);
 
-            lock (m_capsObjects)
+            m_capsObjectsRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (m_capsObjects.ContainsKey(agentId))
                 {
@@ -147,6 +152,10 @@ namespace OpenSim.Region.CoreModules.Framework
 
                 m_capsObjects[agentId] = caps;
             }
+            finally
+            {
+                m_capsObjectsRwLock.ReleaseWriterLock();
+            }
 
             m_scene.EventManager.TriggerOnRegisterCaps(agentId, caps);
         }
@@ -154,15 +163,21 @@ namespace OpenSim.Region.CoreModules.Framework
         public void RemoveCaps(UUID agentId)
         {
             m_log.DebugFormat("[CAPS]: Remove caps for agent {0} in region {1}", agentId, m_scene.RegionInfo.RegionName);
-            lock (m_childrenSeeds)
+            m_childrenSeedsRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (m_childrenSeeds.ContainsKey(agentId))
                 {
                     m_childrenSeeds.Remove(agentId);
                 }
             }
+            finally
+            {
+                m_childrenSeedsRwLock.ReleaseWriterLock();
+            }
 
-            lock (m_capsObjects)
+            m_capsObjectsRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (m_capsObjects.ContainsKey(agentId))
                 {
@@ -177,16 +192,25 @@ namespace OpenSim.Region.CoreModules.Framework
                         agentId, m_scene.RegionInfo.RegionName);
                 }
             }
+            finally
+            {
+                m_capsObjectsRwLock.ReleaseWriterLock();
+            }
         }
         
         public Caps GetCapsForUser(UUID agentId)
         {
-            lock (m_capsObjects)
+            m_capsObjectsRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_capsObjects.ContainsKey(agentId))
                 {
                     return m_capsObjects[agentId];
                 }
+            }
+            finally
+            {
+                m_capsObjectsRwLock.ReleaseReaderLock();
             }
             
             return null;
@@ -194,22 +218,41 @@ namespace OpenSim.Region.CoreModules.Framework
         
         public void SetAgentCapsSeeds(AgentCircuitData agent)
         {
-            lock (m_capsPaths)
+            m_capsPathsRwLock.AcquireWriterLock(-1);
+            try
+            {
                 m_capsPaths[agent.AgentID] = agent.CapsPath;
+            }
+            finally
+            {
+                m_capsPathsRwLock.ReleaseWriterLock();
+            }
 
-            lock (m_childrenSeeds)
-                m_childrenSeeds[agent.AgentID] 
+            m_childrenSeedsRwLock.AcquireWriterLock(-1);
+            try
+            {
+                m_childrenSeeds[agent.AgentID]
                     = ((agent.ChildrenCapSeeds == null) ? new Dictionary<ulong, string>() : agent.ChildrenCapSeeds);
+            }
+            finally
+            {
+                m_childrenSeedsRwLock.ReleaseWriterLock();
+            }
         }
         
         public string GetCapsPath(UUID agentId)
         {
-            lock (m_capsPaths)
+            m_capsPathsRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_capsPaths.ContainsKey(agentId))
                 {
                     return m_capsPaths[agentId];
                 }
+            }
+            finally
+            {
+                m_capsPathsRwLock.ReleaseReaderLock();
             }
 
             return null;
@@ -219,9 +262,16 @@ namespace OpenSim.Region.CoreModules.Framework
         {
             Dictionary<ulong, string> seeds = null;
 
-            lock (m_childrenSeeds)
+            m_childrenSeedsRwLock.AcquireReaderLock(-1);
+            try
+            {
                 if (m_childrenSeeds.TryGetValue(agentID, out seeds))
                     return seeds;
+            }
+            finally
+            {
+                m_childrenSeedsRwLock.ReleaseReaderLock();
+            }
 
             return new Dictionary<ulong, string>();
         }
@@ -230,12 +280,17 @@ namespace OpenSim.Region.CoreModules.Framework
         {
             Dictionary<ulong, string> seeds;
 
-            lock (m_childrenSeeds)
+            m_childrenSeedsRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (m_childrenSeeds.TryGetValue(agentID, out seeds))
                 {
                     seeds.Remove(handle);
                 }
+            }
+            finally
+            {
+                m_childrenSeedsRwLock.ReleaseWriterLock();
             }
         }
 
@@ -244,13 +299,18 @@ namespace OpenSim.Region.CoreModules.Framework
             Dictionary<ulong, string> seeds;
             string returnval;
 
-            lock (m_childrenSeeds)
+            m_childrenSeedsRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_childrenSeeds.TryGetValue(agentID, out seeds))
                 {
                     if (seeds.TryGetValue(handle, out returnval))
                         return returnval;
                 }
+            }
+            finally
+            {
+                m_childrenSeedsRwLock.ReleaseReaderLock();
             }
 
             return null;
@@ -260,15 +320,23 @@ namespace OpenSim.Region.CoreModules.Framework
         {
             //m_log.DebugFormat(" !!! Setting child seeds in {0} to {1}", m_scene.RegionInfo.RegionName, seeds.Count);
 
-            lock (m_childrenSeeds)
+            m_childrenSeedsRwLock.AcquireWriterLock(-1);
+            try
+            {
                 m_childrenSeeds[agentID] = seeds;
+            }
+            finally
+            {
+                m_childrenSeedsRwLock.ReleaseWriterLock();
+            }
         }
 
         public void DumpChildrenSeeds(UUID agentID)
         {
             m_log.Info("================ ChildrenSeed "+m_scene.RegionInfo.RegionName+" ================");
 
-            lock (m_childrenSeeds)
+            m_childrenSeedsRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (KeyValuePair<ulong, string> kvp in m_childrenSeeds[agentID])
                 {
@@ -276,6 +344,10 @@ namespace OpenSim.Region.CoreModules.Framework
                     Util.RegionHandleToRegionLoc(kvp.Key, out x, out y);
                     m_log.Info(" >> "+x+", "+y+": "+kvp.Value);
                 }
+            }
+            finally
+            {
+                m_childrenSeedsRwLock.ReleaseReaderLock();
             }
         }
 
@@ -287,7 +359,8 @@ namespace OpenSim.Region.CoreModules.Framework
             StringBuilder capsReport = new StringBuilder();
             capsReport.AppendFormat("Region {0}:\n", m_scene.RegionInfo.RegionName);
 
-            lock (m_capsObjects)
+            m_capsObjectsRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (KeyValuePair<UUID, Caps> kvp in m_capsObjects)
                 {
@@ -306,6 +379,10 @@ namespace OpenSim.Region.CoreModules.Framework
                     foreach (KeyValuePair<string, string> kvp3 in caps.ExternalCapsHandlers)
                         capsReport.AppendFormat(m_showCapsCommandFormat, kvp3.Key, kvp3.Value);
                 }
+            }
+            finally
+            {
+                m_capsObjectsRwLock.ReleaseReaderLock();
             }
 
             MainConsole.Instance.Output(capsReport.ToString());
