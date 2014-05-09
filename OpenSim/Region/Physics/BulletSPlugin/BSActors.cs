@@ -27,6 +27,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 
 namespace OpenSim.Region.Physics.BulletSPlugin
 {
@@ -34,6 +35,7 @@ public class BSActorCollection
 {
     private BSScene m_physicsScene { get; set; }
     private Dictionary<string, BSActor> m_actors;
+    private ReaderWriterLock m_actorsRwLock = new ReaderWriterLock();
 
     public BSActorCollection(BSScene physicsScene)
     {
@@ -42,18 +44,24 @@ public class BSActorCollection
     }
     public void Add(string name, BSActor actor)
     {
-        lock (m_actors)
+        m_actorsRwLock.AcquireWriterLock(-1);
+        try
         {
             if (!m_actors.ContainsKey(name))
             {
                 m_actors[name] = actor;
             }
         }
+        finally
+        {
+            m_actorsRwLock.ReleaseWriterLock();
+        }
     }
     public bool RemoveAndRelease(string name)
     {
         bool ret = false;
-        lock (m_actors)
+        m_actorsRwLock.AcquireWriterLock(-1);
+        try
         {
             if (m_actors.ContainsKey(name))
             {
@@ -63,14 +71,23 @@ public class BSActorCollection
                 ret = true;
             }
         }
+        finally
+        {
+            m_actorsRwLock.ReleaseWriterLock();
+        }
         return ret;
     }
     public void Clear()
     {
-        lock (m_actors)
+        m_actorsRwLock.AcquireWriterLock(-1);
+        try
         {
             ForEachActor(a => a.Dispose());
             m_actors.Clear();
+        }
+        finally
+        {
+            m_actorsRwLock.ReleaseWriterLock();
         }
     }
     public void Dispose()
@@ -79,18 +96,39 @@ public class BSActorCollection
     }
     public bool HasActor(string name)
     {
-        return m_actors.ContainsKey(name);
+        m_actorsRwLock.AcquireReaderLock(-1);
+        try
+        {
+            return m_actors.ContainsKey(name);
+        }
+        finally
+        {
+            m_actorsRwLock.ReleaseReaderLock();
+        }
     }
     public bool TryGetActor(string actorName, out BSActor theActor)
     {
-        return m_actors.TryGetValue(actorName, out theActor);
+        m_actorsRwLock.AcquireReaderLock(-1);
+        try
+        {
+            return m_actors.TryGetValue(actorName, out theActor);
+        }
+        finally
+        {
+            m_actorsRwLock.ReleaseReaderLock();
+        }
     }
     public void ForEachActor(Action<BSActor> act)
     {
-        lock (m_actors)
+        m_actorsRwLock.AcquireReaderLock(-1);
+        try
         {
             foreach (KeyValuePair<string, BSActor> kvp in m_actors)
                 act(kvp.Value);
+        }
+        finally
+        {
+            m_actorsRwLock.ReleaseReaderLock();
         }
     }
 

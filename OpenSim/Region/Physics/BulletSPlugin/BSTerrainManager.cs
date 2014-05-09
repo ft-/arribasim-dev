@@ -27,6 +27,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 
 using OpenSim.Framework;
 using OpenSim.Region.Framework;
@@ -94,6 +95,7 @@ public sealed class BSTerrainManager : IDisposable
     // If doing mega-regions, if we're region zero we will be managing multiple
     //    region terrains since region zero does the physics for the whole mega-region.
     private Dictionary<Vector3, BSTerrainPhys> m_terrains;
+    private ReaderWriterLock m_terrainsRwLock = new ReaderWriterLock();
 
     // Flags used to know when to recalculate the height.
     private bool m_terrainModified = false;
@@ -151,10 +153,15 @@ public sealed class BSTerrainManager : IDisposable
         m_physicsScene.PE.ForceActivationState(m_groundPlane, ActivationState.DISABLE_SIMULATION);
 
         BSTerrainPhys initialTerrain = new BSTerrainHeightmap(m_physicsScene, Vector3.Zero, BSScene.TERRAIN_ID, DefaultRegionSize);
-        lock (m_terrains)
+        m_terrainsRwLock.AcquireWriterLock(-1);
+        try
         {
             // Build an initial terrain and put it in the world. This quickly gets replaced by the real region terrain.
             m_terrains.Add(Vector3.Zero, initialTerrain);
+        }
+        finally
+        {
+            m_terrainsRwLock.ReleaseWriterLock();
         }
     }
 
@@ -177,13 +184,18 @@ public sealed class BSTerrainManager : IDisposable
     // Release all the terrain we have allocated
     public void ReleaseTerrain()
     {
-        lock (m_terrains)
+        m_terrainsRwLock.AcquireWriterLock(-1);
+        try
         {
             foreach (KeyValuePair<Vector3, BSTerrainPhys> kvp in m_terrains)
             {
                 kvp.Value.Dispose();
             }
             m_terrains.Clear();
+        }
+        finally
+        {
+            m_terrainsRwLock.ReleaseWriterLock();
         }
     }
 
@@ -264,7 +276,8 @@ public sealed class BSTerrainManager : IDisposable
 
         Vector3 terrainRegionBase = new Vector3(minCoords.X, minCoords.Y, 0f);
 
-        lock (m_terrains)
+        m_terrainsRwLock.AcquireReaderLock(-1);
+        try
         {
             BSTerrainPhys terrainPhys;
             if (m_terrains.TryGetValue(terrainRegionBase, out terrainPhys))
@@ -282,7 +295,15 @@ public sealed class BSTerrainManager : IDisposable
                 {
                     // This terrain is not part of the mega-region scheme. Create vanilla terrain.
                     BSTerrainPhys newTerrainPhys = BuildPhysicalTerrain(terrainRegionBase, id, heightMap, minCoords, maxCoords);
-                    m_terrains.Add(terrainRegionBase, newTerrainPhys);
+                    LockCookie lc = m_terrainsRwLock.UpgradeToWriterLock(-1);
+                    try
+                    {
+                        m_terrains.Add(terrainRegionBase, newTerrainPhys);
+                    }
+                    finally
+                    {
+                        m_terrainsRwLock.DowngradeFromWriterLock(ref lc);
+                    }
 
                     m_terrainModified = true;
                 }
@@ -316,6 +337,10 @@ public sealed class BSTerrainManager : IDisposable
 
                 m_terrainModified = true;
             }
+        }
+        finally
+        {
+            m_terrainsRwLock.ReleaseReaderLock();
         }
     }
 
@@ -492,9 +517,14 @@ public sealed class BSTerrainManager : IDisposable
         }
 
         BSTerrainPhys physTerrain = null;
-        lock (m_terrains)
+        m_terrainsRwLock.AcquireReaderLock(-1);
+        try
         {
             ret = m_terrains.TryGetValue(terrainBaseXYZ, out physTerrain);
+        }
+        finally
+        {
+            m_terrainsRwLock.ReleaseReaderLock();
         }
         outTerrainBase = terrainBaseXYZ;
         outPhysTerrain = physTerrain;
@@ -516,7 +546,8 @@ public sealed class BSTerrainManager : IDisposable
         ret.Y = Util.Clamp<float>(ret.Y, 0f, 1000000f);
         ret.Z = 0f;
 
-        lock (m_terrains)
+        m_terrainsRwLock.AcquireReaderLock(-1);
+        try
         {
             // Once down to the <0,0> region, we have to be done.
             while (ret.X > 0f || ret.Y > 0f)
@@ -536,6 +567,10 @@ public sealed class BSTerrainManager : IDisposable
                         break;
                 }
             }
+        }
+        finally
+        {
+            m_terrainsRwLock.ReleaseReaderLock();
         }
 
         return ret;

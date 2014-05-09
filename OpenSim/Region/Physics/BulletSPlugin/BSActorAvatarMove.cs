@@ -316,28 +316,36 @@ public class BSActorAvatarMove : BSActor
                 if (kvp.Key > m_physicsScene.TerrainManager.HighestTerrainID)
                 {
                     BSPhysObject collisionObject;
-                    if (m_physicsScene.PhysObjects.TryGetValue(kvp.Key, out collisionObject))
+                    m_physicsScene.PhysObjectsRwLock.AcquireReaderLock(-1);
+                    try
                     {
-                        if (!collisionObject.IsVolumeDetect)
+                        if (m_physicsScene.PhysObjects.TryGetValue(kvp.Key, out collisionObject))
                         {
-                            OMV.Vector3 touchPosition = kvp.Value.Position;
-                            m_physicsScene.DetailLog("{0},BSCharacter.WalkUpStairs,min={1},max={2},touch={3}",
-                                            m_controllingPrim.LocalID, nearFeetHeightMin, nearFeetHeightMax, touchPosition);
-                            if (touchPosition.Z >= nearFeetHeightMin && touchPosition.Z <= nearFeetHeightMax)
+                            if (!collisionObject.IsVolumeDetect)
                             {
-                                // This contact is within the 'near the feet' range.
-                                // The normal should be our contact point to the object so it is pointing away
-                                //    thus the difference between our facing orientation and the normal should be small.
-                                OMV.Vector3 directionFacing = OMV.Vector3.UnitX * m_controllingPrim.RawOrientation;
-                                OMV.Vector3 touchNormal = OMV.Vector3.Normalize(kvp.Value.SurfaceNormal);
-                                float diff = Math.Abs(OMV.Vector3.Distance(directionFacing, touchNormal));
-                                if (diff < BSParam.AvatarStepApproachFactor)
+                                OMV.Vector3 touchPosition = kvp.Value.Position;
+                                m_physicsScene.DetailLog("{0},BSCharacter.WalkUpStairs,min={1},max={2},touch={3}",
+                                                m_controllingPrim.LocalID, nearFeetHeightMin, nearFeetHeightMax, touchPosition);
+                                if (touchPosition.Z >= nearFeetHeightMin && touchPosition.Z <= nearFeetHeightMax)
                                 {
-                                    if (highestTouchPosition.Z < touchPosition.Z)
-                                        highestTouchPosition = touchPosition;
+                                    // This contact is within the 'near the feet' range.
+                                    // The normal should be our contact point to the object so it is pointing away
+                                    //    thus the difference between our facing orientation and the normal should be small.
+                                    OMV.Vector3 directionFacing = OMV.Vector3.UnitX * m_controllingPrim.RawOrientation;
+                                    OMV.Vector3 touchNormal = OMV.Vector3.Normalize(kvp.Value.SurfaceNormal);
+                                    float diff = Math.Abs(OMV.Vector3.Distance(directionFacing, touchNormal));
+                                    if (diff < BSParam.AvatarStepApproachFactor)
+                                    {
+                                        if (highestTouchPosition.Z < touchPosition.Z)
+                                            highestTouchPosition = touchPosition;
+                                    }
                                 }
                             }
                         }
+                    }
+                    finally
+                    {
+                        m_physicsScene.PhysObjectsRwLock.ReleaseReaderLock();
                     }
                 }
             }

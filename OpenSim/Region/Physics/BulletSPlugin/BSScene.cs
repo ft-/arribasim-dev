@@ -60,6 +60,8 @@ public sealed class BSScene : PhysicsScene, IPhysicsParameters
     public Thread m_physicsThread;
 
     public Dictionary<uint, BSPhysObject> PhysObjects;
+    public ReaderWriterLock PhysObjectsRwLock;
+
     public BSShapeCollection Shapes;
 
     // Keeping track of the objects with collisions so we can report begin and end of a collision
@@ -76,6 +78,7 @@ public sealed class BSScene : PhysicsScene, IPhysicsParameters
     // Keep track of all the avatars so we can send them a collision event
     //    every tick so OpenSim will update its animation.
     private HashSet<BSPhysObject> m_avatars = new HashSet<BSPhysObject>();
+    private ReaderWriterLock m_avatarsRwLock = new ReaderWriterLock();
 
     // let my minuions use my logger
     public ILog Logger { get { return m_log; } }
@@ -415,11 +418,19 @@ public sealed class BSScene : PhysicsScene, IPhysicsParameters
         // make sure no stepping happens while we're deleting stuff
         m_initialized = false;
 
-        foreach (KeyValuePair<uint, BSPhysObject> kvp in PhysObjects)
+        PhysObjectsRwLock.AcquireWriterLock(-1);
+        try
         {
-            kvp.Value.Destroy();
+            foreach (KeyValuePair<uint, BSPhysObject> kvp in PhysObjects)
+            {
+                kvp.Value.Destroy();
+            }
+            PhysObjects.Clear();
         }
-        PhysObjects.Clear();
+        finally
+        {
+            PhysObjectsRwLock.ReleaseWriterLock();
+        }
 
         // Now that the prims are all cleaned up, there should be no constraints left
         if (Constraints != null)
@@ -464,14 +475,28 @@ public sealed class BSScene : PhysicsScene, IPhysicsParameters
         if (!m_initialized) return null;
 
         BSCharacter actor = new BSCharacter(localID, avName, this, position, size, isFlying);
-        lock (PhysObjects)
+        PhysObjectsRwLock.AcquireWriterLock(-1);
+        try
+        {
             PhysObjects.Add(localID, actor);
+        }
+        finally
+        {
+            PhysObjectsRwLock.ReleaseWriterLock();
+        }
 
         // TODO: Remove kludge someday.
         // We must generate a collision for avatars whether they collide or not.
         // This is required by OpenSim to update avatar animations, etc.
-        lock (m_avatars)
+        m_avatarsRwLock.AcquireWriterLock(-1);
+        try
+        {
             m_avatars.Add(actor);
+        }
+        finally
+        {
+            m_avatarsRwLock.ReleaseWriterLock();
+        }
 
         return actor;
     }
@@ -487,11 +512,25 @@ public sealed class BSScene : PhysicsScene, IPhysicsParameters
         {
             try
             {
-                lock (PhysObjects)
+                PhysObjectsRwLock.AcquireWriterLock(-1);
+                try
+                {
                     PhysObjects.Remove(bsactor.LocalID);
+                }
+                finally
+                {
+                    PhysObjectsRwLock.ReleaseWriterLock();
+                }
                 // Remove kludge someday
-                lock (m_avatars)
+                m_avatarsRwLock.AcquireWriterLock(-1);
+                try
+                {
                     m_avatars.Remove(bsactor);
+                }
+                finally
+                {
+                    m_avatarsRwLock.ReleaseWriterLock();
+                }
             }
             catch (Exception e)
             {
@@ -518,7 +557,15 @@ public sealed class BSScene : PhysicsScene, IPhysicsParameters
             // m_log.DebugFormat("{0}: RemovePrim. id={1}/{2}", LogHeader, bsprim.Name, bsprim.LocalID);
             try
             {
-                lock (PhysObjects) PhysObjects.Remove(bsprim.LocalID);
+                PhysObjectsRwLock.AcquireWriterLock(-1);
+                try
+                {
+                    PhysObjects.Remove(bsprim.LocalID);
+                }
+                finally
+                {
+                    PhysObjectsRwLock.ReleaseWriterLock();
+                }
             }
             catch (Exception e)
             {
@@ -543,7 +590,15 @@ public sealed class BSScene : PhysicsScene, IPhysicsParameters
         // DetailLog("{0},BSScene.AddPrimShape,call", localID);
 
         BSPhysObject prim = new BSPrimLinkable(localID, primName, this, position, size, rotation, pbs, isPhysical);
-        lock (PhysObjects) PhysObjects.Add(localID, prim);
+        PhysObjectsRwLock.AcquireWriterLock(-1);
+        try
+        {
+            PhysObjects.Add(localID, prim);
+        }
+        finally
+        {
+            PhysObjectsRwLock.ReleaseWriterLock();
+        }
         return prim;
     }
 
@@ -662,10 +717,18 @@ public sealed class BSScene : PhysicsScene, IPhysicsParameters
                 {
                     EntityProperties entprop = m_updateArray[ii];
                     BSPhysObject pobj;
-                    if (PhysObjects.TryGetValue(entprop.ID, out pobj))
+                    PhysObjectsRwLock.AcquireReaderLock(-1);
+                    try
                     {
-                        if (pobj.IsInitialized)
-                            pobj.UpdateProperties(entprop);
+                        if (PhysObjects.TryGetValue(entprop.ID, out pobj))
+                        {
+                            if (pobj.IsInitialized)
+                                pobj.UpdateProperties(entprop);
+                        }
+                    }
+                    finally
+                    {
+                        PhysObjectsRwLock.ReleaseReaderLock();
                     }
                 }
             }
@@ -727,9 +790,17 @@ public sealed class BSScene : PhysicsScene, IPhysicsParameters
             // The simulator expects collisions for avatars even if there are have been no collisions.
             //    The event updates avatar animations and stuff.
             // If you fix avatar animation updates, remove this overhead and let normal collision processing happen.
-            foreach (BSPhysObject bsp in m_avatars)
-                if (!ObjectsWithCollisions.Contains(bsp))   // don't call avatars twice
-                    bsp.SendCollisions();
+            m_avatarsRwLock.AcquireReaderLock(-1);
+            try
+            {
+                foreach (BSPhysObject bsp in m_avatars)
+                    if (!ObjectsWithCollisions.Contains(bsp))   // don't call avatars twice
+                        bsp.SendCollisions();
+            }
+            finally
+            {
+                m_avatarsRwLock.ReleaseReaderLock();
+            }
 
             // Objects that are done colliding are removed from the ObjectsWithCollisions list.
             // Not done above because it is inside an iteration of ObjectWithCollisions.
@@ -779,16 +850,24 @@ public sealed class BSScene : PhysicsScene, IPhysicsParameters
         }
 
         BSPhysObject collider;
-        if (!PhysObjects.TryGetValue(localID, out collider))
-        {
-            // If the object that is colliding cannot be found, just ignore the collision.
-            DetailLog("{0},BSScene.SendCollision,colliderNotInObjectList,id={1},with={2}", DetailLogZero, localID, collidingWith);
-            return;
-        }
-
-        // Note: the terrain is not in the physical object list so 'collidee' can be null when Collide() is called.
         BSPhysObject collidee = null;
-        PhysObjects.TryGetValue(collidingWith, out collidee);
+        PhysObjectsRwLock.AcquireReaderLock(-1);
+        try
+        {
+            if (!PhysObjects.TryGetValue(localID, out collider))
+            {
+                // If the object that is colliding cannot be found, just ignore the collision.
+                DetailLog("{0},BSScene.SendCollision,colliderNotInObjectList,id={1},with={2}", DetailLogZero, localID, collidingWith);
+                return;
+            }
+
+            // Note: the terrain is not in the physical object list so 'collidee' can be null when Collide() is called.
+            PhysObjects.TryGetValue(collidingWith, out collidee);
+        }
+        finally
+        {
+            PhysObjectsRwLock.ReleaseReaderLock();
+        }
 
         // DetailLog("{0},BSScene.SendCollision,collide,id={1},with={2}", DetailLogZero, localID, collidingWith);
 
@@ -874,7 +953,8 @@ public sealed class BSScene : PhysicsScene, IPhysicsParameters
     {
         Dictionary<uint, float> topColliders;
 
-        lock (PhysObjects)
+        PhysObjectsRwLock.AcquireReaderLock(-1);
+        try
         {
             foreach (KeyValuePair<uint, BSPhysObject> kvp in PhysObjects)
             {
@@ -884,6 +964,10 @@ public sealed class BSScene : PhysicsScene, IPhysicsParameters
             List<BSPhysObject> orderedPrims = new List<BSPhysObject>(PhysObjects.Values);
             orderedPrims.OrderByDescending(p => p.CollisionScore);
             topColliders = orderedPrims.Take(25).ToDictionary(p => p.LocalID, p => p.CollisionScore);
+        }
+        finally
+        {
+            PhysObjectsRwLock.ReleaseReaderLock();
         }
 
         return topColliders;
@@ -1096,7 +1180,15 @@ public sealed class BSScene : PhysicsScene, IPhysicsParameters
                         TaintedUpdateParameter(parm, objectIDs, val);
                         break;
                     case PhysParameterEntry.APPLY_TO_ALL:
-                        lock (PhysObjects) objectIDs = new List<uint>(PhysObjects.Keys);
+                        PhysObjectsRwLock.AcquireReaderLock(-1);
+                        try
+                        {
+                            objectIDs = new List<uint>(PhysObjects.Keys);
+                        }
+                        finally
+                        {
+                            PhysObjectsRwLock.ReleaseReaderLock();
+                        }
                         TaintedUpdateParameter(parm, objectIDs, val);
                         break;
                     default:
@@ -1127,8 +1219,16 @@ public sealed class BSScene : PhysicsScene, IPhysicsParameters
                     foreach (uint lID in xlIDs)
                     {
                         BSPhysObject theObject = null;
-                        if (PhysObjects.TryGetValue(lID, out theObject))
-                            thisParam.SetOnObject(this, theObject);
+                        PhysObjectsRwLock.AcquireReaderLock(-1);
+                        try
+                        {
+                            if (PhysObjects.TryGetValue(lID, out theObject))
+                                thisParam.SetOnObject(this, theObject);
+                        }
+                        finally
+                        {
+                            PhysObjectsRwLock.ReleaseReaderLock();
+                        }
                     }
                 }
             }

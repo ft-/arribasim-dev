@@ -25,6 +25,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 using System;
+using System.Threading;
 using System.Collections.Generic;
 using System.Text;
 
@@ -99,7 +100,7 @@ public abstract class BSLinkset
     // We lock the diddling of linkset classes to prevent any badness.
     // This locks the modification of the instances of this class. Changes
     //    to the physical representation is done via the tainting mechenism.
-    protected object m_linksetActivityLock = new Object();
+    protected ReaderWriterLock m_linksetActivityLock = new ReaderWriterLock();
 
     // We keep the prim's mass in the linkset structure since it could be dependent on other prims
     public float LinksetMass { get; protected set; }
@@ -138,12 +139,17 @@ public abstract class BSLinkset
     // Called at runtime.
     public BSLinkset AddMeToLinkset(BSPrimLinkable child)
     {
-        lock (m_linksetActivityLock)
+        m_linksetActivityLock.AcquireWriterLock(-1);
+        try
         {
             // Don't add the root to its own linkset
             if (!IsRoot(child))
                 AddChildToLinkset(child);
             LinksetMass = ComputeLinksetMass();
+        }
+        finally
+        {
+            m_linksetActivityLock.ReleaseWriterLock();
         }
         return this;
     }
@@ -154,7 +160,8 @@ public abstract class BSLinkset
     // Called at runtime.
     public BSLinkset RemoveMeFromLinkset(BSPrimLinkable child, bool inTaintTime)
     {
-        lock (m_linksetActivityLock)
+        m_linksetActivityLock.AcquireWriterLock(-1);
+        try
         {
             if (IsRoot(child))
             {
@@ -163,6 +170,10 @@ public abstract class BSLinkset
             }
             RemoveChildFromLinkset(child, inTaintTime);
             LinksetMass = ComputeLinksetMass();
+        }
+        finally
+        {
+            m_linksetActivityLock.ReleaseWriterLock();
         }
 
         // The child is down to a linkset of just itself
@@ -183,21 +194,24 @@ public abstract class BSLinkset
     // Return 'true' if this child is in this linkset
     public bool HasChild(BSPrimLinkable child)
     {
-        bool ret = false;
-        lock (m_linksetActivityLock)
+        m_linksetActivityLock.AcquireReaderLock(-1);
+        try
         {
-            ret = m_children.ContainsKey(child);
+            return m_children.ContainsKey(child);
         }
-        return ret;
+        finally
+        {
+            m_linksetActivityLock.ReleaseReaderLock();
+        }
     }
 
     // Perform an action on each member of the linkset including root prim.
     // Depends on the action on whether this should be done at taint time.
     public delegate bool ForEachMemberAction(BSPrimLinkable obj);
-    public virtual bool ForEachMember(ForEachMemberAction action)
+    public virtual void ForEachMember(ForEachMemberAction action)
     {
-        bool ret = false;
-        lock (m_linksetActivityLock)
+        m_linksetActivityLock.AcquireReaderLock(-1);
+        try
         {
             action(LinksetRoot);
             foreach (BSPrimLinkable po in m_children.Keys)
@@ -206,27 +220,31 @@ public abstract class BSLinkset
                     break;
             }
         }
-        return ret;
+        finally
+        {
+            m_linksetActivityLock.ReleaseReaderLock();
+        }
     }
 
     public bool TryGetLinkInfo(BSPrimLinkable child, out BSLinkInfo foundInfo)
     {
-        bool ret = false;
-        BSLinkInfo found = null;
-        lock (m_linksetActivityLock)
+        m_linksetActivityLock.AcquireReaderLock(-1);
+        try
         {
-            ret = m_children.TryGetValue(child, out found);
+            return m_children.TryGetValue(child, out foundInfo);
         }
-        foundInfo = found;
-        return ret;
+        finally
+        {
+            m_linksetActivityLock.ReleaseReaderLock();
+        }
     }
     // Perform an action on each member of the linkset including root prim.
     // Depends on the action on whether this should be done at taint time.
     public delegate bool ForEachLinkInfoAction(BSLinkInfo obj);
-    public virtual bool ForEachLinkInfo(ForEachLinkInfoAction action)
+    public virtual void ForEachLinkInfo(ForEachLinkInfoAction action)
     {
-        bool ret = false;
-        lock (m_linksetActivityLock)
+        m_linksetActivityLock.AcquireReaderLock(-1);
+        try
         {
             foreach (BSLinkInfo po in m_children.Values)
             {
@@ -234,7 +252,10 @@ public abstract class BSLinkset
                     break;
             }
         }
-        return ret;
+        finally
+        {
+            m_linksetActivityLock.ReleaseReaderLock();
+        }
     }
 
     // Check the type of the link and return 'true' if the link is flexible and the
@@ -411,12 +432,17 @@ public abstract class BSLinkset
         float mass = LinksetRoot.RawMass;
         if (HasAnyChildren)
         {
-            lock (m_linksetActivityLock)
+            m_linksetActivityLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (BSPrimLinkable bp in m_children.Keys)
                 {
                     mass += bp.RawMass;
                 }
+            }
+            finally
+            {
+                m_linksetActivityLock.ReleaseReaderLock();
             }
         }
         return mass;
@@ -426,7 +452,8 @@ public abstract class BSLinkset
     protected virtual OMV.Vector3 ComputeLinksetCenterOfMass()
     {
         OMV.Vector3 com;
-        lock (m_linksetActivityLock)
+        m_linksetActivityLock.AcquireReaderLock(-1);
+        try
         {
             com = LinksetRoot.Position * LinksetRoot.RawMass;
             float totalMass = LinksetRoot.RawMass;
@@ -439,6 +466,10 @@ public abstract class BSLinkset
             if (totalMass != 0f)
                 com /= totalMass;
         }
+        finally
+        {
+            m_linksetActivityLock.ReleaseReaderLock();
+        }
 
         return com;
     }
@@ -446,7 +477,8 @@ public abstract class BSLinkset
     protected virtual OMV.Vector3 ComputeLinksetGeometricCenter()
     {
         OMV.Vector3 com;
-        lock (m_linksetActivityLock)
+        m_linksetActivityLock.AcquireReaderLock(-1);
+        try
         {
             com = LinksetRoot.Position;
 
@@ -455,6 +487,10 @@ public abstract class BSLinkset
                 com += bp.Position;
             }
             com /= (m_children.Count + 1);
+        }
+        finally
+        {
+            m_linksetActivityLock.ReleaseReaderLock();
         }
 
         return com;
