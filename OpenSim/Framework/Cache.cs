@@ -28,6 +28,7 @@
 using System;
 using System.Collections.Generic;
 using OpenMetaverse;
+using System.Threading;
 
 namespace OpenSim.Framework
 {
@@ -203,6 +204,7 @@ namespace OpenSim.Framework
         /// Must only be accessed under lock.
         /// </summary>
         private List<CacheItemBase> m_Index = new List<CacheItemBase>();
+        private ReaderWriterLock m_IndexRwLock = new ReaderWriterLock();
 
         /// <summary>
         /// Must only be accessed under m_Index lock.
@@ -280,7 +282,17 @@ namespace OpenSim.Framework
         //
         public int Count
         {
-            get { lock (m_Index) { return m_Index.Count; } }
+            get {
+                m_IndexRwLock.AcquireReaderLock(-1);
+                try
+                { 
+                    return m_Index.Count; 
+                }
+                finally
+                {
+                    m_IndexRwLock.ReleaseReaderLock();
+                }
+            }
         }
 
         // Maximum number of items this cache will hold
@@ -293,7 +305,8 @@ namespace OpenSim.Framework
 
         private void SetSize(int newSize)
         {
-            lock (m_Index)
+            m_IndexRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (Count <= Size)
                     return;
@@ -309,6 +322,10 @@ namespace OpenSim.Framework
                 foreach (CacheItemBase item in m_Index)
                     m_Lookup[item.uuid] = item;
             }
+            finally
+            {
+                m_IndexRwLock.ReleaseWriterLock();
+            }
         }
 
         public TimeSpan DefaultTTL
@@ -323,21 +340,44 @@ namespace OpenSim.Framework
         {
             CacheItemBase item = null;
 
-            lock (m_Index)
+            m_IndexRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_Lookup.ContainsKey(index))
                     item = m_Lookup[index];
 
                 if (item == null)
                 {
-                    Expire(true);
+                    LockCookie lc = m_IndexRwLock.UpgradeToWriterLock(-1);
+                    try
+                    {
+                        Expire(true);
+                    }
+                    finally
+                    {
+                        m_IndexRwLock.DowngradeFromWriterLock(ref lc);
+                    }
                     return null;
                 }
-    
+
                 item.hits++;
                 item.lastUsed = DateTime.Now;
-    
-                Expire(true);
+
+                {
+                    LockCookie lc = m_IndexRwLock.UpgradeToWriterLock(-1);
+                    try
+                    {
+                        Expire(true);
+                    }
+                    finally
+                    {
+                        m_IndexRwLock.DowngradeFromWriterLock(ref lc);
+                    }
+                }
+            }
+            finally
+            {
+                m_IndexRwLock.ReleaseReaderLock();
             }
 
             return item;
@@ -370,7 +410,8 @@ namespace OpenSim.Framework
             {
                 if ((m_Flags & CacheFlags.CacheMissing) != 0)
                 {
-                    lock (m_Index)
+                    m_IndexRwLock.AcquireWriterLock(-1);
+                    try
                     {
                         CacheItemBase missing = new CacheItemBase(index);
                         if (!m_Index.Contains(missing))
@@ -378,6 +419,10 @@ namespace OpenSim.Framework
                             m_Index.Add(missing);
                             m_Lookup[index] = missing;
                         }
+                    }
+                    finally
+                    {
+                        m_IndexRwLock.ReleaseWriterLock();
                     }
                 }
                 return null;
@@ -394,8 +439,15 @@ namespace OpenSim.Framework
         {
             CacheItemBase item;
 
-            lock (m_Index)
+            m_IndexRwLock.AcquireReaderLock(-1);
+            try
+            {
                 item = m_Index.Find(d);
+            }
+            finally
+            {
+                m_IndexRwLock.ReleaseReaderLock();
+            }
 
             if (item == null)
                 return null;
@@ -431,7 +483,8 @@ namespace OpenSim.Framework
         {
             CacheItemBase item;
 
-            lock (m_Index)
+            m_IndexRwLock.AcquireWriterLock(-1);
+            try
             {
                 Expire(false);
 
@@ -459,6 +512,10 @@ namespace OpenSim.Framework
 
                 m_Index.Add(item);
                 m_Lookup[index] = item;
+            }
+            finally
+            {
+                m_IndexRwLock.ReleaseWriterLock();
             }
 
             item.Store(data);
@@ -539,7 +596,8 @@ namespace OpenSim.Framework
 
         public void Invalidate(string uuid)
         {
-            lock (m_Index)
+            m_IndexRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (!m_Lookup.ContainsKey(uuid))
                     return;
@@ -548,14 +606,23 @@ namespace OpenSim.Framework
                 m_Lookup.Remove(uuid);
                 m_Index.Remove(item);
             }
+            finally
+            {
+                m_IndexRwLock.ReleaseWriterLock();
+            }
         }
 
         public void Clear()
         {
-            lock (m_Index)
+            m_IndexRwLock.AcquireWriterLock(-1);
+            try
             {
                 m_Index.Clear();
                 m_Lookup.Clear();
+            }
+            finally
+            {
+                m_IndexRwLock.ReleaseWriterLock();
             }
         }
     }
