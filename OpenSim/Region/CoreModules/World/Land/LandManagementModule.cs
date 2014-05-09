@@ -31,6 +31,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using log4net;
 using Nini.Config;
 using OpenMetaverse;
@@ -90,6 +91,7 @@ namespace OpenSim.Region.CoreModules.World.Land
         /// Land objects keyed by local id
         /// </value>
         private readonly Dictionary<int, ILandObject> m_landList = new Dictionary<int, ILandObject>();
+        private ReaderWriterLock m_landListRwLock = new ReaderWriterLock();
 
         private int m_lastLandLocalID = LandChannel.START_LAND_LOCAL_ID - 1;
 
@@ -141,9 +143,14 @@ namespace OpenSim.Region.CoreModules.World.Land
             m_scene.EventManager.OnSetAllowForcefulBan += EventManagerOnSetAllowedForcefulBan;            
             m_scene.EventManager.OnRegisterCaps += EventManagerOnRegisterCaps;
 
-            lock (m_scene)
+            m_landListRwLock.AcquireWriterLock(-1);
+            try
             {
                 m_scene.LandChannel = (ILandChannel)landChannel;
+            }
+            finally
+            {
+                m_landListRwLock.ReleaseWriterLock();
             }
             
             RegisterCommands();
@@ -274,10 +281,15 @@ namespace OpenSim.Region.CoreModules.World.Land
             newData.LocalID = local_id;
 
             ILandObject land;
-            lock (m_landList)
+            m_landListRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_landList.TryGetValue(local_id, out land))
                     land.LandData = newData;
+            }
+            finally
+            {
+                m_landListRwLock.ReleaseReaderLock();
             }
 
             if (land != null)
@@ -296,11 +308,16 @@ namespace OpenSim.Region.CoreModules.World.Land
         public void ResetSimLandObjects()
         {
             //Remove all the land objects in the sim and add a blank, full sim land object set to public
-            lock (m_landList)
+            m_landListRwLock.AcquireWriterLock(-1);
+            try
             {
                 m_landList.Clear();
                 m_lastLandLocalID = LandChannel.START_LAND_LOCAL_ID - 1;
                 m_landIDList = new int[m_scene.RegionInfo.RegionSizeX / LandUnit, m_scene.RegionInfo.RegionSizeY / LandUnit];
+            }
+            finally
+            {
+                m_landListRwLock.ReleaseWriterLock();
             }
         }
         
@@ -324,9 +341,14 @@ namespace OpenSim.Region.CoreModules.World.Land
 
         public List<ILandObject> AllParcels()
         {
-            lock (m_landList)
+            m_landListRwLock.AcquireReaderLock(-1);
+            try
             {
                 return new List<ILandObject>(m_landList.Values);
+            }
+            finally
+            {
+                m_landListRwLock.ReleaseReaderLock();
             }
         }
 
@@ -385,9 +407,14 @@ namespace OpenSim.Region.CoreModules.World.Land
             if (m_scene.RegionInfo.RegionID == regionID)
             {
                 ILandObject parcelAvatarIsEntering;
-                lock (m_landList)
+                m_landListRwLock.AcquireReaderLock(-1);
+                try
                 {
                     parcelAvatarIsEntering = m_landList[localLandID];
+                }
+                finally
+                {
+                    m_landListRwLock.ReleaseReaderLock();
                 }
 
                 if (parcelAvatarIsEntering != null)
@@ -542,9 +569,14 @@ namespace OpenSim.Region.CoreModules.World.Land
                                                     int landLocalID, IClientAPI remote_client)
         {
             ILandObject land;
-            lock (m_landList)
+            m_landListRwLock.AcquireReaderLock(-1);
+            try
             {
                 m_landList.TryGetValue(landLocalID, out land);
+            }
+            finally
+            {
+                m_landListRwLock.ReleaseReaderLock();
             }
 
             if (land != null)
@@ -566,9 +598,14 @@ namespace OpenSim.Region.CoreModules.World.Land
             // packets may have come in out of sequence and that would be
             // a big mess if using the sequenceID
             ILandObject land;
-            lock (m_landList)
+            m_landListRwLock.AcquireReaderLock(-1);
+            try
             {
                 m_landList.TryGetValue(landLocalID, out land);
+            }
+            finally
+            {
+                m_landListRwLock.ReleaseReaderLock();
             }
 
             if (land != null)
@@ -606,7 +643,8 @@ namespace OpenSim.Region.CoreModules.World.Land
             if (m_primCountModule != null)
                 new_land.PrimCounts = m_primCountModule.GetPrimCounts(new_land.LandData.GlobalID);
 
-            lock (m_landList)
+            m_landListRwLock.AcquireWriterLock(-1);
+            try
             {
                 int newLandLocalID = m_lastLandLocalID + 1;
                 new_land.LandData.LocalID = newLandLocalID;
@@ -670,6 +708,10 @@ namespace OpenSim.Region.CoreModules.World.Land
                 m_landList.Add(newLandLocalID, new_land);
                 m_lastLandLocalID++;
             }
+            finally
+            {
+                m_landListRwLock.ReleaseWriterLock();
+            }
 
             new_land.ForceUpdateLandInfo();
             m_scene.EventManager.TriggerLandObjectAdded(new_land);
@@ -684,7 +726,8 @@ namespace OpenSim.Region.CoreModules.World.Land
         public void removeLandObject(int local_id)
         {
             ILandObject land;
-            lock (m_landList)
+            m_landListRwLock.AcquireWriterLock(-1);
+            try
             {
                 for (int x = 0; x < m_landIDList.GetLength(0); x++)
                 {
@@ -703,6 +746,10 @@ namespace OpenSim.Region.CoreModules.World.Land
                 land = m_landList[local_id];
                 m_landList.Remove(local_id);
             }
+            finally
+            {
+                m_landListRwLock.ReleaseWriterLock();
+            }
 
             m_scene.EventManager.TriggerLandObjectRemoved(land.LandData.GlobalID);
         }
@@ -713,22 +760,32 @@ namespace OpenSim.Region.CoreModules.World.Land
         public void Clear(bool setupDefaultParcel)
         {
             List<ILandObject> parcels;
-            lock (m_landList)
+            m_landListRwLock.AcquireReaderLock(-1);
+            try
             {
                 parcels = new List<ILandObject>(m_landList.Values);
+
+                foreach (ILandObject lo in parcels)
+                {
+                    //m_scene.SimulationDataService.RemoveLandObject(lo.LandData.GlobalID);
+                    m_scene.EventManager.TriggerLandObjectRemoved(lo.LandData.GlobalID);
+                }
+
+                LockCookie lc = m_landListRwLock.UpgradeToWriterLock(-1);
+                try
+                { 
+                    m_landList.Clear();
+
+                    ResetSimLandObjects();
+                }
+                finally
+                {
+                    m_landListRwLock.DowngradeFromWriterLock(ref lc);
+                }
             }
-
-            foreach (ILandObject lo in parcels)
+            finally
             {
-                //m_scene.SimulationDataService.RemoveLandObject(lo.LandData.GlobalID);
-                m_scene.EventManager.TriggerLandObjectRemoved(lo.LandData.GlobalID);
-            }
-
-            lock (m_landList)
-            {
-                m_landList.Clear();
-
-                ResetSimLandObjects();
+                m_landListRwLock.ReleaseReaderLock();
             }
             
             if (setupDefaultParcel)
@@ -738,7 +795,8 @@ namespace OpenSim.Region.CoreModules.World.Land
         private void performFinalLandJoin(ILandObject master, ILandObject slave)
         {
             bool[,] landBitmapSlave = slave.GetLandBitmap();
-            lock (m_landList)
+            m_landListRwLock.AcquireWriterLock(-1);
+            try
             {
                 for (int x = 0; x < landBitmapSlave.GetLength(0); x++)
                 {
@@ -751,6 +809,10 @@ namespace OpenSim.Region.CoreModules.World.Land
                     }
                 }
             }
+            finally
+            {
+                m_landListRwLock.ReleaseWriterLock();
+            }
 
             removeLandObject(slave.LandData.LocalID);
             UpdateLandObject(master.LandData.LocalID, master.LandData);
@@ -758,12 +820,17 @@ namespace OpenSim.Region.CoreModules.World.Land
 
         public ILandObject GetLandObject(int parcelLocalID)
         {
-            lock (m_landList)
+            m_landListRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_landList.ContainsKey(parcelLocalID))
                 {
                     return m_landList[parcelLocalID];
                 }
+            }
+            finally
+            {
+                m_landListRwLock.ReleaseReaderLock();
             }
             return null;
         }
@@ -802,7 +869,8 @@ namespace OpenSim.Region.CoreModules.World.Land
                 return null;
             }
 
-            lock (m_landList)
+            m_landListRwLock.AcquireReaderLock();
+            try
             {
                 // Corner case. If an autoreturn happens during sim startup
                 // we will come here with the list uninitialized
@@ -826,6 +894,10 @@ namespace OpenSim.Region.CoreModules.World.Land
                 }
                 
                 return null;
+            }
+            finally
+            {
+                m_landListRwLock.ReleaseReaderLock();
             }
              */
         }
@@ -885,12 +957,17 @@ namespace OpenSim.Region.CoreModules.World.Land
 
         public void ResetOverMeRecords()
         {
-            lock (m_landList)
+            m_landListRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (LandObject p in m_landList.Values)
                 {
                     p.ResetOverMeRecord();
                 }
+            }
+            finally
+            {
+                m_landListRwLock.ReleaseReaderLock();
             }
         }
 
@@ -906,12 +983,17 @@ namespace OpenSim.Region.CoreModules.World.Land
 
         public void EventManagerOnObjectBeingRemovedFromScene(SceneObjectGroup obj)
         {
-            lock (m_landList)
+            m_landListRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (LandObject p in m_landList.Values)
                 {
                     p.RemovePrimFromOverMe(obj);
                 }
+            }
+            finally
+            {
+                m_landListRwLock.ReleaseReaderLock();
             }
         }
 
@@ -919,7 +1001,8 @@ namespace OpenSim.Region.CoreModules.World.Land
         {
             //Get Simwide prim count for owner
             Dictionary<UUID, List<LandObject>> landOwnersAndParcels = new Dictionary<UUID, List<LandObject>>();
-            lock (m_landList)
+            m_landListRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (LandObject p in m_landList.Values)
                 {
@@ -934,6 +1017,10 @@ namespace OpenSim.Region.CoreModules.World.Land
                         landOwnersAndParcels[p.LandData.OwnerID].Add(p);
                     }
                 }
+            }
+            finally
+            {
+                m_landListRwLock.ReleaseReaderLock();
             }
 
             foreach (UUID owner in landOwnersAndParcels.Keys)
@@ -1037,11 +1124,16 @@ namespace OpenSim.Region.CoreModules.World.Land
 
             //Now, lets set the subdivision area of the original to false
             int startLandObjectIndex = startLandObject.LandData.LocalID;
-            lock (m_landList)
+            m_landListRwLock.AcquireWriterLock(-1);
+            try
             {
                 m_landList[startLandObjectIndex].SetLandBitmap(
                     newLand.ModifyLandBitmapSquare(startLandObject.GetLandBitmap(), start_x, start_y, end_x, end_y, false));
                 m_landList[startLandObjectIndex].ForceUpdateLandInfo();
+            }
+            finally
+            {
+                m_landListRwLock.ReleaseWriterLock();
             }
 
             //Now add the new land object
@@ -1105,7 +1197,8 @@ namespace OpenSim.Region.CoreModules.World.Land
                 }
             }
 
-            lock (m_landList)
+            m_landListRwLock.AcquireWriterLock(-1);
+            try
             {
                 foreach (ILandObject slaveLandObject in selectedLandObjects)
                 {
@@ -1113,6 +1206,10 @@ namespace OpenSim.Region.CoreModules.World.Land
                         slaveLandObject.MergeLandBitmaps(masterLandObject.GetLandBitmap(), slaveLandObject.GetLandBitmap()));
                     performFinalLandJoin(masterLandObject, slaveLandObject);
                 }
+            }
+            finally
+            {
+                m_landListRwLock.ReleaseWriterLock();
             }
 
             masterLandObject.SendLandUpdateToAvatarsOverMe();
@@ -1274,9 +1371,14 @@ namespace OpenSim.Region.CoreModules.World.Land
         public void ClientOnParcelPropertiesUpdateRequest(LandUpdateArgs args, int localID, IClientAPI remote_client)
         {
             ILandObject land;
-            lock (m_landList)
+            m_landListRwLock.AcquireReaderLock(-1);
+            try
             {
                 m_landList.TryGetValue(localID, out land);
+            }
+            finally
+            {
+                m_landListRwLock.ReleaseReaderLock();
             }
 
             if (land != null)
@@ -1305,9 +1407,14 @@ namespace OpenSim.Region.CoreModules.World.Land
         public void ClientOnParcelObjectOwnerRequest(int local_id, IClientAPI remote_client)
         {
             ILandObject land;
-            lock (m_landList)
+            m_landListRwLock.AcquireReaderLock(-1);
+            try
             {
                 m_landList.TryGetValue(local_id, out land);
+            }
+            finally
+            {
+                m_landListRwLock.ReleaseReaderLock();
             }
 
             if (land != null)
@@ -1324,9 +1431,14 @@ namespace OpenSim.Region.CoreModules.World.Land
         public void ClientOnParcelGodForceOwner(int local_id, UUID ownerID, IClientAPI remote_client)
         {
             ILandObject land;
-            lock (m_landList)
+            m_landListRwLock.AcquireReaderLock(-1);
+            try
             {
                 m_landList.TryGetValue(local_id, out land);
+            }
+            finally
+            {
+                m_landListRwLock.ReleaseReaderLock();
             }
 
             if (land != null)
@@ -1348,9 +1460,14 @@ namespace OpenSim.Region.CoreModules.World.Land
         public void ClientOnParcelAbandonRequest(int local_id, IClientAPI remote_client)
         {
             ILandObject land;
-            lock (m_landList)
+            m_landListRwLock.AcquireReaderLock(-1);
+            try
             {
                 m_landList.TryGetValue(local_id, out land);
+            }
+            finally
+            {
+                m_landListRwLock.ReleaseReaderLock();
             }
 
             if (land != null)
@@ -1372,9 +1489,14 @@ namespace OpenSim.Region.CoreModules.World.Land
         public void ClientOnParcelReclaim(int local_id, IClientAPI remote_client)
         {
             ILandObject land;
-            lock (m_landList)
+            m_landListRwLock.AcquireReaderLock(-1);
+            try
             {
                 m_landList.TryGetValue(local_id, out land);
+            }
+            finally
+            {
+                m_landListRwLock.ReleaseReaderLock();
             }
 
             if (land != null)
@@ -1406,9 +1528,14 @@ namespace OpenSim.Region.CoreModules.World.Land
             if (e.economyValidated && e.landValidated)
             {
                 ILandObject land;
-                lock (m_landList)
+                m_landListRwLock.AcquireReaderLock(-1);
+                try
                 {
                     m_landList.TryGetValue(e.parcelLocalID, out land);
+                }
+                finally
+                {
+                    m_landListRwLock.ReleaseReaderLock();
                 }
 
                 if (land != null)
@@ -1427,9 +1554,14 @@ namespace OpenSim.Region.CoreModules.World.Land
             if (e.landValidated == false)
             {
                 ILandObject lob = null;
-                lock (m_landList)
+                m_landListRwLock.AcquireReaderLock(-1);
+                try
                 {
                     m_landList.TryGetValue(e.parcelLocalID, out lob);
+                }
+                finally
+                {
+                    m_landListRwLock.ReleaseReaderLock();
                 }
 
                 if (lob != null)
@@ -1456,9 +1588,14 @@ namespace OpenSim.Region.CoreModules.World.Land
         void ClientOnParcelDeedToGroup(int parcelLocalID, UUID groupID, IClientAPI remote_client)
         {
             ILandObject land;
-            lock (m_landList)
+            m_landListRwLock.AcquireReaderLock(-1);
+            try
             {
                 m_landList.TryGetValue(parcelLocalID, out land);
+            }
+            finally
+            {
+                m_landListRwLock.ReleaseReaderLock();
             }
 
             if (!m_scene.Permissions.CanDeedParcel(remote_client.AgentId, land))
@@ -1479,7 +1616,8 @@ namespace OpenSim.Region.CoreModules.World.Land
 
             // Prevent race conditions from any auto-creation of new parcels for varregions whilst we are still loading
             // the existing parcels.
-            lock (m_landList)
+            m_landListRwLock.AcquireWriterLock(-1);
+            try
             {
                 for (int i = 0; i < data.Count; i++)
                     IncomingLandObjectFromStorage(data[i]);
@@ -1539,6 +1677,10 @@ namespace OpenSim.Region.CoreModules.World.Land
                     }
                 }
             }
+            finally
+            {
+                m_landListRwLock.ReleaseWriterLock();
+            }
         }
 
         private void IncomingLandObjectFromStorage(LandData data)
@@ -1553,9 +1695,14 @@ namespace OpenSim.Region.CoreModules.World.Land
             if (localID != -1)
             {
                 ILandObject selectedParcel = null;
-                lock (m_landList)
+                m_landListRwLock.AcquireReaderLock(-1);
+                try
                 {
                     m_landList.TryGetValue(localID, out selectedParcel);
+                }
+                finally
+                {
+                    m_landListRwLock.ReleaseReaderLock();
                 }
 
                 if (selectedParcel == null) 
@@ -1622,12 +1769,17 @@ namespace OpenSim.Region.CoreModules.World.Land
 
         public void setParcelObjectMaxOverride(overrideParcelMaxPrimCountDelegate overrideDel)
         {
-            lock (m_landList)
+            m_landListRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (LandObject obj in m_landList.Values)
                 {
                     obj.SetParcelObjectMaxOverride(overrideDel);
                 }
+            }
+            finally
+            {
+                m_landListRwLock.ReleaseReaderLock();
             }
         }
 
@@ -1703,9 +1855,14 @@ namespace OpenSim.Region.CoreModules.World.Land
             land_update.ObscureMedia = properties.ObscureMedia;
 
             ILandObject land;
-            lock (m_landList)
+            m_landListRwLock.AcquireReaderLock(-1);
+            try
             {
                 m_landList.TryGetValue(parcelID, out land);
+            }
+            finally
+            {
+                m_landListRwLock.ReleaseReaderLock();
             }
 
             if (land != null)
@@ -1862,9 +2019,14 @@ namespace OpenSim.Region.CoreModules.World.Land
         public void setParcelOtherCleanTime(IClientAPI remoteClient, int localID, int otherCleanTime)
         {
             ILandObject land;
-            lock (m_landList)
+            m_landListRwLock.AcquireReaderLock(-1);
+            try
             {
                 m_landList.TryGetValue(localID, out land);
+            }
+            finally
+            {
+                m_landListRwLock.ReleaseReaderLock();
             }
 
             if (land == null) return;
@@ -2066,13 +2228,18 @@ namespace OpenSim.Region.CoreModules.World.Land
 
                 ILandObject lo;
 
-                lock (m_landList)
+                m_landListRwLock.AcquireReaderLock(-1);
+                try
                 { 
                     if (!m_landList.TryGetValue(landLocalId, out lo))
                     {
                         MainConsole.Instance.OutputFormat("No parcel found with local ID {0}", landLocalId);
                         return;
                     }
+                }
+                finally
+                {
+                    m_landListRwLock.ReleaseReaderLock();
                 }
 
                 AppendParcelReport(report, lo);
@@ -2092,8 +2259,9 @@ namespace OpenSim.Region.CoreModules.World.Land
             cdt.AddColumn("Starts", ConsoleDisplayUtil.VectorSize);
             cdt.AddColumn("Ends", ConsoleDisplayUtil.VectorSize);
             cdt.AddColumn("Owner", ConsoleDisplayUtil.UserNameSize);
-            
-            lock (m_landList)
+
+            m_landListRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (ILandObject lo in m_landList.Values)
                 {
@@ -2111,6 +2279,10 @@ namespace OpenSim.Region.CoreModules.World.Land
                     cdt.AddRow(
                         ld.Name, ld.LocalID, ld.Area, lo.StartPoint, lo.EndPoint, ownerName);
                 }
+            }
+            finally
+            {
+                m_landListRwLock.ReleaseReaderLock();
             }
 
             report.Append(cdt.ToString());
