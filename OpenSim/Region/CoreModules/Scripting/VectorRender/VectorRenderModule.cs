@@ -126,13 +126,9 @@ namespace OpenSim.Region.CoreModules.Scripting.VectorRender
                 {
                     SizeF stringSize = new SizeF();
 
-                    // XXX: This lock may be unnecessary.
-                    lock (m_graph)
-                    {
-                        stringSize = m_graph.MeasureString(text, myFont);
-                        xSize = stringSize.Width;
-                        ySize = stringSize.Height;
-                    }
+                    stringSize = m_graph.MeasureString(text, myFont);
+                    xSize = stringSize.Width;
+                    ySize = stringSize.Height;
                 }
             }
         }
