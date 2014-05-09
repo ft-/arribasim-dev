@@ -59,7 +59,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         /// This lock exists so that multiple threads from different engines and/or different copies of the same engine
         /// are prevented from running non-thread safe code (e.g. read/write of lists) concurrently.
         /// </remarks>
-        private static object staticLock = new object();
+        private static ReaderWriterLock staticLock = new ReaderWriterLock();
 
         private static List<IScriptEngine> m_ScriptEngines =
                 new List<IScriptEngine>();
@@ -82,9 +82,16 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         public Dataserver DataserverPlugin
         {
             get 
-            { 
-                lock (staticLock)
-                    return m_Dataserver[m_ScriptEngine]; 
+            {
+                staticLock.AcquireReaderLock(-1);
+                try
+                {
+                    return m_Dataserver[m_ScriptEngine];
+                }
+                finally
+                {
+                    staticLock.ReleaseReaderLock();
+                }
             }
         }
 
@@ -92,8 +99,15 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         {
             get 
             { 
-                lock (staticLock)
-                    return m_Timer[m_ScriptEngine]; 
+                staticLock.AcquireReaderLock(-1);
+                try
+                {
+                    return m_Timer[m_ScriptEngine];
+                }
+                finally
+                {
+                    staticLock.ReleaseReaderLock();
+                }
             }
         }
 
@@ -101,17 +115,31 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         {
             get 
             { 
-                lock (staticLock)
-                    return m_HttpRequest[m_ScriptEngine]; 
+                staticLock.AcquireReaderLock(-1);
+                try
+                {
+                    return m_HttpRequest[m_ScriptEngine];
+                }
+                finally
+                {
+                    staticLock.ReleaseReaderLock();
+                }
             }
         }
 
         public Listener ListenerPlugin
         {
             get 
-            { 
-                lock (staticLock)
-                    return m_Listener[m_ScriptEngine]; 
+            {
+                staticLock.AcquireReaderLock(-1);
+                try
+                {
+                    return m_Listener[m_ScriptEngine];
+                }
+                finally
+                {
+                    staticLock.ReleaseReaderLock();
+                }
             }
         }
 
@@ -119,26 +147,47 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         {
             get 
             { 
-                lock (staticLock)
-                    return m_SensorRepeat[m_ScriptEngine]; 
+                staticLock.AcquireReaderLock(-1);
+                try
+                {
+                    return m_SensorRepeat[m_ScriptEngine];
+                }
+                finally
+                {
+                    staticLock.ReleaseReaderLock();
+                }
             }
         }
 
         public XmlRequest XmlRequestPlugin
         {
             get 
-            { 
-                lock (staticLock)
-                    return m_XmlRequest[m_ScriptEngine]; 
+            {
+                staticLock.AcquireReaderLock(-1);
+                try
+                {
+                    return m_XmlRequest[m_ScriptEngine];
+                }
+                finally
+                {
+                    staticLock.ReleaseReaderLock();
+                }
             }
         }
 
         public IScriptEngine[] ScriptEngines
         {
             get 
-            { 
-                lock (staticLock)
-                    return m_ScriptEngines.ToArray(); 
+            {
+                staticLock.AcquireReaderLock(-1);
+                try
+                {
+                    return m_ScriptEngines.ToArray();
+                }
+                finally
+                {
+                    staticLock.ReleaseReaderLock();
+                }
             }
         }
 
@@ -150,7 +199,8 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             // then more than one thread could arrive at this block of code simultaneously.  However, it cannot be
             // executed concurrently both because concurrent list operations are not thread-safe and because of other
             // race conditions such as the later check of cmdHandlerThread == null.
-            lock (staticLock)
+            staticLock.AcquireWriterLock(-1);
+            try
             {
                 if (m_ScriptEngines.Count == 0)
                     ReadConfig();
@@ -173,6 +223,10 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                     m_XmlRequest[m_ScriptEngine] = new XmlRequest(this);
 
                 StartThread();
+            }
+            finally
+            {
+                staticLock.ReleaseWriterLock();
             }
         }
 
@@ -237,7 +291,8 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
         private static void DoOneCmdHandlerPass()
         {
-            lock (staticLock)
+            staticLock.AcquireReaderLock(-1);
+            try
             {
                 // Check HttpRequests
                 m_HttpRequest[m_ScriptEngines[0]].CheckHttpRequests();
@@ -260,18 +315,23 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                     m_Dataserver[s].ExpireRequests();
                 }
             }
+            finally
+            {
+                staticLock.ReleaseReaderLock();
+            }
         }
 
         /// <summary>
-        /// Remove a specific script (and all its pending commands)
+        /// Unregister a specific script from facilities (and all its pending commands)
         /// </summary>
         /// <param name="localID"></param>
         /// <param name="itemID"></param>
-        public static void RemoveScript(IScriptEngine engine, uint localID, UUID itemID)
+        public static void UnregisterScriptFacilities(IScriptEngine engine, uint localID, UUID itemID)
         {
 //            m_log.DebugFormat("[ASYNC COMMAND MANAGER]: Removing facilities for script {0}", itemID);
 
-            lock (staticLock)
+            staticLock.AcquireReaderLock(-1);
+            try
             {
                 // Remove dataserver events
                 m_Dataserver[engine].RemoveEvents(localID, itemID);
@@ -298,28 +358,10 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                 // Remove Sensors
                 m_SensorRepeat[engine].UnSetSenseRepeaterEvents(localID, itemID);
             }
-        }
-
-        public static void StateChange(IScriptEngine engine, uint localID, UUID itemID)
-        {
-            // Remove a specific script
-
-            // Remove dataserver events
-            m_Dataserver[engine].RemoveEvents(localID, itemID);
-
-            IWorldComm comms = engine.World.RequestModuleInterface<IWorldComm>();
-            if (comms != null)
-                comms.DeleteListener(itemID);
-
-            IXMLRPC xmlrpc = engine.World.RequestModuleInterface<IXMLRPC>();
-            if (xmlrpc != null)
+            finally
             {
-                xmlrpc.DeleteChannels(itemID);
-                xmlrpc.CancelSRDRequests(itemID);
+                staticLock.ReleaseReaderLock();
             }
-            // Remove Sensors
-            m_SensorRepeat[engine].UnSetSenseRepeaterEvents(localID, itemID);
-
         }
 
         /// <summary>
@@ -329,12 +371,17 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         /// <returns></returns>
         public static SensorRepeat GetSensorRepeatPlugin(IScriptEngine engine)
         {
-            lock (staticLock)
+            staticLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_SensorRepeat.ContainsKey(engine))
                     return m_SensorRepeat[engine];
                 else
                     return null;
+            }
+            finally
+            {
+                staticLock.ReleaseReaderLock();
             }
         }
 
@@ -345,12 +392,17 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         /// <returns></returns>
         public static Dataserver GetDataserverPlugin(IScriptEngine engine)
         {
-            lock (staticLock)
+            staticLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_Dataserver.ContainsKey(engine))
                     return m_Dataserver[engine];
                 else
                     return null;
+            }
+            finally
+            {
+                staticLock.ReleaseReaderLock();
             }
         }
 
@@ -361,12 +413,17 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         /// <returns></returns>
         public static Timer GetTimerPlugin(IScriptEngine engine)
         {
-            lock (staticLock)
+            staticLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_Timer.ContainsKey(engine))
                     return m_Timer[engine];
                 else
                     return null;
+            }
+            finally
+            {
+                staticLock.ReleaseReaderLock();
             }
         }
 
@@ -377,12 +434,17 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         /// <returns></returns>
         public static Listener GetListenerPlugin(IScriptEngine engine)
         {
-            lock (staticLock)
+            staticLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_Listener.ContainsKey(engine))
                     return m_Listener[engine];
                 else
                     return null;
+            }
+            finally
+            {
+                staticLock.ReleaseReaderLock();
             }
         }
 
@@ -390,7 +452,8 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         {
             List<Object> data = new List<Object>();
 
-            lock (staticLock)
+            staticLock.AcquireReaderLock(-1);
+            try
             {
                 Object[] listeners = m_Listener[engine].GetSerializationData(itemID);
                 if (listeners.Length > 0)
@@ -416,6 +479,10 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                     data.AddRange(sensors);
                 }
             }
+            finally
+            {
+                staticLock.ReleaseReaderLock();
+            }
 
             return data.ToArray();
         }
@@ -439,23 +506,28 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                     idx+=len;
 
-                    lock (staticLock)
+                    staticLock.AcquireReaderLock(-1);
+                    try
                     {
-                    switch (type)
-                    {
-                        case "listener":
-                            m_Listener[engine].CreateFromData(localID, itemID,
-                                                        hostID, item);
-                            break;
-                        case "timer":
-                            m_Timer[engine].CreateFromData(localID, itemID,
-                                                        hostID, item);
-                            break;
-                        case "sensor":
-                            m_SensorRepeat[engine].CreateFromData(localID,
-                                                        itemID, hostID, item);
-                            break;
+                        switch (type)
+                        {
+                            case "listener":
+                                m_Listener[engine].CreateFromData(localID, itemID,
+                                                            hostID, item);
+                                break;
+                            case "timer":
+                                m_Timer[engine].CreateFromData(localID, itemID,
+                                                            hostID, item);
+                                break;
+                            case "sensor":
+                                m_SensorRepeat[engine].CreateFromData(localID,
+                                                            itemID, hostID, item);
+                                break;
                         }
+                    }
+                    finally
+                    {
+                        staticLock.ReleaseReaderLock();
                     }
                 }
             }
