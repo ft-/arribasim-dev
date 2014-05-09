@@ -27,6 +27,7 @@
 
 using System.Collections.Generic;
 using OpenMetaverse;
+using System.Threading;
 
 namespace OpenSim.Framework
 {
@@ -42,6 +43,7 @@ namespace OpenSim.Framework
         /// We lock this for operations both on this dictionary and on m_agentCircuitsByUUID
         /// </remarks>
         private Dictionary<uint, AgentCircuitData> m_agentCircuits = new Dictionary<uint, AgentCircuitData>();
+        private ReaderWriterLock m_AgentCircuitsRwLock = new ReaderWriterLock();
 
         /// <summary>
         /// Agent circuits indexed by agent UUID.
@@ -52,10 +54,15 @@ namespace OpenSim.Framework
         {
             AgentCircuitData validcircuit = null;
 
-            lock (m_agentCircuits)
+            m_AgentCircuitsRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_agentCircuits.ContainsKey(circuitcode))
                     validcircuit = m_agentCircuits[circuitcode];
+            }
+            finally
+            {
+                m_AgentCircuitsRwLock.ReleaseReaderLock();
             }
 
             AuthenticateResponse user = new AuthenticateResponse();
@@ -96,7 +103,8 @@ namespace OpenSim.Framework
         /// <param name="agentData"></param>
         public virtual void AddNewCircuit(uint circuitCode, AgentCircuitData agentData)
         {
-            lock (m_agentCircuits)
+            m_AgentCircuitsRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (m_agentCircuits.ContainsKey(circuitCode))
                 {
@@ -109,11 +117,16 @@ namespace OpenSim.Framework
                     m_agentCircuitsByUUID[agentData.AgentID] = agentData;
                 }
             }
+            finally
+            {
+                m_AgentCircuitsRwLock.ReleaseWriterLock();
+            }
         }
 
         public virtual void RemoveCircuit(uint circuitCode)
         {
-            lock (m_agentCircuits)
+            m_AgentCircuitsRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (m_agentCircuits.ContainsKey(circuitCode))
                 {
@@ -122,11 +135,16 @@ namespace OpenSim.Framework
                     m_agentCircuitsByUUID.Remove(agentID);
                 }
             }
+            finally
+            {
+                m_AgentCircuitsRwLock.ReleaseWriterLock();
+            }
         }
 
         public virtual void RemoveCircuit(UUID agentID)
         {
-            lock (m_agentCircuits)
+            m_AgentCircuitsRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (m_agentCircuitsByUUID.ContainsKey(agentID))
                 {
@@ -135,24 +153,42 @@ namespace OpenSim.Framework
                     m_agentCircuitsByUUID.Remove(agentID);
                 }
             }
+            finally
+            {
+                m_AgentCircuitsRwLock.ReleaseWriterLock();
+            }
         }
 
         public AgentCircuitData GetAgentCircuitData(uint circuitCode)
         {
             AgentCircuitData agentCircuit = null;
 
-            lock (m_agentCircuits)
+            m_AgentCircuitsRwLock.AcquireReaderLock(-1);
+            try
+            {
                 m_agentCircuits.TryGetValue(circuitCode, out agentCircuit);
 
-            return agentCircuit;
+                return agentCircuit;
+            }
+            finally
+            {
+                m_AgentCircuitsRwLock.ReleaseReaderLock();
+            }
         }
 
         public AgentCircuitData GetAgentCircuitData(UUID agentID)
         {
             AgentCircuitData agentCircuit = null;
 
-            lock (m_agentCircuits)
+            m_AgentCircuitsRwLock.AcquireReaderLock(-1);
+            try
+            {
                 m_agentCircuitsByUUID.TryGetValue(agentID, out agentCircuit);
+            }
+            finally
+            {
+                m_AgentCircuitsRwLock.ReleaseReaderLock();
+            }
 
             return agentCircuit;
         }
@@ -163,13 +199,21 @@ namespace OpenSim.Framework
         /// <returns></returns>
         public Dictionary<UUID, AgentCircuitData> GetAgentCircuits()
         {
-            lock (m_agentCircuits)
+            m_AgentCircuitsRwLock.AcquireReaderLock(-1);
+            try
+            {
                 return new Dictionary<UUID, AgentCircuitData>(m_agentCircuitsByUUID);
+            }
+            finally
+            {
+                m_AgentCircuitsRwLock.ReleaseReaderLock();
+            }
         }
 
         public void UpdateAgentData(AgentCircuitData agentData)
         {
-            lock (m_agentCircuits)
+            m_AgentCircuitsRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_agentCircuits.ContainsKey((uint) agentData.circuitcode))
                 {
@@ -184,6 +228,10 @@ namespace OpenSim.Framework
                     // m_log.Debug("update user start pos is " + agentData.startpos.X + " , " + agentData.startpos.Y + " , " + agentData.startpos.Z);
                 }
             }
+            finally
+            {
+                m_AgentCircuitsRwLock.ReleaseReaderLock();
+            }
         }
 
         /// <summary>
@@ -193,7 +241,8 @@ namespace OpenSim.Framework
         /// <param name="newcircuitcode"></param>
         public bool TryChangeCiruitCode(uint circuitcode, uint newcircuitcode)
         {
-            lock (m_agentCircuits)
+            m_AgentCircuitsRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (m_agentCircuits.ContainsKey((uint)circuitcode) && !m_agentCircuits.ContainsKey((uint)newcircuitcode))
                 {
@@ -206,22 +255,40 @@ namespace OpenSim.Framework
                     return true;
                 }
             }
+            finally
+            {
+                m_AgentCircuitsRwLock.ReleaseWriterLock();
+            }
 
             return false;
         }
 
         public void UpdateAgentChildStatus(uint circuitcode, bool childstatus)
         {
-            lock (m_agentCircuits)
+            m_AgentCircuitsRwLock.AcquireReaderLock(-1);
+            try
+            {
                 if (m_agentCircuits.ContainsKey(circuitcode))
                     m_agentCircuits[circuitcode].child = childstatus;
+            }
+            finally
+            {
+                m_AgentCircuitsRwLock.ReleaseReaderLock();
+            }
         }
 
         public bool GetAgentChildStatus(uint circuitcode)
         {
-            lock (m_agentCircuits)
+            m_AgentCircuitsRwLock.AcquireReaderLock(-1);
+            try
+            {
                 if (m_agentCircuits.ContainsKey(circuitcode))
                     return m_agentCircuits[circuitcode].child;
+            }
+            finally
+            {
+                m_AgentCircuitsRwLock.ReleaseReaderLock();
+            }
 
             return false;
         }
