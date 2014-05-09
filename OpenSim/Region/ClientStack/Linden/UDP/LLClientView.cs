@@ -312,7 +312,8 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
         private static string LogHeader = "[LLCLIENTVIEW]";
-        protected static Dictionary<PacketType, PacketMethod> PacketHandlers = new Dictionary<PacketType, PacketMethod>(); //Global/static handlers for all clients
+        private static Dictionary<PacketType, PacketMethod> PacketHandlers = new Dictionary<PacketType, PacketMethod>(); //Global/static handlers for all clients
+        private static ReaderWriterLock PacketHandlersRwLock = new ReaderWriterLock();
 
         /// <summary>
         /// Handles UDP texture download.
@@ -366,8 +367,11 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         /// </remarks>
         private AgentUpdateArgs m_thisAgentUpdateArgs = new AgentUpdateArgs();
 
-        protected Dictionary<PacketType, PacketProcessor> m_packetHandlers = new Dictionary<PacketType, PacketProcessor>();
-        protected Dictionary<string, GenericMessage> m_genericPacketHandlers = new Dictionary<string, GenericMessage>(); //PauPaw:Local Generic Message handlers
+        private Dictionary<PacketType, PacketProcessor> m_packetHandlers = new Dictionary<PacketType, PacketProcessor>();
+        private ReaderWriterLock m_packetHandlersRwLock = new ReaderWriterLock();
+
+        private Dictionary<string, GenericMessage> m_genericPacketHandlers = new Dictionary<string, GenericMessage>(); //PauPaw:Local Generic Message handlers
+        private ReaderWriterLock m_genericPacketHandlersRwLock = new ReaderWriterLock();
         protected Scene m_scene;
         protected string m_firstName;
         protected string m_lastName;
@@ -376,7 +380,8 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         protected UUID m_activeGroupID;
         protected string m_activeGroupName = String.Empty;
         protected ulong m_activeGroupPowers;
-        protected Dictionary<UUID, ulong> m_groupPowers = new Dictionary<UUID, ulong>();
+        private Dictionary<UUID, ulong> m_groupPowers = new Dictionary<UUID, ulong>();
+        private ReaderWriterLock m_groupPowersRwLock = new ReaderWriterLock();
         protected int m_terrainCheckerCount;
         protected uint m_agentFOVCounter;
 
@@ -403,7 +408,18 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         public UUID ActiveGroupId { get { return m_activeGroupID; } private set { m_activeGroupID = value; } }
         public string ActiveGroupName { get { return m_activeGroupName; } private set { m_activeGroupName = value; } }
         public ulong ActiveGroupPowers { get { return m_activeGroupPowers; } private set { m_activeGroupPowers = value; } }
-        public bool IsGroupMember(UUID groupID) { return m_groupPowers.ContainsKey(groupID); }
+        public bool IsGroupMember(UUID groupID)
+        {
+            m_groupPowersRwLock.AcquireReaderLock(-1);
+            try
+            {
+                return m_groupPowers.ContainsKey(groupID);
+            }
+            finally
+            {
+                m_groupPowersRwLock.ReleaseReaderLock();
+            }
+        }
 
         /// <summary>
         /// Entity update queues
@@ -609,13 +625,18 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         public static bool AddPacketHandler(PacketType packetType, PacketMethod handler)
         {
             bool result = false;
-            lock (PacketHandlers)
+            PacketHandlersRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (!PacketHandlers.ContainsKey(packetType))
                 {
                     PacketHandlers.Add(packetType, handler);
                     result = true;
                 }
+            }
+            finally
+            {
+                PacketHandlersRwLock.ReleaseWriterLock();
             }
             return result;
         }
@@ -649,13 +670,18 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         public bool AddLocalPacketHandler(PacketType packetType, PacketMethod handler, bool doAsync)
         {
             bool result = false;
-            lock (m_packetHandlers)
+            m_packetHandlersRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (!m_packetHandlers.ContainsKey(packetType))
                 {
                     m_packetHandlers.Add(packetType, new PacketProcessor() { method = handler, Async = doAsync });
                     result = true;
                 }
+            }
+            finally
+            {
+                m_packetHandlersRwLock.ReleaseWriterLock();
             }
 
             return result;
@@ -666,13 +692,18 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             MethodName = MethodName.ToLower().Trim();
 
             bool result = false;
-            lock (m_genericPacketHandlers)
+            m_genericPacketHandlersRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (!m_genericPacketHandlers.ContainsKey(MethodName))
                 {
                     m_genericPacketHandlers.Add(MethodName, handler);
                     result = true;
                 }
+            }
+            finally
+            {
+                m_genericPacketHandlersRwLock.ReleaseWriterLock();
             }
             return result;
         }
@@ -686,7 +717,17 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         {
             bool result = false;
             PacketProcessor pprocessor;
-            if (m_packetHandlers.TryGetValue(packet.Type, out pprocessor))
+            m_packetHandlersRwLock.AcquireReaderLock(-1);
+            try
+            { 
+                result = m_packetHandlers.TryGetValue(packet.Type, out pprocessor);
+            }
+            finally
+            {
+                m_packetHandlersRwLock.ReleaseReaderLock();
+            }
+
+            if(result)
             {
                 //there is a local handler for this packet type
                 if (pprocessor.Async)
@@ -715,9 +756,14 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                 //there is not a local handler so see if there is a Global handler
                 PacketMethod method = null;
                 bool found;
-                lock (PacketHandlers)
+                PacketHandlersRwLock.AcquireReaderLock(-1);
+                try
                 {
                     found = PacketHandlers.TryGetValue(packet.Type, out method);
+                }
+                finally
+                {
+                    PacketHandlersRwLock.ReleaseReaderLock();
                 }
                 if (found)
                 {
@@ -2657,13 +2703,29 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
         public void SendGroupMembership(GroupMembershipData[] GroupMembership)
         {
-            m_groupPowers.Clear();
+            m_groupPowersRwLock.AcquireWriterLock(-1);
+            try
+            {
+                m_groupPowers.Clear();
+            }
+            finally
+            {
+                m_groupPowersRwLock.ReleaseWriterLock();
+            }
 
             AgentGroupDataUpdatePacket Groupupdate = new AgentGroupDataUpdatePacket();
             AgentGroupDataUpdatePacket.GroupDataBlock[] Groups = new AgentGroupDataUpdatePacket.GroupDataBlock[GroupMembership.Length];
             for (int i = 0; i < GroupMembership.Length; i++)
             {
-                m_groupPowers[GroupMembership[i].GroupID] = GroupMembership[i].GroupPowers;
+                m_groupPowersRwLock.AcquireWriterLock(-1);
+                try
+                {
+                    m_groupPowers[GroupMembership[i].GroupID] = GroupMembership[i].GroupPowers;
+                }
+                finally
+                {
+                    m_groupPowersRwLock.ReleaseWriterLock();
+                }
 
                 AgentGroupDataUpdatePacket.GroupDataBlock Group = new AgentGroupDataUpdatePacket.GroupDataBlock();
                 Group.AcceptNotices = GroupMembership[i].AcceptNotices;
@@ -5435,10 +5497,18 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             if (groupID == ActiveGroupId)
                 return ActiveGroupPowers;
 
-            if (m_groupPowers.ContainsKey(groupID))
-                return m_groupPowers[groupID];
+            m_groupPowersRwLock.AcquireReaderLock(-1);
+            try
+            {
+                if (m_groupPowers.ContainsKey(groupID))
+                    return m_groupPowers[groupID];
 
-            return 0;
+                return 0;
+            }
+            finally
+            {
+                m_groupPowersRwLock.ReleaseReaderLock();
+            }
         }
 
         #endregion
@@ -12530,6 +12600,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         #region IClientCore
 
         private readonly Dictionary<Type, object> m_clientInterfaces = new Dictionary<Type, object>();
+        private ReaderWriterLock m_clientInterfacesRwLock = new ReaderWriterLock();
 
         /// <summary>
         /// Register an interface on this client, should only be called in the constructor.
@@ -12538,24 +12609,37 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         /// <param name="iface"></param>
         protected void RegisterInterface<T>(T iface)
         {
-            lock (m_clientInterfaces)
+            m_clientInterfacesRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (!m_clientInterfaces.ContainsKey(typeof(T)))
                 {
                     m_clientInterfaces.Add(typeof(T), iface);
                 }
             }
+            finally
+            {
+                m_clientInterfacesRwLock.ReleaseWriterLock();
+            }
         }
 
         public bool TryGet<T>(out T iface)
         {
-            if (m_clientInterfaces.ContainsKey(typeof(T)))
+            m_clientInterfacesRwLock.AcquireReaderLock(-1);
+            try
             {
-                iface = (T)m_clientInterfaces[typeof(T)];
-                return true;
+                if (m_clientInterfaces.ContainsKey(typeof(T)))
+                {
+                    iface = (T)m_clientInterfaces[typeof(T)];
+                    return true;
+                }
+                iface = default(T);
+                return false;
             }
-            iface = default(T);
-            return false;
+            finally
+            {
+                m_clientInterfacesRwLock.ReleaseReaderLock();
+            }
         }
 
         public T Get<T>()
@@ -12584,14 +12668,22 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                 GroupMembershipData[] GroupMembership =
                         m_GroupsModule.GetMembershipData(AgentId);
 
-                m_groupPowers.Clear();
-
-                if (GroupMembership != null)
+                m_groupPowersRwLock.AcquireWriterLock(-1);
+                try
                 {
-                    for (int i = 0; i < GroupMembership.Length; i++)
+                    m_groupPowers.Clear();
+
+                    if (GroupMembership != null)
                     {
-                        m_groupPowers[GroupMembership[i].GroupID] = GroupMembership[i].GroupPowers;
+                        for (int i = 0; i < GroupMembership.Length; i++)
+                        {
+                            m_groupPowers[GroupMembership[i].GroupID] = GroupMembership[i].GroupPowers;
+                        }
                     }
+                }
+                finally
+                {
+                    m_groupPowersRwLock.ReleaseWriterLock();
                 }
             }
         }
