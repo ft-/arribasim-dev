@@ -30,6 +30,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Net;
 using System.Text;
+using System.Threading;
 using log4net;
 using OpenSim.Framework;
 using OpenSim.Framework.Console;
@@ -43,6 +44,7 @@ namespace OpenSim.Framework.Servers
 
         private static BaseHttpServer instance = null;
         private static Dictionary<uint, BaseHttpServer> m_Servers = new Dictionary<uint, BaseHttpServer>();
+        private static ReaderWriterLock m_ServersRwLock = new ReaderWriterLock();
 
         /// <summary>
         /// Control the printing of certain debug messages.
@@ -62,9 +64,16 @@ namespace OpenSim.Framework.Servers
             {
                 s_debugLevel = value;
 
-                lock (m_Servers)
+                m_ServersRwLock.AcquireReaderLock(-1);
+                try
+                {
                     foreach (BaseHttpServer server in m_Servers.Values)
                         server.DebugLevel = s_debugLevel;
+                }
+                finally
+                {
+                    m_ServersRwLock.ReleaseReaderLock();
+                }
             }
         }
 
@@ -85,9 +94,16 @@ namespace OpenSim.Framework.Servers
 
             set
             {
-                lock (m_Servers)
+                m_ServersRwLock.AcquireReaderLock(-1);
+                try
+                {
                     if (!m_Servers.ContainsValue(value))
                         throw new Exception("HTTP server must already have been registered to be set as the main instance");
+                }
+                finally
+                {
+                    m_ServersRwLock.ReleaseReaderLock();
+                }
 
                 instance = value;
             }
@@ -102,7 +118,18 @@ namespace OpenSim.Framework.Servers
         /// <value></value>
         public static Dictionary<uint, BaseHttpServer> Servers
         {
-            get { return new Dictionary<uint, BaseHttpServer>(m_Servers); }
+            get 
+            {
+                m_ServersRwLock.AcquireReaderLock(-1);
+                try
+                {
+                    return new Dictionary<uint, BaseHttpServer>(m_Servers);
+                }
+                finally
+                {
+                    m_ServersRwLock.ReleaseReaderLock();
+                }
+            }
         }
 
         public static void RegisterHttpConsoleCommands(ICommandConsole console)
@@ -217,7 +244,8 @@ namespace OpenSim.Framework.Servers
 
             StringBuilder handlers = new StringBuilder();
 
-            lock (m_Servers)
+            m_ServersRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (BaseHttpServer httpServer in m_Servers.Values)
                 {
@@ -255,6 +283,10 @@ namespace OpenSim.Framework.Servers
                     handlers.Append("\n");
                 }
             }
+            finally
+            {
+                m_ServersRwLock.ReleaseReaderLock();
+            }
 
             MainConsole.Instance.Output(handlers.ToString());
         }
@@ -265,12 +297,17 @@ namespace OpenSim.Framework.Servers
         /// <param name='server'></param>
         public static void AddHttpServer(BaseHttpServer server)
         {
-            lock (m_Servers)
+            m_ServersRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (m_Servers.ContainsKey(server.Port))
                     throw new Exception(string.Format("HTTP server for port {0} already exists.", server.Port));
 
                 m_Servers.Add(server.Port, server);
+            }
+            finally
+            {
+                m_ServersRwLock.ReleaseWriterLock();
             }
         }
 
@@ -284,12 +321,17 @@ namespace OpenSim.Framework.Servers
         /// <returns></returns>
         public static bool RemoveHttpServer(uint port)
         {
-            lock (m_Servers)
+            m_ServersRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (instance != null && instance.Port == port)
                     instance = null;
 
                 return m_Servers.Remove(port);
+            }
+            finally
+            {
+                m_ServersRwLock.ReleaseWriterLock();
             }
         }
 
@@ -303,8 +345,15 @@ namespace OpenSim.Framework.Servers
         /// <returns>true if a server with the given port is registered, false otherwise.</returns>
         public static bool ContainsHttpServer(uint port)
         {
-            lock (m_Servers)
+            m_ServersRwLock.AcquireReaderLock(-1);
+            try
+            {
                 return m_Servers.ContainsKey(port);
+            }
+            finally
+            {
+                m_ServersRwLock.ReleaseReaderLock();
+            }
         }
 
         /// <summary>
@@ -338,19 +387,32 @@ namespace OpenSim.Framework.Servers
             if (instance != null && port == Instance.Port)
                 return Instance;
 
-            lock (m_Servers)
+            m_ServersRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_Servers.ContainsKey(port))
                     return m_Servers[port];
 
-                m_Servers[port] = new BaseHttpServer(port);
+                LockCookie lc = m_ServersRwLock.UpgradeToWriterLock(-1);
+                try
+                {
+                    m_Servers[port] = new BaseHttpServer(port);
 
-                if (ipaddr != null)
-                    m_Servers[port].ListenIPAddress = ipaddr;
+                    if (ipaddr != null)
+                        m_Servers[port].ListenIPAddress = ipaddr;
 
-                m_Servers[port].Start();
+                    m_Servers[port].Start();
+                }
+                finally
+                {
+                    m_ServersRwLock.DowngradeFromWriterLock(ref lc);
+                }
 
                 return m_Servers[port];
+            }
+            finally
+            {
+                m_ServersRwLock.ReleaseReaderLock();
             }
         }
     }
