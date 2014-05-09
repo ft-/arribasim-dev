@@ -91,19 +91,33 @@ namespace OpenSim.Framework.Servers.HttpServer
 
         // protected HttpListener m_httpListener;
         protected CoolHTTPListener m_httpListener2;
-        protected Dictionary<string, XmlRpcMethod> m_rpcHandlers        = new Dictionary<string, XmlRpcMethod>();
-        protected Dictionary<string, JsonRPCMethod> jsonRpcHandlers     = new Dictionary<string, JsonRPCMethod>();
-        protected Dictionary<string, bool> m_rpcHandlersKeepAlive       = new Dictionary<string, bool>();
-        protected DefaultLLSDMethod m_defaultLlsdHandler = null; // <--   Moving away from the monolithic..  and going to /registered/
-        protected Dictionary<string, LLSDMethod> m_llsdHandlers         = new Dictionary<string, LLSDMethod>();
-        protected Dictionary<string, IRequestHandler> m_streamHandlers  = new Dictionary<string, IRequestHandler>();
-        protected Dictionary<string, GenericHTTPMethod> m_HTTPHandlers  = new Dictionary<string, GenericHTTPMethod>();
-//        protected Dictionary<string, IHttpAgentHandler> m_agentHandlers = new Dictionary<string, IHttpAgentHandler>();
-        protected Dictionary<string, PollServiceEventArgs> m_pollHandlers =
-            new Dictionary<string, PollServiceEventArgs>();
+        private Dictionary<string, XmlRpcMethod> m_rpcHandlers = new Dictionary<string, XmlRpcMethod>();
+        private ReaderWriterLock m_rpcHandlersRwLock = new ReaderWriterLock();
+        
+        private Dictionary<string, JsonRPCMethod> jsonRpcHandlers     = new Dictionary<string, JsonRPCMethod>();
+        private ReaderWriterLock jsonRpcHandlersRwLock = new ReaderWriterLock();
 
-        protected Dictionary<string, WebSocketRequestDelegate> m_WebSocketHandlers =
-            new Dictionary<string, WebSocketRequestDelegate>(); 
+        private Dictionary<string, bool> m_rpcHandlersKeepAlive = new Dictionary<string, bool>();
+        protected DefaultLLSDMethod m_defaultLlsdHandler = null; // <--   Moving away from the monolithic..  and going to /registered/
+        
+        private Dictionary<string, LLSDMethod> m_llsdHandlers = new Dictionary<string, LLSDMethod>();
+        private ReaderWriterLock m_llsdHandlersRwLock = new ReaderWriterLock();
+
+        private Dictionary<string, IRequestHandler> m_streamHandlers = new Dictionary<string, IRequestHandler>();
+        private ReaderWriterLock m_streamHandlersRwLock = new ReaderWriterLock();
+
+        private Dictionary<string, GenericHTTPMethod> m_HTTPHandlers = new Dictionary<string, GenericHTTPMethod>();
+        private ReaderWriterLock m_HTTPHandlersRwLock = new ReaderWriterLock();
+
+//        protected Dictionary<string, IHttpAgentHandler> m_agentHandlers = new Dictionary<string, IHttpAgentHandler>();
+
+        private Dictionary<string, PollServiceEventArgs> m_pollHandlers =
+            new Dictionary<string, PollServiceEventArgs>();
+        private ReaderWriterLock m_pollHandlersRwLock = new ReaderWriterLock();
+
+        private Dictionary<string, WebSocketRequestDelegate> m_WebSocketHandlers =
+            new Dictionary<string, WebSocketRequestDelegate>();
+        private ReaderWriterLock m_WebSocketHandlersRwLock = new ReaderWriterLock();
 
         protected uint m_port;
         protected uint m_sslport;
@@ -178,7 +192,8 @@ namespace OpenSim.Framework.Servers.HttpServer
             string path = handler.Path;
             string handlerKey = GetHandlerKey(httpMethod, path);
 
-            lock (m_streamHandlers)
+            m_streamHandlersRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (!m_streamHandlers.ContainsKey(handlerKey))
                 {
@@ -186,28 +201,51 @@ namespace OpenSim.Framework.Servers.HttpServer
                     m_streamHandlers.Add(handlerKey, handler);
                 }
             }
+            finally
+            {
+                m_streamHandlersRwLock.ReleaseWriterLock();
+            }
         }
 
         public void AddWebSocketHandler(string servicepath, WebSocketRequestDelegate handler)
         {
-            lock (m_WebSocketHandlers)
+            m_WebSocketHandlersRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (!m_WebSocketHandlers.ContainsKey(servicepath))
                     m_WebSocketHandlers.Add(servicepath, handler);
+            }
+            finally
+            {
+                m_WebSocketHandlersRwLock.ReleaseWriterLock();
             }
         }
 
         public void RemoveWebSocketHandler(string servicepath)
         {
-            lock (m_WebSocketHandlers)
+            m_WebSocketHandlersRwLock.AcquireWriterLock(-1);
+            try
+            {
                 if (m_WebSocketHandlers.ContainsKey(servicepath))
                     m_WebSocketHandlers.Remove(servicepath);
+            }
+            finally
+            {
+                m_WebSocketHandlersRwLock.ReleaseWriterLock();
+            }
         }
 
         public List<string> GetStreamHandlerKeys()
         {
-            lock (m_streamHandlers)
+            m_WebSocketHandlersRwLock.AcquireReaderLock(-1);
+            try
+            {
                 return new List<string>(m_streamHandlers.Keys);
+            }
+            finally
+            {
+                m_WebSocketHandlersRwLock.ReleaseReaderLock();
+            }
         }
 
         private static string GetHandlerKey(string httpMethod, string path)
@@ -222,10 +260,15 @@ namespace OpenSim.Framework.Servers.HttpServer
 
         public bool AddXmlRPCHandler(string method, XmlRpcMethod handler, bool keepAlive)
         {
-            lock (m_rpcHandlers)
+            m_rpcHandlersRwLock.AcquireWriterLock(-1);
+            try
             {
                 m_rpcHandlers[method] = handler;
                 m_rpcHandlersKeepAlive[method] = keepAlive; // default
+            }
+            finally
+            {
+                m_rpcHandlersRwLock.ReleaseWriterLock();
             }
 
             return true;
@@ -233,7 +276,8 @@ namespace OpenSim.Framework.Servers.HttpServer
 
         public XmlRpcMethod GetXmlRPCHandler(string method)
         {
-            lock (m_rpcHandlers)
+            m_rpcHandlersRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_rpcHandlers.ContainsKey(method))
                 {
@@ -244,27 +288,44 @@ namespace OpenSim.Framework.Servers.HttpServer
                     return null;
                 }
             }
+            finally
+            {
+                m_rpcHandlersRwLock.ReleaseReaderLock();
+            }
         }
 
         public List<string> GetXmlRpcHandlerKeys()
         {
-            lock (m_rpcHandlers)
+            m_rpcHandlersRwLock.AcquireReaderLock(-1);
+            try
+            {
                 return new List<string>(m_rpcHandlers.Keys);
+            }
+            finally
+            {
+                m_rpcHandlersRwLock.ReleaseReaderLock();
+            }
         }
 
         // JsonRPC 
         public bool AddJsonRPCHandler(string method, JsonRPCMethod handler)
         {
-            lock(jsonRpcHandlers)
+            jsonRpcHandlersRwLock.AcquireWriterLock(-1);
+            try
             {
                 jsonRpcHandlers.Add(method, handler);
+            }
+            finally
+            {
+                jsonRpcHandlersRwLock.ReleaseWriterLock();
             }
             return true;
         }
 
         public JsonRPCMethod GetJsonRPCHandler(string method)
         {
-            lock (jsonRpcHandlers)
+            jsonRpcHandlersRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (jsonRpcHandlers.ContainsKey(method))
                 {
@@ -275,25 +336,41 @@ namespace OpenSim.Framework.Servers.HttpServer
                     return null;
                 }
             }
+            finally
+            {
+                jsonRpcHandlersRwLock.ReleaseReaderLock();
+            }
         }
 
         public List<string> GetJsonRpcHandlerKeys()
         {
-            lock (jsonRpcHandlers)
+            jsonRpcHandlersRwLock.AcquireReaderLock(-1);
+            try
+            {
                 return new List<string>(jsonRpcHandlers.Keys);
+            }
+            finally
+            {
+                jsonRpcHandlersRwLock.ReleaseReaderLock();
+            }
         }
 
         public bool AddHTTPHandler(string methodName, GenericHTTPMethod handler)
         {
             //m_log.DebugFormat("[BASE HTTP SERVER]: Registering {0}", methodName);
 
-            lock (m_HTTPHandlers)
+            m_HTTPHandlersRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (!m_HTTPHandlers.ContainsKey(methodName))
                 {
                     m_HTTPHandlers.Add(methodName, handler);
                     return true;
                 }
+            }
+            finally
+            {
+                m_HTTPHandlersRwLock.ReleaseWriterLock();
             }
 
             //must already have a handler for that path so return false
@@ -302,13 +379,21 @@ namespace OpenSim.Framework.Servers.HttpServer
 
         public List<string> GetHTTPHandlerKeys()
         {
-            lock (m_HTTPHandlers)
+            m_HTTPHandlersRwLock.AcquireReaderLock(-1);
+            try
+            {
                 return new List<string>(m_HTTPHandlers.Keys);
+            }
+            finally
+            {
+                m_HTTPHandlersRwLock.ReleaseReaderLock();
+            }
         }
 
         public bool AddPollServiceHTTPHandler(string methodName, PollServiceEventArgs args)
         {
-            lock (m_pollHandlers)
+            m_pollHandlersRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (!m_pollHandlers.ContainsKey(methodName))
                 {
@@ -316,43 +401,31 @@ namespace OpenSim.Framework.Servers.HttpServer
                     return true;
                 }
             }
+            finally
+            {
+                m_pollHandlersRwLock.ReleaseWriterLock();
+            }
 
             return false;
         }
 
         public List<string> GetPollServiceHandlerKeys()
         {
-            lock (m_pollHandlers)
+            m_pollHandlersRwLock.AcquireReaderLock(-1);
+            try
+            {
                 return new List<string>(m_pollHandlers.Keys);
+            }
+            finally
+            {
+                m_pollHandlersRwLock.ReleaseReaderLock();
+            }
         }
-
-//        // Note that the agent string is provided simply to differentiate
-//        // the handlers - it is NOT required to be an actual agent header
-//        // value.
-//        public bool AddAgentHandler(string agent, IHttpAgentHandler handler)
-//        {
-//            lock (m_agentHandlers)
-//            {
-//                if (!m_agentHandlers.ContainsKey(agent))
-//                {
-//                    m_agentHandlers.Add(agent, handler);
-//                    return true;
-//                }
-//            }
-//
-//            //must already have a handler for that path so return false
-//            return false;
-//        }
-//
-//        public List<string> GetAgentHandlerKeys()
-//        {
-//            lock (m_agentHandlers)
-//                return new List<string>(m_agentHandlers.Keys);
-//        }
 
         public bool AddLLSDHandler(string path, LLSDMethod handler)
         {
-            lock (m_llsdHandlers)
+            m_llsdHandlersRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (!m_llsdHandlers.ContainsKey(path))
                 {
@@ -360,13 +433,24 @@ namespace OpenSim.Framework.Servers.HttpServer
                     return true;
                 }
             }
+            finally
+            {
+                m_llsdHandlersRwLock.ReleaseWriterLock();
+            }
             return false;
         }
 
         public List<string> GetLLSDHandlerKeys()
         {
-            lock (m_llsdHandlers)
+            m_llsdHandlersRwLock.AcquireReaderLock(-1);
+            try
+            {
                 return new List<string>(m_llsdHandlers.Keys);
+            }
+            finally
+            {
+                m_llsdHandlersRwLock.ReleaseReaderLock();
+            }
         }
 
         public bool SetDefaultLLSDHandler(DefaultLLSDMethod handler)
@@ -447,10 +531,15 @@ namespace OpenSim.Framework.Servers.HttpServer
         {
             OSHttpRequest req = new OSHttpRequest(context, request);
             WebSocketRequestDelegate dWebSocketRequestDelegate = null;
-            lock (m_WebSocketHandlers)
+            m_WebSocketHandlersRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_WebSocketHandlers.ContainsKey(req.RawUrl))
                     dWebSocketRequestDelegate = m_WebSocketHandlers[req.RawUrl];
+            }
+            finally
+            {
+                m_WebSocketHandlersRwLock.ReleaseReaderLock();
             }
             if (dWebSocketRequestDelegate != null)
             {
@@ -863,7 +952,8 @@ namespace OpenSim.Framework.Servers.HttpServer
         {
             string bestMatch = null;
 
-            lock (m_streamHandlers)
+            m_streamHandlersRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (string pattern in m_streamHandlers.Keys)
                 {
@@ -888,13 +978,18 @@ namespace OpenSim.Framework.Servers.HttpServer
                     return true;
                 }
             }
+            finally
+            {
+                m_streamHandlersRwLock.ReleaseReaderLock();
+            }
         }
 
         private bool TryGetPollServiceHTTPHandler(string handlerKey, out PollServiceEventArgs oServiceEventArgs)
         {
             string bestMatch = null;
 
-            lock (m_pollHandlers)
+            m_pollHandlersRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (string pattern in m_pollHandlers.Keys)
                 {
@@ -919,6 +1014,10 @@ namespace OpenSim.Framework.Servers.HttpServer
                     return true;
                 }
             }
+            finally
+            {
+                m_pollHandlersRwLock.ReleaseReaderLock();
+            }
         }
 
         private bool TryGetHTTPHandler(string handlerKey, out GenericHTTPMethod HTTPHandler)
@@ -927,7 +1026,8 @@ namespace OpenSim.Framework.Servers.HttpServer
 
             string bestMatch = null;
 
-            lock (m_HTTPHandlers)
+            m_HTTPHandlersRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (string pattern in m_HTTPHandlers.Keys)
                 {
@@ -952,26 +1052,11 @@ namespace OpenSim.Framework.Servers.HttpServer
                     return true;
                 }
             }
+            finally
+            {
+                m_HTTPHandlersRwLock.ReleaseReaderLock();
+            }
         }
-
-//        private bool TryGetAgentHandler(OSHttpRequest request, OSHttpResponse response, out IHttpAgentHandler agentHandler)
-//        {
-//            agentHandler = null;
-//            
-//            lock (m_agentHandlers)
-//            {
-//                foreach (IHttpAgentHandler handler in m_agentHandlers.Values)
-//                {
-//                    if (handler.Match(request, response))
-//                    {
-//                        agentHandler = handler;
-//                        return true;
-//                    }
-//                }
-//            }
-//
-//            return false;
-//        }
 
         /// <summary>
         /// Try all the registered xmlrpc handlers when an xmlrpc request is received.
@@ -1031,11 +1116,16 @@ namespace OpenSim.Framework.Servers.HttpServer
                     XmlRpcMethod method;
                     bool methodWasFound;
                     bool keepAlive = false;
-                    lock (m_rpcHandlers)
+                    m_rpcHandlersRwLock.AcquireReaderLock(-1);
+                    try
                     {
                         methodWasFound = m_rpcHandlers.TryGetValue(methodName, out method);
                         if (methodWasFound)
                             keepAlive = m_rpcHandlersKeepAlive[methodName];
+                    }
+                    finally
+                    {
+                        m_rpcHandlersRwLock.ReleaseReaderLock();
                     }
 
                     if (methodWasFound)
@@ -1166,9 +1256,14 @@ namespace OpenSim.Framework.Servers.HttpServer
 
                     if (jsonRpcHandlers.ContainsKey(methodname))
                     {
-                        lock(jsonRpcHandlers)
+                        jsonRpcHandlersRwLock.AcquireReaderLock(-1);
+                        try
                         {
                             jsonRpcHandlers.TryGetValue(methodname, out method);
+                        }
+                        finally
+                        {
+                            jsonRpcHandlersRwLock.ReleaseReaderLock();
                         }
                         bool res = false;
                         try
@@ -1370,13 +1465,18 @@ namespace OpenSim.Framework.Servers.HttpServer
 
             string bestMatch = null;
 
-            lock (m_llsdHandlers)
+            m_llsdHandlersRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (string pattern in m_llsdHandlers.Keys)
                 {
                     if (searchquery.StartsWith(pattern) && searchquery.Length >= pattern.Length)
                         bestMatch = pattern;
                 }
+            }
+            finally
+            {
+                m_llsdHandlersRwLock.ReleaseReaderLock();
             }
 
             // extra kicker to remove the default XMLRPC login case..  just in case..
@@ -1420,7 +1520,8 @@ namespace OpenSim.Framework.Servers.HttpServer
 
             //m_log.DebugFormat("[BASE HTTP HANDLER]: Checking if we have an HTTP handler for {0}", searchquery);
 
-            lock (m_HTTPHandlers)
+            m_HTTPHandlersRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (string pattern in m_HTTPHandlers.Keys)
                 {
@@ -1442,6 +1543,10 @@ namespace OpenSim.Framework.Servers.HttpServer
                 {
                     return true;
                 }
+            }
+            finally
+            {
+                m_HTTPHandlersRwLock.ReleaseReaderLock();
             }
         }
 
@@ -1476,7 +1581,8 @@ namespace OpenSim.Framework.Servers.HttpServer
 
             string bestMatch = null;
 
-            lock (m_llsdHandlers)
+            m_llsdHandlersRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (string pattern in m_llsdHandlers.Keys)
                 {
@@ -1502,6 +1608,10 @@ namespace OpenSim.Framework.Servers.HttpServer
                     llsdHandler = m_llsdHandlers[bestMatch];
                     return true;
                 }
+            }
+            finally
+            {
+                m_llsdHandlersRwLock.ReleaseReaderLock();
             }
         }
 
@@ -1674,7 +1784,8 @@ namespace OpenSim.Framework.Servers.HttpServer
 //            m_log.DebugFormat(
 //                "[BASE HTTP HANDLER]: TryGetHTTPHandlerPathBased() looking for HTTP handler to match {0}", searchquery);
 
-            lock (m_HTTPHandlers)
+            m_HTTPHandlersRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (string pattern in m_HTTPHandlers.Keys)
                 {
@@ -1702,6 +1813,10 @@ namespace OpenSim.Framework.Servers.HttpServer
                     httpHandler =  m_HTTPHandlers[bestMatch];
                     return true;
                 }
+            }
+            finally
+            {
+                m_HTTPHandlersRwLock.ReleaseReaderLock();
             }
         }
 
@@ -1953,13 +2068,21 @@ namespace OpenSim.Framework.Servers.HttpServer
 
             //m_log.DebugFormat("[BASE HTTP SERVER]: Removing handler key {0}", handlerKey);
 
-            lock (m_streamHandlers)
+            m_streamHandlersRwLock.AcquireWriterLock(-1);
+            try
+            {
                 m_streamHandlers.Remove(handlerKey);
+            }
+            finally
+            {
+                m_streamHandlersRwLock.ReleaseWriterLock();
+            }
         }
 
         public void RemoveHTTPHandler(string httpMethod, string path)
         {
-            lock (m_HTTPHandlers)
+            m_HTTPHandlersRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (httpMethod != null && httpMethod.Length == 0)
                 {
@@ -1969,45 +2092,55 @@ namespace OpenSim.Framework.Servers.HttpServer
 
                 m_HTTPHandlers.Remove(GetHandlerKey(httpMethod, path));
             }
+            finally
+            {
+                m_HTTPHandlersRwLock.ReleaseWriterLock();
+            }
         }
 
         public void RemovePollServiceHTTPHandler(string httpMethod, string path)
         {
-            lock (m_pollHandlers)
+            m_pollHandlersRwLock.AcquireWriterLock(-1);
+            try
+            {
                 m_pollHandlers.Remove(path);
+            }
+            finally
+            {
+                m_pollHandlersRwLock.ReleaseWriterLock();
+            }
         }
-
-//        public bool RemoveAgentHandler(string agent, IHttpAgentHandler handler)
-//        {
-//            lock (m_agentHandlers)
-//            {
-//                IHttpAgentHandler foundHandler;
-//
-//                if (m_agentHandlers.TryGetValue(agent, out foundHandler) && foundHandler == handler)
-//                {
-//                    m_agentHandlers.Remove(agent);
-//                    return true;
-//                }
-//            }
-//
-//            return false;
-//        }
 
         public void RemoveXmlRPCHandler(string method)
         {
-            lock (m_rpcHandlers)
+            m_rpcHandlersRwLock.AcquireWriterLock(-1);
+            try
+            {
                 m_rpcHandlers.Remove(method);
+            }
+            finally
+            {
+                m_rpcHandlersRwLock.ReleaseWriterLock();
+            }
         }
 
         public void RemoveJsonRPCHandler(string method)
         {
-            lock(jsonRpcHandlers)
+            jsonRpcHandlersRwLock.AcquireWriterLock(-1);
+            try
+            {
                 jsonRpcHandlers.Remove(method);
+            }
+            finally
+            {
+                jsonRpcHandlersRwLock.ReleaseWriterLock();
+            }
         }
 
         public bool RemoveLLSDHandler(string path, LLSDMethod handler)
         {
-            lock (m_llsdHandlers)
+            m_llsdHandlersRwLock.AcquireWriterLock(-1);
+            try
             {
                 LLSDMethod foundHandler;
 
@@ -2016,6 +2149,10 @@ namespace OpenSim.Framework.Servers.HttpServer
                     m_llsdHandlers.Remove(path);
                     return true;
                 }
+            }
+            finally
+            {
+                m_llsdHandlersRwLock.ReleaseWriterLock();
             }
 
             return false;
