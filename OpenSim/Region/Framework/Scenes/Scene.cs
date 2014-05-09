@@ -251,7 +251,8 @@ namespace OpenSim.Region.Framework.Scenes
         protected int m_splitRegionID;
         protected Timer m_restartWaitTimer = new Timer();
         protected List<RegionInfo> m_regionRestartNotifyList = new List<RegionInfo>();
-        protected List<RegionInfo> m_neighbours = new List<RegionInfo>();
+        private List<RegionInfo> m_neighbours = new List<RegionInfo>();
+        private ReaderWriterLock m_neighboursRwLock = new ReaderWriterLock();
         protected string m_simulatorVersion = "OpenSimulator Server";
         protected AgentCircuitManager m_authenticateHandler;
         protected SceneCommunicationService m_sceneGridService;
@@ -1117,16 +1118,21 @@ namespace OpenSim.Region.Framework.Scenes
 
         public void AddNeighborRegion(RegionInfo region)
         {
-            lock (m_neighbours)
+            m_neighboursRwLock.AcquireWriterLock(-1);
+            try
             {
-                if (!CheckNeighborRegion(region))
+                if (!CheckNeighborRegionInternal(region))
                 {
                     m_neighbours.Add(region);
                 }
             }
+            finally
+            {
+                m_neighboursRwLock.ReleaseWriterLock();
+            }
         }
 
-        public bool CheckNeighborRegion(RegionInfo region)
+        private bool CheckNeighborRegionInternal(RegionInfo region)
         {
             bool found = false;
             lock (m_neighbours)
@@ -1141,6 +1147,19 @@ namespace OpenSim.Region.Framework.Scenes
                 }
             }
             return found;
+        }
+
+        public bool CheckNeighborRegion(RegionInfo region)
+        {
+            m_neighboursRwLock.AcquireReaderLock(-1);
+            try
+            {
+                return CheckNeighborRegionInternal(region);
+            }
+            finally
+            {
+                m_neighboursRwLock.ReleaseReaderLock();
+            }
         }
 
         // Alias IncomingHelloNeighbour OtherRegionUp, for now
