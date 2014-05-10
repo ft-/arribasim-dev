@@ -28,6 +28,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Threading;
 using log4net;
 using Nini.Config;
 using OpenMetaverse;
@@ -44,8 +45,9 @@ namespace OpenSim.Region.CoreModules.Avatar.Friends
     public class CallingCardModule : ISharedRegionModule, ICallingCardModule
     {
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
-        protected List<Scene> m_Scenes = new List<Scene>();
-        protected bool m_Enabled = true;
+        private List<Scene> m_Scenes = new List<Scene>();
+        private ReaderWriterLock m_ScenesRwLock = new ReaderWriterLock();
+        private bool m_Enabled = true;
 
         public void Initialise(IConfigSource source)
         {
@@ -59,7 +61,15 @@ namespace OpenSim.Region.CoreModules.Avatar.Friends
             if (!m_Enabled)
                 return;
 
-            m_Scenes.Add(scene);
+            m_ScenesRwLock.AcquireWriterLock(-1);
+            try
+            {
+                m_Scenes.Add(scene);
+            }
+            finally
+            {
+                m_ScenesRwLock.ReleaseWriterLock();
+            }
 
             scene.RegisterModuleInterface<ICallingCardModule>(this);
         }
@@ -69,7 +79,15 @@ namespace OpenSim.Region.CoreModules.Avatar.Friends
             if (!m_Enabled)
                 return;
 
-            m_Scenes.Remove(scene);
+            m_ScenesRwLock.AcquireWriterLock(-1);
+            try
+            {
+                m_Scenes.Remove(scene);
+            }
+            finally
+            {
+                m_ScenesRwLock.ReleaseWriterLock();
+            }
 
             scene.EventManager.OnNewClient -= OnNewClient;
             scene.EventManager.OnIncomingInstantMessage +=
@@ -267,7 +285,8 @@ namespace OpenSim.Region.CoreModules.Avatar.Friends
 
         private Scene GetClientScene(UUID agentId)
         {
-            lock (m_Scenes)
+            m_ScenesRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (Scene scene in m_Scenes)
                 {
@@ -279,12 +298,17 @@ namespace OpenSim.Region.CoreModules.Avatar.Friends
                     }
                 }
             }
+            finally
+            {
+                m_ScenesRwLock.ReleaseReaderLock();
+            }
             return null;
         }
 
         private ScenePresence GetClientPresence(UUID agentId)
         {
-            lock (m_Scenes)
+            m_ScenesRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (Scene scene in m_Scenes)
                 {
@@ -295,6 +319,10 @@ namespace OpenSim.Region.CoreModules.Avatar.Friends
                             return presence;
                     }
                 }
+            }
+            finally
+            {
+                m_ScenesRwLock.ReleaseReaderLock();
             }
             return null;
         }

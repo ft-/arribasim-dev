@@ -59,7 +59,17 @@ namespace OpenSim.Region.CoreModules.Avatar.Friends
             get
             {
                 if (m_uMan == null)
-                    m_uMan = m_Scenes[0].RequestModuleInterface<IUserManagement>();
+                {
+                    m_ScenesRwLock.AcquireReaderLock(-1);
+                    try
+                    {
+                        m_uMan = m_Scenes[0].RequestModuleInterface<IUserManagement>();
+                    }
+                    finally
+                    {
+                        m_ScenesRwLock.ReleaseReaderLock();
+                    }
+                }
                 return m_uMan;
             }
         }
@@ -168,30 +178,46 @@ namespace OpenSim.Region.CoreModules.Avatar.Friends
             {
                 UUID agentID = client.AgentId;
                 // we do this only for the root agent
-                if (m_Friends[agentID].Refcount == 1)
+                m_FriendsRwLock.AcquireReaderLock(-1);
+                try
                 {
-                    // We need to preload the user management cache with the names
-                    // of foreign friends, just like we do with SOPs' creators
-                    foreach (FriendInfo finfo in m_Friends[agentID].Friends)
+                    if (m_Friends[agentID].Refcount == 1)
                     {
-                        if (finfo.TheirFlags != -1)
+                        // We need to preload the user management cache with the names
+                        // of foreign friends, just like we do with SOPs' creators
+                        foreach (FriendInfo finfo in m_Friends[agentID].Friends)
                         {
-                            UUID id;
-                            if (!UUID.TryParse(finfo.Friend, out id))
+                            if (finfo.TheirFlags != -1)
                             {
-                                string url = string.Empty, first = string.Empty, last = string.Empty, tmp = string.Empty;
-                                if (Util.ParseUniversalUserIdentifier(finfo.Friend, out id, out url, out first, out last, out tmp))
+                                UUID id;
+                                if (!UUID.TryParse(finfo.Friend, out id))
                                 {
-                                    IUserManagement uMan = m_Scenes[0].RequestModuleInterface<IUserManagement>();
-                                    m_log.DebugFormat("[HGFRIENDS MODULE]: caching {0}", finfo.Friend);
-                                    uMan.AddUser(id, url + ";" + first + " " + last);
+                                    string url = string.Empty, first = string.Empty, last = string.Empty, tmp = string.Empty;
+                                    if (Util.ParseUniversalUserIdentifier(finfo.Friend, out id, out url, out first, out last, out tmp))
+                                    {
+                                        m_ScenesRwLock.AcquireReaderLock(-1);
+                                        try
+                                        {
+                                            IUserManagement uMan = m_Scenes[0].RequestModuleInterface<IUserManagement>();
+                                            m_log.DebugFormat("[HGFRIENDS MODULE]: caching {0}", finfo.Friend);
+                                            uMan.AddUser(id, url + ";" + first + " " + last);
+                                        }
+                                        finally
+                                        {
+                                            m_ScenesRwLock.ReleaseReaderLock();
+                                        }
+                                    }
                                 }
                             }
                         }
-                    }
 
-//                    m_log.DebugFormat("[HGFRIENDS MODULE]: Exiting CacheFriends for {0} since detected root agent", client.Name);
-                    return true;
+                        //                    m_log.DebugFormat("[HGFRIENDS MODULE]: Exiting CacheFriends for {0} since detected root agent", client.Name);
+                        return true;
+                    }
+                }
+                finally
+                {
+                    m_FriendsRwLock.ReleaseReaderLock();
                 }
             }
 
@@ -208,14 +234,22 @@ namespace OpenSim.Region.CoreModules.Avatar.Friends
                 AgentCircuitData aCircuit = ((Scene)client.Scene).AuthenticateHandler.GetAgentCircuitData(client.AgentId);
                 if (aCircuit != null && (aCircuit.teleportFlags & (uint)Constants.TeleportFlags.ViaHGLogin) != 0)
                 {
-                    UserAccount account = m_Scenes[0].UserAccountService.GetUserAccount(client.Scene.RegionInfo.ScopeID, client.AgentId);
-                    if (account == null) // foreign
+                    m_ScenesRwLock.AcquireReaderLock(-1);
+                    try
                     {
-                        FriendInfo[] friends = GetFriendsFromCache(client.AgentId);
-                        foreach (FriendInfo f in friends)
+                        UserAccount account = m_Scenes[0].UserAccountService.GetUserAccount(client.Scene.RegionInfo.ScopeID, client.AgentId);
+                        if (account == null) // foreign
                         {
-                            client.SendChangeUserRights(new UUID(f.Friend), client.AgentId, f.TheirFlags);
+                            FriendInfo[] friends = GetFriendsFromCache(client.AgentId);
+                            foreach (FriendInfo f in friends)
+                            {
+                                client.SendChangeUserRights(new UUID(f.Friend), client.AgentId, f.TheirFlags);
+                            }
                         }
+                    }
+                    finally
+                    {
+                        m_ScenesRwLock.ReleaseReaderLock();
                     }
                 }
             }
