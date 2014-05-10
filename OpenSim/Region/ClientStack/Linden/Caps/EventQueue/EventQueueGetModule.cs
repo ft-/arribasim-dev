@@ -76,10 +76,13 @@ namespace OpenSim.Region.ClientStack.Linden
         protected Scene m_scene;
         
         private Dictionary<UUID, int> m_ids = new Dictionary<UUID, int>();
+        private ReaderWriterLock m_idsRwLock = new ReaderWriterLock();
 
         private Dictionary<UUID, Queue<OSD>> queues = new Dictionary<UUID, Queue<OSD>>();
         private Dictionary<UUID, UUID> m_QueueUUIDAvatarMapping = new Dictionary<UUID, UUID>();
+        private ReaderWriterLock m_QueueUUIDAvatarMappingRwLock = new ReaderWriterLock();
         private Dictionary<UUID, UUID> m_AvatarQueueUUIDMapping = new Dictionary<UUID, UUID>();
+        private ReaderWriterLock m_AvatarQueueUUIDMappingRwLock = new ReaderWriterLock();
             
         #region INonSharedRegionModule methods
         public virtual void Initialise(IConfigSource config)
@@ -262,14 +265,22 @@ namespace OpenSim.Region.ClientStack.Linden
                 queues.Remove(agentID);
 
             List<UUID> removeitems = new List<UUID>();
-            lock (m_AvatarQueueUUIDMapping)
+            m_AvatarQueueUUIDMappingRwLock.AcquireWriterLock(-1);
+            try
+            {
                 m_AvatarQueueUUIDMapping.Remove(agentID);
+            }
+            finally
+            {
+                m_AvatarQueueUUIDMappingRwLock.ReleaseWriterLock();
+            }
 
             UUID searchval = UUID.Zero;
 
             removeitems.Clear();
-            
-            lock (m_QueueUUIDAvatarMapping)
+
+            m_QueueUUIDAvatarMappingRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (UUID ky in m_QueueUUIDAvatarMapping.Keys)
                 {
@@ -281,8 +292,20 @@ namespace OpenSim.Region.ClientStack.Linden
                     }
                 }
 
-                foreach (UUID ky in removeitems)
-                    m_QueueUUIDAvatarMapping.Remove(ky);
+                LockCookie lc = m_QueueUUIDAvatarMappingRwLock.UpgradeToWriterLock(-1);
+                try
+                {
+                    foreach (UUID ky in removeitems)
+                        m_QueueUUIDAvatarMapping.Remove(ky);
+                }
+                finally
+                {
+                    m_QueueUUIDAvatarMappingRwLock.DowngradeFromWriterLock(ref lc);
+                }
+            }
+            finally
+            {
+                m_QueueUUIDAvatarMappingRwLock.ReleaseReaderLock();
             }
 
             // m_log.DebugFormat("[EVENTQUEUE]: Deleted queues for {0} in region {1}", agentID, m_scene.RegionInfo.RegionName);
@@ -311,7 +334,8 @@ namespace OpenSim.Region.ClientStack.Linden
 
             UUID eventQueueGetUUID;
 
-            lock (m_AvatarQueueUUIDMapping)
+            m_AvatarQueueUUIDMappingRwLock.AcquireReaderLock(-1);
+            try
             {
                 // Reuse open queues.  The client does!
                 if (m_AvatarQueueUUIDMapping.ContainsKey(agentID))
@@ -325,17 +349,31 @@ namespace OpenSim.Region.ClientStack.Linden
                     //m_log.DebugFormat("[EVENTQUEUE]: Using random UUID!");
                 }
             }
+            finally
+            {
+                m_AvatarQueueUUIDMappingRwLock.ReleaseReaderLock();
+            }
 
-            lock (m_QueueUUIDAvatarMapping)
+            m_QueueUUIDAvatarMappingRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (!m_QueueUUIDAvatarMapping.ContainsKey(eventQueueGetUUID))
                     m_QueueUUIDAvatarMapping.Add(eventQueueGetUUID, agentID);
             }
+            finally
+            {
+                m_QueueUUIDAvatarMappingRwLock.ReleaseWriterLock();
+            }
 
-            lock (m_AvatarQueueUUIDMapping)
+            m_AvatarQueueUUIDMappingRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (!m_AvatarQueueUUIDMapping.ContainsKey(agentID))
                     m_AvatarQueueUUIDMapping.Add(agentID, eventQueueGetUUID);
+            }
+            finally
+            {
+                m_AvatarQueueUUIDMappingRwLock.ReleaseWriterLock();
             }
 
             caps.RegisterPollHandler(
@@ -343,10 +381,15 @@ namespace OpenSim.Region.ClientStack.Linden
                 new PollServiceEventArgs(null, GenerateEqgCapPath(eventQueueGetUUID), HasEvents, GetEvents, NoEvents, agentID, SERVER_EQ_TIME_NO_EVENTS));
 
             Random rnd = new Random(Environment.TickCount);
-            lock (m_ids)
+            m_idsRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (!m_ids.ContainsKey(agentID))
                     m_ids.Add(agentID, rnd.Next(30000000));
+            }
+            finally
+            {
+                m_idsRwLock.ReleaseWriterLock();
             }
         }
 
@@ -401,8 +444,15 @@ namespace OpenSim.Region.ClientStack.Linden
             }
 
             int thisID = 0;
-            lock (m_ids)
+            m_idsRwLock.AcquireReaderLock(-1);
+            try
+            {
                 thisID = m_ids[pAgentId];
+            }
+            finally
+            {
+                m_idsRwLock.ReleaseReaderLock();
+            }
 
             OSDArray array = new OSDArray();
             if (element == null) // didn't have an event in 15s
@@ -437,9 +487,14 @@ namespace OpenSim.Region.ClientStack.Linden
             events.Add("events", array);
 
             events.Add("id", new OSDInteger(thisID));
-            lock (m_ids)
+            m_idsRwLock.AcquireWriterLock(-1);
+            try
             {
                 m_ids[pAgentId] = thisID + 1;
+            }
+            finally
+            {
+                m_idsRwLock.ReleaseWriterLock();
             }
             Hashtable responsedata = new Hashtable();
             responsedata["int_response_code"] = 200;
@@ -488,8 +543,15 @@ namespace OpenSim.Region.ClientStack.Linden
 //            Hashtable responsedata = new Hashtable();
 //
 //            int thisID = 0;
-//            lock (m_ids)
+//            m_idsRwLock.AcquireReaderLock(-1);
+//            try
+//            {
 //                thisID = m_ids[agentID];
+//            }
+//            finally
+//            {
+//                m_idsRwLock.ReleaseReaderLock();
+//            }
 //
 //            if (element == null)
 //            {
@@ -555,9 +617,14 @@ namespace OpenSim.Region.ClientStack.Linden
 //            events.Add("events", array);
 //
 //            events.Add("id", new OSDInteger(thisID));
-//            lock (m_ids)
+//            m_idsRwLock.AcquireWriterLock(-1);
+//            try
 //            {
 //                m_ids[agentID] = thisID + 1;
+//            }
+//            finally
+//            {
+//                m_idsRwLock.ReleaseWriterLock();
 //            }
 //
 //            responsedata["int_response_code"] = 200;
@@ -583,12 +650,17 @@ namespace OpenSim.Region.ClientStack.Linden
 //            // parse the path and search for the avatar with it registered
 //            if (UUID.TryParse(capuuid, out capUUID))
 //            {
-//                lock (m_QueueUUIDAvatarMapping)
+//                m_QueueUUIDAvatarMapping.AcquireReaderLock(-1);
+//                try
 //                {
 //                    if (m_QueueUUIDAvatarMapping.ContainsKey(capUUID))
 //                    {
 //                        AvatarID = m_QueueUUIDAvatarMapping[capUUID];
 //                    }
+//                }
+//                finally
+//                {
+//                    m_QueueUUIDAvatarMapping.ReleaseReaderLock();
 //                }
 //                
 //                if (AvatarID != UUID.Zero)
@@ -632,77 +704,99 @@ namespace OpenSim.Region.ClientStack.Linden
             UUID capUUID = UUID.Zero;
             if (UUID.TryParse(capuuid, out capUUID))
             {
-/* Don't remove this yet code cleaners!
- * Still testing this!
- * 
-                lock (m_QueueUUIDAvatarMapping)
-                {
-                    if (m_QueueUUIDAvatarMapping.ContainsKey(capUUID))
-                    {
-                        AvatarID = m_QueueUUIDAvatarMapping[capUUID];
-                    }
-                }
+                /* Don't remove this yet code cleaners!
+                 * Still testing this!
+                 * 
+                                m_QueueUUIDAvatarMapping.AcquireReaderLock(-1);
+                                try
+                                {
+                                    if (m_QueueUUIDAvatarMapping.ContainsKey(capUUID))
+                                    {
+                                        AvatarID = m_QueueUUIDAvatarMapping[capUUID];
+                                    }
+                                }
+                                finally
+                                {
+                                    m_QueueUUIDAvatarMapping.ReleaseReaderLock();
+                                }
                 
                  
-                if (AvatarID != UUID.Zero)
-                {
-                    // Repair the CAP!
-                    //OpenSim.Framework.Capabilities.Caps caps = m_scene.GetCapsHandlerForUser(AvatarID);
-                    //string capsBase = "/CAPS/EQG/";
-                    //caps.RegisterHandler("EventQueueGet",
-                                //new RestHTTPHandler("POST", capsBase + capUUID.ToString() + "/",
-                                                      //delegate(Hashtable m_dhttpMethod)
-                                                      //{
-                                                      //    return ProcessQueue(m_dhttpMethod, AvatarID, caps);
-                                                      //}));
-                    // start new ID sequence.
-                    Random rnd = new Random(System.Environment.TickCount);
-                    lock (m_ids)
-                    {
-                        if (!m_ids.ContainsKey(AvatarID))
-                            m_ids.Add(AvatarID, rnd.Next(30000000));
-                    }
+                                if (AvatarID != UUID.Zero)
+                                {
+                                    // Repair the CAP!
+                                    //OpenSim.Framework.Capabilities.Caps caps = m_scene.GetCapsHandlerForUser(AvatarID);
+                                    //string capsBase = "/CAPS/EQG/";
+                                    //caps.RegisterHandler("EventQueueGet",
+                                                //new RestHTTPHandler("POST", capsBase + capUUID.ToString() + "/",
+                                                                      //delegate(Hashtable m_dhttpMethod)
+                                                                      //{
+                                                                      //    return ProcessQueue(m_dhttpMethod, AvatarID, caps);
+                                                                      //}));
+                                    // start new ID sequence.
+                                    Random rnd = new Random(System.Environment.TickCount);
+                                    m_idsRwLock.AcquireWriterLock(-1);
+                                    try
+                                    {
+                                        if (!m_ids.ContainsKey(AvatarID))
+                                            m_ids.Add(AvatarID, rnd.Next(30000000));
+                                    }
+                                    finally
+                                    {
+                                        m_idsRwLock.ReleaseWriterLock();
+                                    }
 
 
-                    int thisID = 0;
-                    lock (m_ids)
-                        thisID = m_ids[AvatarID];
+                                    int thisID = 0;
+                                    m_idsRwLock.AcquireReaderLock(-1);
+                                    try
+                                    {
+                                        thisID = m_ids[AvatarID];
+                                    }
+                                    finally
+                                    {
+                                        m_idsRwLock.ReleaseReaderLock();
+                                    }
 
-                    BlockingLLSDQueue queue = GetQueue(AvatarID);
-                    OSDArray array = new OSDArray();
-                    LLSD element = queue.Dequeue(15000); // 15s timeout
-                    if (element == null)
-                    {
+                                    BlockingLLSDQueue queue = GetQueue(AvatarID);
+                                    OSDArray array = new OSDArray();
+                                    LLSD element = queue.Dequeue(15000); // 15s timeout
+                                    if (element == null)
+                                    {
                         
-                        array.Add(EventQueueHelper.KeepAliveEvent());
-                    }
-                    else
-                    {
-                        array.Add(element);
-                        while (queue.Count() > 0)
-                        {
-                            array.Add(queue.Dequeue(1));
-                            thisID++;
-                        }
-                    }
-                    OSDMap events = new OSDMap();
-                    events.Add("events", array);
+                                        array.Add(EventQueueHelper.KeepAliveEvent());
+                                    }
+                                    else
+                                    {
+                                        array.Add(element);
+                                        while (queue.Count() > 0)
+                                        {
+                                            array.Add(queue.Dequeue(1));
+                                            thisID++;
+                                        }
+                                    }
+                                    OSDMap events = new OSDMap();
+                                    events.Add("events", array);
 
-                    events.Add("id", new LLSDInteger(thisID));
+                                    events.Add("id", new LLSDInteger(thisID));
                     
-                    lock (m_ids)
-                    {
-                        m_ids[AvatarID] = thisID + 1;
-                    }
+                                    m_ids.AcquireWriterLock(-1);
+                                    try
+                                    {
+                                        m_ids[AvatarID] = thisID + 1;
+                                    }
+                                    finally
+                                    {
+                                        m_ids.ReleaseWriterLock();
+                                    }
                     
-                    return events;
-                }
-                else
-                {
-                    return new LLSD();
-                }
-* 
-*/
+                                    return events;
+                                }
+                                else
+                                {
+                                    return new LLSD();
+                                }
+                * 
+                */
             }
             else
             {
