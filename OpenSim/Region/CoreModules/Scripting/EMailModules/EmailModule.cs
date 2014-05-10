@@ -29,6 +29,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Threading;
 using DotNetOpenMail;
 using DotNetOpenMail.SmtpAuth;
 using log4net;
@@ -71,6 +72,7 @@ namespace OpenSim.Region.CoreModules.Scripting.EmailModules
         // Scenes by Region Handle
         private Dictionary<ulong, Scene> m_Scenes =
             new Dictionary<ulong, Scene>();
+        private ReaderWriterLock m_ScenesRwLock = new ReaderWriterLock();
 
         private bool m_Enabled = false;
 
@@ -126,20 +128,18 @@ namespace OpenSim.Region.CoreModules.Scripting.EmailModules
                 return;
 
         // It's a go!
-            lock (m_Scenes)
+            m_ScenesRwLock.AcquireWriterLock(-1);
+            try
             {
                 // Claim the interface slot
                 scene.RegisterModuleInterface<IEmailModule>(this);
 
                 // Add to scene list
-                if (m_Scenes.ContainsKey(scene.RegionInfo.RegionHandle))
-                {
-                    m_Scenes[scene.RegionInfo.RegionHandle] = scene;
-                }
-                else
-                {
-                    m_Scenes.Add(scene.RegionInfo.RegionHandle, scene);
-                }
+                m_Scenes.Add(scene.RegionInfo.RegionHandle, scene);
+            }
+            finally
+            {
+                m_ScenesRwLock.ReleaseWriterLock();
             }
 
             m_log.Info("[EMAIL] Activated DefaultEmailModule");
@@ -147,6 +147,15 @@ namespace OpenSim.Region.CoreModules.Scripting.EmailModules
 
         public void RemoveRegion(Scene scene)
         {
+            m_ScenesRwLock.AcquireWriterLock(-1);
+            try
+            {
+                m_Scenes.Remove(scene.RegionInfo.RegionHandle);
+            }
+            finally
+            {
+                m_ScenesRwLock.ReleaseWriterLock();
+            }
         }
 
         public void PostInitialise()
@@ -205,7 +214,8 @@ namespace OpenSim.Region.CoreModules.Scripting.EmailModules
 
         private SceneObjectPart findPrim(UUID objectID, out string ObjectRegionName)
         {
-            lock (m_Scenes)
+            m_ScenesRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (Scene s in m_Scenes.Values)
                 {
@@ -219,6 +229,10 @@ namespace OpenSim.Region.CoreModules.Scripting.EmailModules
                         return part;
                     }
                 }
+            }
+            finally
+            {
+                m_ScenesRwLock.ReleaseReaderLock();
             }
             ObjectRegionName = string.Empty;
             return null;
