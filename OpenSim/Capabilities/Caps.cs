@@ -30,6 +30,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Threading;
 using log4net;
 using Nini.Config;
 using OpenMetaverse;
@@ -65,8 +66,10 @@ namespace OpenSim.Framework.Capabilities
 
         private Dictionary<string, PollServiceEventArgs> m_pollServiceHandlers 
             = new Dictionary<string, PollServiceEventArgs>();
+        private ReaderWriterLock m_pollServiceHandlersRwLock = new ReaderWriterLock();
 
         private Dictionary<string, string> m_externalCapsHandlers = new Dictionary<string, string>();
+        private ReaderWriterLock m_externalCapsHandlersRwLock = new ReaderWriterLock();
 
         private IHttpServer m_httpListener;
         private UUID m_agentID;
@@ -114,7 +117,18 @@ namespace OpenSim.Framework.Capabilities
 
         public Dictionary<string, string> ExternalCapsHandlers
         {
-            get { return m_externalCapsHandlers; }
+            get 
+            {
+                m_externalCapsHandlersRwLock.AcquireReaderLock(-1);
+                try
+                {
+                    return m_externalCapsHandlers;
+                }
+                finally
+                {
+                    m_externalCapsHandlersRwLock.ReleaseReaderLock();
+                }
+            }
         }
 
         public Caps(IHttpServer httpServer, string httpListen, uint httpPort, string capsPath,
@@ -155,7 +169,15 @@ namespace OpenSim.Framework.Capabilities
 //                "[CAPS]: Registering handler with name {0}, url {1} for {2}", 
 //                capName, pollServiceHandler.Url, m_agentID, m_regionName);
 
-            m_pollServiceHandlers.Add(capName, pollServiceHandler);
+            m_pollServiceHandlersRwLock.AcquireWriterLock(-1);
+            try
+            {
+                m_pollServiceHandlers.Add(capName, pollServiceHandler);
+            }
+            finally
+            {
+                m_pollServiceHandlersRwLock.ReleaseWriterLock();
+            }
 
             m_httpListener.AddPollServiceHTTPHandler(pollServiceHandler.Url, pollServiceHandler);
 
@@ -182,7 +204,15 @@ namespace OpenSim.Framework.Capabilities
         /// <param name="url"></param>
         public void RegisterHandler(string capsName, string url)
         {
-            m_externalCapsHandlers.Add(capsName, url);
+            m_externalCapsHandlersRwLock.AcquireWriterLock(-1);
+            try
+            {
+                m_externalCapsHandlers.Add(capsName, url);
+            }
+            finally
+            {
+                m_externalCapsHandlersRwLock.ReleaseWriterLock();
+            }
         }
 
         /// <summary>
@@ -195,20 +225,44 @@ namespace OpenSim.Framework.Capabilities
                 m_capsHandlers.Remove(capsName);
             }
 
-            foreach (PollServiceEventArgs handler in m_pollServiceHandlers.Values)
+            m_pollServiceHandlersRwLock.AcquireReaderLock(-1);
+            try
             {
-                m_httpListener.RemovePollServiceHTTPHandler("", handler.Url);
+                foreach (PollServiceEventArgs handler in m_pollServiceHandlers.Values)
+                {
+                    m_httpListener.RemovePollServiceHTTPHandler("", handler.Url);
+                }
+            }
+            finally
+            {
+                m_pollServiceHandlersRwLock.ReleaseReaderLock();
             }
         }
 
         public bool TryGetPollHandler(string name, out PollServiceEventArgs pollHandler)
         {
-            return m_pollServiceHandlers.TryGetValue(name, out pollHandler);
+            m_pollServiceHandlersRwLock.AcquireReaderLock(-1);
+            try
+            {
+                return m_pollServiceHandlers.TryGetValue(name, out pollHandler);
+            }
+            finally
+            {
+                m_pollServiceHandlersRwLock.ReleaseReaderLock();
+            }
         }
 
         public Dictionary<string, PollServiceEventArgs> GetPollHandlers()
         {
-            return new Dictionary<string, PollServiceEventArgs>(m_pollServiceHandlers);
+            m_pollServiceHandlersRwLock.AcquireReaderLock(-1);
+            try
+            {
+                return new Dictionary<string, PollServiceEventArgs>(m_pollServiceHandlers);
+            }
+            finally
+            {
+                m_pollServiceHandlersRwLock.ReleaseReaderLock();
+            }
         }
 
         /// <summary>
@@ -220,7 +274,8 @@ namespace OpenSim.Framework.Capabilities
         {
             Hashtable caps = CapsHandlers.GetCapsDetails(excludeSeed, requestedCaps);
 
-            lock (m_pollServiceHandlers)
+            m_pollServiceHandlersRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (KeyValuePair <string, PollServiceEventArgs> kvp in m_pollServiceHandlers)
                 {
@@ -242,6 +297,10 @@ namespace OpenSim.Framework.Capabilities
 
                         caps[kvp.Key] = string.Format("{0}://{1}:{2}{3}", protocol, hostName, port, kvp.Value.Url);
                 }
+            }
+            finally
+            {
+                m_pollServiceHandlersRwLock.ReleaseReaderLock();
             }
 
             // Add the external too
