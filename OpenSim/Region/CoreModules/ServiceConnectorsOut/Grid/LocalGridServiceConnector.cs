@@ -31,6 +31,7 @@ using Nini.Config;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Threading;
 using OpenSim.Framework;
 using OpenSim.Framework.Console;
 using OpenSim.Server.Base;
@@ -52,6 +53,7 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Grid
 
         private IGridService m_GridService;
         private Dictionary<UUID, RegionCache> m_LocalCache = new Dictionary<UUID, RegionCache>();
+        private ReaderWriterLock m_LocalCacheRwLock = new ReaderWriterLock();
 
         private bool m_Enabled;
 
@@ -144,12 +146,17 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Grid
 
             scene.RegisterModuleInterface<IGridService>(this);
 
-            lock (m_LocalCache)
+            m_LocalCacheRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (m_LocalCache.ContainsKey(scene.RegionInfo.RegionID))
                     m_log.ErrorFormat("[LOCAL GRID SERVICE CONNECTOR]: simulator seems to have more than one region with the same UUID. Please correct this!");
                 else
                     m_LocalCache.Add(scene.RegionInfo.RegionID, new RegionCache(scene));
+            }
+            finally
+            {
+                m_LocalCacheRwLock.ReleaseWriterLock();
             }
         }
 
@@ -158,10 +165,15 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Grid
             if (!m_Enabled)
                 return;
 
-            lock (m_LocalCache)
+            m_LocalCacheRwLock.AcquireWriterLock(-1);
+            try
             {
                 m_LocalCache[scene.RegionInfo.RegionID].Clear();
                 m_LocalCache.Remove(scene.RegionInfo.RegionID);
+            }
+            finally
+            {
+                m_LocalCacheRwLock.ReleaseWriterLock();
             }
         }
 
@@ -203,7 +215,8 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Grid
             // First see if it's a neighbour, even if it isn't on this sim.
             // Neighbour data is cached in memory, so this is fast
 
-            lock (m_LocalCache)
+            m_LocalCacheRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (RegionCache rcache in m_LocalCache.Values)
                 {
@@ -215,6 +228,10 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Grid
                         break;
                     }
                 }
+            }
+            finally
+            {
+                m_LocalCacheRwLock.ReleaseReaderLock();
             }
 
             // Then try on this sim (may be a lookup in DB if this is using MySql).
@@ -277,7 +294,8 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Grid
         {
             System.Text.StringBuilder caps = new System.Text.StringBuilder();
 
-            lock (m_LocalCache)
+            m_LocalCacheRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (KeyValuePair<UUID, RegionCache> kvp in m_LocalCache)
                 {
@@ -286,6 +304,10 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Grid
                     foreach (GridRegion r in regions)
                         caps.AppendFormat("    {0} @ {1}-{2}\n", r.RegionName, Util.WorldToRegionLoc((uint)r.RegionLocX), Util.WorldToRegionLoc((uint)r.RegionLocY));
                 }
+            }
+            finally
+            {
+                m_LocalCacheRwLock.ReleaseReaderLock();
             }
 
             MainConsole.Instance.Output(caps.ToString());
