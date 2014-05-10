@@ -32,6 +32,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Reflection;
 using System.Web;
+using System.Threading;
 using OpenSim.Framework;
 using OpenSim.Services.Interfaces;
 using OpenSim.Services.Connectors.Hypergrid;
@@ -46,25 +47,8 @@ namespace OpenSim.Services.Connectors
                 LogManager.GetLogger(
                 MethodBase.GetCurrentMethod().DeclaringType);
 
-        private Dictionary<IAssetService, object> m_endpointSerializer = new Dictionary<IAssetService, object>();
-        private object EndPointLock(IAssetService connector)
-        {
-            lock (m_endpointSerializer)
-            {
-                object eplock = null;
-
-                if (! m_endpointSerializer.TryGetValue(connector, out eplock))
-                {
-                    eplock = new object();
-                    m_endpointSerializer.Add(connector, eplock);
-                    // m_log.WarnFormat("[WEB UTIL] add a new host to end point serializer {0}",endpoint);
-                }
-
-                return eplock;
-            }
-        }
-
         private Dictionary<string, IAssetService> m_connectors = new Dictionary<string, IAssetService>();
+        private ReaderWriterLock m_connectorsRwLock = new ReaderWriterLock();
 
         public HGAssetServiceConnector(IConfigSource source)
         {
@@ -87,7 +71,8 @@ namespace OpenSim.Services.Connectors
         private IAssetService GetConnector(string url)
         {
             IAssetService connector = null;
-            lock (m_connectors)
+            m_connectorsRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_connectors.ContainsKey(url))
                 {
@@ -95,19 +80,39 @@ namespace OpenSim.Services.Connectors
                 }
                 else
                 {
-                    // Still not as flexible as I would like this to be,
-                    // but good enough for now
-                    string connectorType = new HeloServicesConnector(url).Helo();
-                    m_log.DebugFormat("[HG ASSET SERVICE]: HELO returned {0}", connectorType);
-                    if (connectorType == "opensim-simian")
+                    LockCookie lc = m_connectorsRwLock.UpgradeToWriterLock(-1);
+                    try
                     {
-                        connector = new SimianAssetServiceConnector(url);
-                    }
-                    else
-                        connector = new AssetServicesConnector(url);
+                        /* recheck since other thread may have created it */
+                        if (m_connectors.ContainsKey(url))
+                        {
+                            connector = m_connectors[url];
+                        }
+                        else
+                        {
+                            // Still not as flexible as I would like this to be,
+                            // but good enough for now
+                            string connectorType = new HeloServicesConnector(url).Helo();
+                            m_log.DebugFormat("[HG ASSET SERVICE]: HELO returned {0}", connectorType);
+                            if (connectorType == "opensim-simian")
+                            {
+                                connector = new SimianAssetServiceConnector(url);
+                            }
+                            else
+                                connector = new AssetServicesConnector(url);
 
-                    m_connectors.Add(url, connector);
+                            m_connectors.Add(url, connector);
+                        }
+                    }
+                    finally
+                    {
+                        m_connectorsRwLock.DowngradeFromWriterLock(ref lc);
+                    }
                 }
+            }
+            finally
+            {
+                m_connectorsRwLock.ReleaseReaderLock();
             }
             return connector;
         }
@@ -215,7 +220,6 @@ namespace OpenSim.Services.Connectors
             foreach (string url in url2assets.Keys)
             {
                 IAssetService connector = GetConnector(url);
-                lock (EndPointLock(connector))
                 {
                     List<AssetAndIndex> curAssets = url2assets[url];
                     string[] assetIDs = curAssets.ConvertAll(a => a.assetID.ToString()).ToArray();
@@ -243,8 +247,7 @@ namespace OpenSim.Services.Connectors
                 IAssetService connector = GetConnector(url);
                 // Restore the assetID to a simple UUID
                 asset.ID = assetID;
-                lock (EndPointLock(connector))
-                    return connector.Store(asset);
+                return connector.Store(asset);
             }
 
             return String.Empty;
