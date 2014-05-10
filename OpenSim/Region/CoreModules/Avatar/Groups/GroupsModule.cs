@@ -28,6 +28,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Threading;
 using log4net;
 using Nini.Config;
 using OpenMetaverse;
@@ -47,9 +48,11 @@ namespace OpenSim.Region.CoreModules.Avatar.Groups
 
         private Dictionary<UUID, GroupMembershipData> m_GroupMap =
                 new Dictionary<UUID, GroupMembershipData>();
+        private ReaderWriterLock m_GroupMapRwLock = new ReaderWriterLock();
 
         private Dictionary<UUID, IClientAPI> m_ClientMap =
                 new Dictionary<UUID, IClientAPI>();
+        private ReaderWriterLock m_ClientMapRwLock = new ReaderWriterLock();
 
         private UUID opensimulatorGroupID =
                 new UUID("00000000-68f9-1111-024e-222222111123");
@@ -145,15 +148,25 @@ namespace OpenSim.Region.CoreModules.Avatar.Groups
                 return;
 
 //            m_log.Debug("[GROUPS]: Shutting down group module.");
-            
-            lock (m_ClientMap)
+
+            m_ClientMapRwLock.AcquireWriterLock(-1);
+            try
             {
                 m_ClientMap.Clear();
             }
+            finally
+            {
+                m_ClientMapRwLock.ReleaseWriterLock();
+            }
 
-            lock (m_GroupMap)
+            m_GroupMapRwLock.AcquireWriterLock(-1);
+            try
             {
                 m_GroupMap.Clear();
+            }
+            finally
+            {
+                m_GroupMapRwLock.ReleaseWriterLock();
             }
         }
 
@@ -175,12 +188,17 @@ namespace OpenSim.Region.CoreModules.Avatar.Groups
 //            client.OnInstantMessage += OnInstantMessage;
             client.OnAgentDataUpdateRequest += OnAgentDataUpdateRequest;
             client.OnUUIDGroupNameRequest += HandleUUIDGroupNameRequest;
-            lock (m_ClientMap)
+            m_ClientMapRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (!m_ClientMap.ContainsKey(client.AgentId))
                 {
                     m_ClientMap.Add(client.AgentId, client);
                 }
+            }
+            finally
+            {
+                m_ClientMapRwLock.ReleaseWriterLock();
             }
 
             GroupMembershipData[] updateGroups = new GroupMembershipData[1];
@@ -225,7 +243,8 @@ namespace OpenSim.Region.CoreModules.Avatar.Groups
             string groupnamereply = "Unknown";
             UUID groupUUID = UUID.Zero;
 
-            lock (m_GroupMap)
+            m_GroupMapRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_GroupMap.ContainsKey(id))
                 {
@@ -234,12 +253,17 @@ namespace OpenSim.Region.CoreModules.Avatar.Groups
                     groupUUID = grp.GroupID;
                 }
             }
+            finally
+            {
+                m_GroupMapRwLock.ReleaseReaderLock();
+            }
             remote_client.SendGroupNameReply(groupUUID, groupnamereply);
         }
 
         private void OnClientClosed(UUID agentID, Scene scene)
         {
-            lock (m_ClientMap)
+            m_GroupMapRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (m_ClientMap.ContainsKey(agentID))
                 {
@@ -254,6 +278,10 @@ namespace OpenSim.Region.CoreModules.Avatar.Groups
 //                    }
                     m_ClientMap.Remove(agentID);
                 }
+            }
+            finally
+            {
+                m_GroupMapRwLock.ReleaseWriterLock();
             }
         }
     }
