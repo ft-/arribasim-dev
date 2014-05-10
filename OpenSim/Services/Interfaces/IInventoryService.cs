@@ -175,15 +175,5 @@ namespace OpenSim.Services.Interfaces
         /// <param name="userId"></param>
         /// <returns></returns>
         List<InventoryItemBase> GetActiveGestures(UUID userId);
-
-        /// <summary>
-        /// Get the union of permissions of all inventory items
-        /// that hold the given assetID. 
-        /// </summary>
-        /// <param name="userID"></param>
-        /// <param name="assetID"></param>
-        /// <returns>The permissions or 0 if no such asset is found in 
-        /// the user's inventory</returns>
-        int GetAssetPermissions(UUID userID, UUID assetID);
     }
 }

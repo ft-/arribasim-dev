@@ -132,6 +132,5 @@ namespace OpenSim.Tests.Common.Mock
         }
 
         public XInventoryItem[] GetActiveGestures(UUID principalID) { throw new NotImplementedException(); }
-        public int GetAssetPermissions(UUID principalID, UUID assetID) { throw new NotImplementedException(); }
     }
 }

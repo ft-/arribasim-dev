@@ -133,6 +133,5 @@ namespace OpenSim.Data
         bool MoveFolder(string id, string newParentFolderID);
 
         XInventoryItem[] GetActiveGestures(UUID principalID);
-        int GetAssetPermissions(UUID principalID, UUID assetID);
     }
 }

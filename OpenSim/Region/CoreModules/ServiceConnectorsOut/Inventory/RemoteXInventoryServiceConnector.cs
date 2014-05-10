@@ -317,11 +317,6 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Inventory
             return new List<InventoryItemBase>();
         }
 
-        public  int GetAssetPermissions(UUID userID, UUID assetID)
-        {
-            return m_RemoteConnector.GetAssetPermissions(userID, assetID);
-        }
-
         #endregion
     }
 }

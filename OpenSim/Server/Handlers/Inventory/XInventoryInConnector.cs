@@ -146,8 +146,6 @@ namespace OpenSim.Server.Handlers.Asset
                         return HandleGetFolder(request);
                     case "GETACTIVEGESTURES":
                         return HandleGetActiveGestures(request);
-                    case "GETASSETPERMISSIONS":
-                        return HandleGetAssetPermissions(request);
                 }
                 m_log.DebugFormat("[XINVENTORY HANDLER]: unknown method request: {0}", method);
             }
@@ -550,23 +548,6 @@ namespace OpenSim.Server.Handlers.Asset
             }
             result["ITEMS"] = items;
 
-            string xmlString = ServerUtils.BuildXmlResponse(result);
-
-            //m_log.DebugFormat("[XXX]: resp string: {0}", xmlString);
-            return Util.UTF8NoBomEncoding.GetBytes(xmlString);
-        }
-
-        byte[] HandleGetAssetPermissions(Dictionary<string,object> request)
-        {
-            Dictionary<string,object> result = new Dictionary<string,object>();
-            UUID principal = UUID.Zero;
-            UUID.TryParse(request["PRINCIPAL"].ToString(), out principal);
-            UUID assetID = UUID.Zero;
-            UUID.TryParse(request["ASSET"].ToString(), out assetID);
-
-            int perms = m_InventoryService.GetAssetPermissions(principal, assetID);
-
-            result["RESULT"] = perms.ToString();
             string xmlString = ServerUtils.BuildXmlResponse(result);
 
             //m_log.DebugFormat("[XXX]: resp string: {0}", xmlString);

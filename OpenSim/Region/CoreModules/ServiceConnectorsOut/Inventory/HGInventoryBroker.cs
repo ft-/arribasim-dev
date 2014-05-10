@@ -602,20 +602,6 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Inventory
             return new List<InventoryItemBase>();
         }
 
-        public int GetAssetPermissions(UUID userID, UUID assetID)
-        {
-            //m_log.Debug("[HG INVENTORY CONNECTOR]: GetAssetPermissions " + assetID);
-
-            string invURL = GetInventoryServiceURL(userID);
-
-            if (invURL == null) // not there, forward to local inventory connector to resolve
-                return m_LocalGridInventoryService.GetAssetPermissions(userID, assetID);
-
-            IInventoryService connector = GetConnector(invURL);
-
-            return connector.GetAssetPermissions(userID, assetID);
-        }
-
         #endregion
 
         private IInventoryService GetConnector(string url)

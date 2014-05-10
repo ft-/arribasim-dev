@@ -166,10 +166,6 @@ namespace OpenSim.Server.Handlers.Inventory
                 new RestDeserialiseTrustedHandler<Guid, List<InventoryFolderBase>>
                     ("POST", "/RootFolders/", GetInventorySkeleton, CheckTrustSource));
 
-            m_httpServer.AddStreamHandler(
-                new RestDeserialiseTrustedHandler<InventoryItemBase, int>
-                ("POST", "/AssetPermissions/", GetAssetPermissions, CheckTrustSource));
-
         }
 
         #region Wrappers for converting the Guid parameter
@@ -246,11 +242,6 @@ namespace OpenSim.Server.Handlers.Inventory
         {
             UUID userID = new UUID(rawUserID);
             return m_InventoryService.GetInventorySkeleton(userID);
-        }
-
-        public int GetAssetPermissions(InventoryItemBase item)
-        {
-            return m_InventoryService.GetAssetPermissions(item.Owner, item.AssetID);
         }
 
         public bool DeleteFolders(List<Guid> items)

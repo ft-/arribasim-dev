@@ -123,11 +123,6 @@ namespace OpenSim.Data.SQLite
         {
             return m_Items.GetActiveGestures(principalID);
         }
-
-        public int GetAssetPermissions(UUID principalID, UUID assetID)
-        {
-            return m_Items.GetAssetPermissions(principalID, assetID);
-        }
     }
 
     public class SqliteItemHandler : SqliteInventoryHandler<XInventoryItem>
@@ -216,32 +211,6 @@ namespace OpenSim.Data.SQLite
 
                 return DoQuery(cmd);
             }
-        }
-
-        public int GetAssetPermissions(UUID principalID, UUID assetID)
-        {
-            IDataReader reader;
-
-            using (SqliteCommand cmd = new SqliteCommand())
-            {
-                cmd.CommandText = String.Format("select inventoryCurrentPermissions from inventoryitems where avatarID = :PrincipalID and assetID = :AssetID", m_Realm);
-                cmd.Parameters.Add(new SqliteParameter(":PrincipalID", principalID.ToString()));
-                cmd.Parameters.Add(new SqliteParameter(":AssetID", assetID.ToString()));
-
-                reader = ExecuteReader(cmd, m_Connection);
-            }
-
-            int perms = 0;
-
-            while (reader.Read())
-            {
-                perms |= Convert.ToInt32(reader["inventoryCurrentPermissions"]);
-            }
-
-            reader.Close();
-            //CloseCommand(cmd);
-
-            return perms;
         }
     }
 

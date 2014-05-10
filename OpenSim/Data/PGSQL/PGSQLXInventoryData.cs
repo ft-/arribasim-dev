@@ -125,11 +125,6 @@ namespace OpenSim.Data.PGSQL
         {
             return m_Items.GetActiveGestures(principalID.ToString());
         }
-
-        public int GetAssetPermissions(UUID principalID, UUID assetID)
-        {
-            return m_Items.GetAssetPermissions(principalID, assetID);
-        }
     }
 
     public class PGSQLItemHandler : PGSQLInventoryHandler<XInventoryItem>
@@ -184,39 +179,6 @@ namespace OpenSim.Data.PGSQL
                     cmd.Connection = conn;
                     conn.Open();
                     return DoQuery(cmd);
-                }
-            }
-        }
-
-        public int GetAssetPermissions(UUID principalID, UUID assetID)
-        {
-            using (NpgsqlConnection conn = new NpgsqlConnection(m_ConnectionString))
-            {
-                using (NpgsqlCommand cmd = new NpgsqlCommand())
-                {
-                    cmd.CommandText = String.Format(@"select bit_or(""inventoryCurrentPermissions"") as ""inventoryCurrentPermissions"" 
-                                 from inventoryitems 
-                                 where ""avatarID"" = :PrincipalID 
-                                   and ""assetID"" = :AssetID 
-                                 group by ""assetID"" ", m_Realm);
-
-                    cmd.Parameters.Add(m_database.CreateParameter("PrincipalID", principalID));
-                    cmd.Parameters.Add(m_database.CreateParameter("AssetID", assetID));
-                    cmd.Connection = conn;
-                    conn.Open();
-                    using (NpgsqlDataReader reader = cmd.ExecuteReader())
-                    {
-
-                        int perms = 0;
-
-                        if (reader.Read())
-                        {
-                            perms = Convert.ToInt32(reader["inventoryCurrentPermissions"]);
-                        }
-
-                        return perms;
-                    }
-
                 }
             }
         }

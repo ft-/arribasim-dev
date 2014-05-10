@@ -115,11 +115,6 @@ namespace OpenSim.Data.MySQL
         {
             return m_Items.GetActiveGestures(principalID);
         }
-
-        public int GetAssetPermissions(UUID principalID, UUID assetID)
-        {
-            return m_Items.GetAssetPermissions(principalID, assetID);
-        }
     }
 
     public class MySqlItemHandler : MySqlInventoryHandler<XInventoryItem>
@@ -199,36 +194,6 @@ namespace OpenSim.Data.MySQL
                 cmd.Parameters.AddWithValue("?type", (int)AssetType.Gesture);
 
                 return DoQuery(cmd);
-            }
-        }
-
-        public int GetAssetPermissions(UUID principalID, UUID assetID)
-        {
-            using (MySqlConnection dbcon = new MySqlConnection(m_connectionString))
-            {
-                dbcon.Open();
-
-                using (MySqlCommand cmd = new MySqlCommand())
-                {
-                    cmd.Connection = dbcon;
-
-                    cmd.CommandText = String.Format("select bit_or(inventoryCurrentPermissions) as inventoryCurrentPermissions from inventoryitems where avatarID = ?PrincipalID and assetID = ?AssetID group by assetID", m_Realm);
-                    cmd.Parameters.AddWithValue("?PrincipalID", principalID.ToString());
-                    cmd.Parameters.AddWithValue("?AssetID", assetID.ToString());
-                
-                    using (IDataReader reader = cmd.ExecuteReader())
-                    {
-
-                        int perms = 0;
-                    
-                        if (reader.Read())
-                        {
-                            perms = Convert.ToInt32(reader["inventoryCurrentPermissions"]);
-                        }
-
-                        return perms;
-                    }
-                }
             }
         }
 

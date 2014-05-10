@@ -305,10 +305,5 @@ namespace OpenSim.Services.HypergridService
         //public List<InventoryItemBase> GetActiveGestures(UUID principalID)
         //{
         //}
-
-        //public int GetAssetPermissions(UUID principalID, UUID assetID)
-        //{
-        //}
-
     }
 }

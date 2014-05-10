@@ -458,32 +458,6 @@ namespace OpenSim.Services.Connectors
             return items;
         }
 
-        public int GetAssetPermissions(UUID principalID, UUID assetID)
-        {
-            Dictionary<string,object> ret = MakeRequest("GETASSETPERMISSIONS",
-                    new Dictionary<string,object> {
-                        { "PRINCIPAL", principalID.ToString() },
-                        { "ASSET", assetID.ToString() }
-                    });
-
-            // We cannot use CheckReturn() here because valid values for RESULT are "false" (in the case of request failure) or an int           
-            if (ret == null)
-                return 0;
-
-            if (ret.ContainsKey("RESULT"))
-            {
-                if (ret["RESULT"] is string)
-                {
-                    int intResult;
-
-                    if (int.TryParse ((string)ret["RESULT"], out intResult))
-                        return intResult;
-                }
-            }
-
-            return 0;
-        }
-
         public bool HasInventoryForUser(UUID principalID)
         {
             return false;

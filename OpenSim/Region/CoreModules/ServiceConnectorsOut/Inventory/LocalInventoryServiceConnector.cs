@@ -312,11 +312,6 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Inventory
         {
             return m_InventoryService.GetActiveGestures(userId);
         }
-
-        public int GetAssetPermissions(UUID userID, UUID assetID)
-        {
-            return m_InventoryService.GetAssetPermissions(userID, assetID);
-        }
         #endregion IInventoryService
     }
 }

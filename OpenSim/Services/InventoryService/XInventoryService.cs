@@ -610,11 +610,6 @@ namespace OpenSim.Services.InventoryService
             return ret;
         }
 
-        public virtual int GetAssetPermissions(UUID principalID, UUID assetID)
-        {
-            return m_Database.GetAssetPermissions(principalID, assetID);
-        }
-
         // Unused.
         //
         public bool HasInventoryForUser(UUID userID)
