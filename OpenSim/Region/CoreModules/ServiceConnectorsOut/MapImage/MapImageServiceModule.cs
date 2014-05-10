@@ -33,6 +33,7 @@ using System.IO;
 using System.Timers;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Threading;
 
 using log4net;
 using Mono.Addins;
@@ -63,6 +64,7 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.MapImage
         private IMapImageService m_MapService;
 
         private Dictionary<UUID, Scene> m_scenes = new Dictionary<UUID, Scene>();
+        private ReaderWriterLock m_scenesRwLock = new ReaderWriterLock();
 
         private int m_refreshtime = 0;
         private int m_lastrefresh = 0;
@@ -148,8 +150,15 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.MapImage
 
             // Every shared region module has to maintain an indepedent list of
             // currently running regions
-            lock (m_scenes)
+            m_scenesRwLock.AcquireWriterLock(-1);
+            try
+            {
                 m_scenes[scene.RegionInfo.RegionID] = scene;
+            }
+            finally
+            {
+                m_scenesRwLock.ReleaseWriterLock();
+            }
 
             scene.EventManager.OnRegionReadyStatusChange += s => { if (s.Ready) UploadMapTile(s); };
         }
@@ -162,8 +171,15 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.MapImage
             if (! m_enabled)
                 return;
 
-            lock (m_scenes)
+            m_scenesRwLock.AcquireWriterLock(-1);
+            try
+            {
                 m_scenes.Remove(scene.RegionInfo.RegionID);
+            }
+            finally
+            {
+                m_scenesRwLock.ReleaseWriterLock();
+            }
         }
 
         #endregion ISharedRegionModule
@@ -180,7 +196,8 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.MapImage
                 return;
 
             m_log.DebugFormat("[MAP IMAGE SERVICE MODULE]: map refresh!");
-            lock (m_scenes)
+            m_scenesRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (IScene scene in m_scenes.Values)
                 {
@@ -193,6 +210,10 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.MapImage
                         m_log.WarnFormat("[MAP IMAGE SERVICE MODULE]: something bad happened {0}", ex.Message);
                     }
                 }
+            }
+            finally
+            {
+                m_scenesRwLock.ReleaseReaderLock();
             }
 
             m_lastrefresh = Util.EnvironmentTickCount();
