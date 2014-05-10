@@ -96,6 +96,7 @@ namespace OpenSim.Framework.Console
         /// Commands organized by module
         /// </summary>
         private Dictionary<string, List<CommandInfo>> m_modulesCommands = new Dictionary<string, List<CommandInfo>>();
+        private ReaderWriterLock m_modulesCommandsRwLock = new ReaderWriterLock();
 
         /// <summary>
         /// Get help for the given help string
@@ -141,13 +142,18 @@ namespace OpenSim.Framework.Console
         {
             List<string> help = new List<string>();
 
-            lock (m_modulesCommands)
+            m_modulesCommandsRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (List<CommandInfo> commands in m_modulesCommands.Values)
                 {
                     var ourHelpText = commands.ConvertAll(c => string.Format("{0} - {1}", c.help_text, c.long_help));
                     help.AddRange(ourHelpText);
                 }
+            }
+            finally
+            {
+                m_modulesCommandsRwLock.ReleaseReaderLock();
             }
 
             help.Sort();
@@ -219,7 +225,8 @@ namespace OpenSim.Framework.Console
         /// <returns>true if there was the module existed, false otherwise.</returns>
         private bool TryCollectModuleHelp(string moduleName, List<string> helpText)
         {
-            lock (m_modulesCommands)
+            m_modulesCommandsRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (string key in m_modulesCommands.Keys)
                 {
@@ -237,15 +244,24 @@ namespace OpenSim.Framework.Console
 
                 return false;
             }
+            finally
+            {
+                m_modulesCommandsRwLock.ReleaseReaderLock();
+            }
         }
 
         private List<string> CollectModulesHelp(Dictionary<string, object> dict)
         {
-            lock (m_modulesCommands)
+            m_modulesCommandsRwLock.AcquireReaderLock(-1);
+            try
             {
                 List<string> helpText = new List<string>(m_modulesCommands.Keys);
                 helpText.Sort();
                 return helpText;
+            }
+            finally
+            {
+                m_modulesCommandsRwLock.ReleaseReaderLock();
             }
         }
 
@@ -338,7 +354,8 @@ namespace OpenSim.Framework.Console
             current[String.Empty] = info;
 
             // Now add command to modules dictionary
-            lock (m_modulesCommands)
+            m_modulesCommandsRwLock.AcquireWriterLock(-1);
+            try
             {
                 List<CommandInfo> commands;
                 if (m_modulesCommands.ContainsKey(module))
@@ -353,6 +370,10 @@ namespace OpenSim.Framework.Console
 
 //                m_log.DebugFormat("[COMMAND CONSOLE]: Adding to category {0} command {1}", module, command);
                 commands.Add(info);
+            }
+            finally
+            {
+                m_modulesCommandsRwLock.ReleaseWriterLock();
             }
         }
 
