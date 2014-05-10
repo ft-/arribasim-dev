@@ -33,6 +33,7 @@ using System.Security.Cryptography; // for computing md5 hash
 using log4net;
 using Mono.Addins;
 using Nini.Config;
+using System.Threading;
 
 using OpenMetaverse;
 using OpenMetaverse.StructuredData;
@@ -67,6 +68,7 @@ namespace OpenSim.Region.OptionalModules.Materials
         private bool m_enabled = false;
 
         public Dictionary<UUID, OSDMap> m_regionMaterials = new Dictionary<UUID, OSDMap>();
+        private ReaderWriterLock m_regionMaterialsRwLock = new ReaderWriterLock();
         
         public void Initialise(IConfigSource source)
         {
@@ -188,14 +190,18 @@ namespace OpenSim.Region.OptionalModules.Materials
                     OSDMap matMap = elemOsd as OSDMap;
                     if (matMap.ContainsKey("ID") && matMap.ContainsKey("Material"))
                     {
+                        m_regionMaterialsRwLock.AcquireWriterLock(-1);
                         try
                         {
-                            lock (m_regionMaterials)
-                                m_regionMaterials[matMap["ID"].AsUUID()] = (OSDMap)matMap["Material"];
+                            m_regionMaterials[matMap["ID"].AsUUID()] = (OSDMap)matMap["Material"];
                         }
                         catch (Exception e)
                         {
                             m_log.Warn("[Materials]: exception decoding persisted legacy material: " + e.ToString());
+                        }
+                        finally
+                        {
+                            m_regionMaterialsRwLock.ReleaseWriterLock();
                         }
                     }
                 }
@@ -234,11 +240,12 @@ namespace OpenSim.Region.OptionalModules.Materials
             if (id == UUID.Zero)
                 return;
 
-            lock (m_regionMaterials)
+            m_regionMaterialsRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_regionMaterials.ContainsKey(id))
                     return;
-                
+
                 byte[] data = m_scene.AssetService.GetData(id.ToString());
                 if (data == null)
                 {
@@ -257,7 +264,23 @@ namespace OpenSim.Region.OptionalModules.Materials
                     return;
                 }
 
-                m_regionMaterials[id] = mat;
+                LockCookie lc = m_regionMaterialsRwLock.UpgradeToWriterLock(-1);
+                try
+                {
+                    if (m_regionMaterials.ContainsKey(id))
+                        return;
+
+
+                    m_regionMaterials[id] = mat;
+                }
+                finally
+                {
+                    m_regionMaterialsRwLock.DowngradeFromWriterLock(ref lc);
+                }
+            }
+            finally
+            {
+                m_regionMaterialsRwLock.ReleaseReaderLock();
             }
         }
 
@@ -290,7 +313,8 @@ namespace OpenSim.Region.OptionalModules.Materials
                                 {
                                     UUID id = new UUID(elem.AsBinary(), 0);
 
-                                    lock (m_regionMaterials)
+                                    m_regionMaterialsRwLock.AcquireWriterLock(-1);
+                                    try
                                     {
                                         if (m_regionMaterials.ContainsKey(id))
                                         {
@@ -308,6 +332,10 @@ namespace OpenSim.Region.OptionalModules.Materials
                                             // materials that exist in a prim on the region, and all of these materials
                                             // are already stored in m_regionMaterials.
                                         }
+                                    }
+                                    finally
+                                    {
+                                        m_regionMaterialsRwLock.ReleaseWriterLock();
                                     }
                                 }
                                 catch (Exception e)
@@ -445,25 +473,34 @@ namespace OpenSim.Region.OptionalModules.Materials
         private UUID StoreMaterialAsAsset(UUID agentID, OSDMap mat, SceneObjectPart sop)
         {
             UUID id;
+            bool storeAssedRequired = false;
             // Material UUID = hash of the material's data.
             // This makes materials deduplicate across the entire grid (but isn't otherwise required).
             byte[] data = System.Text.Encoding.ASCII.GetBytes(OSDParser.SerializeLLSDXmlString(mat));
             using (var md5 = MD5.Create())
                 id = new UUID(md5.ComputeHash(data), 0);
 
-            lock (m_regionMaterials)
+            m_regionMaterialsRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (!m_regionMaterials.ContainsKey(id))
                 {
                     m_regionMaterials[id] = mat;
-
-                    // This asset might exist already, but it's ok to try to store it again
-                    string name = "Material " + ChooseMaterialName(mat, sop);
-                    name = name.Substring(0, Math.Min(64, name.Length)).Trim();
-                    AssetBase asset = new AssetBase(id, name, (sbyte)OpenSimAssetType.Material, agentID.ToString());
-                    asset.Data = data;
-                    m_scene.AssetService.Store(asset);
+                    storeAssedRequired = true;
                 }
+            }
+            finally
+            {
+                m_regionMaterialsRwLock.ReleaseWriterLock();
+            }
+            if(storeAssedRequired)
+            {
+                // This asset might exist already, but it's ok to try to store it again
+                string name = "Material " + ChooseMaterialName(mat, sop);
+                name = name.Substring(0, Math.Min(64, name.Length)).Trim();
+                AssetBase asset = new AssetBase(id, name, (sbyte)OpenSimAssetType.Material, agentID.ToString());
+                asset.Data = data;
+                m_scene.AssetService.Store(asset);
             }
             return id;
         }
@@ -505,7 +542,8 @@ namespace OpenSim.Region.OptionalModules.Materials
             int matsCount = 0;
             OSDArray allOsd = new OSDArray();
 
-            lock (m_regionMaterials)
+            m_regionMaterialsRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (KeyValuePair<UUID, OSDMap> kvp in m_regionMaterials)
                 {
@@ -516,6 +554,10 @@ namespace OpenSim.Region.OptionalModules.Materials
                     allOsd.Add(matMap);
                     matsCount++;
                 }
+            }
+            finally
+            {
+                m_regionMaterialsRwLock.ReleaseReaderLock();
             }
 
             resp["Zipped"] = ZCompressOSD(allOsd, false);
