@@ -52,7 +52,7 @@ namespace OpenSim.Region.Framework.Scenes
 
         private Timer m_timer;
         private Dictionary<KeyframeMotion, object> m_motions = new Dictionary<KeyframeMotion, object>();
-        private object m_lockObject = new object();
+        private ReaderWriterLock m_lockObject = new ReaderWriterLock();
         private object m_timerLock = new object();
         private const double m_tickDuration = 50.0;
 
@@ -87,9 +87,14 @@ namespace OpenSim.Region.Framework.Scenes
             {
                 List<KeyframeMotion> motions;
 
-                lock (m_lockObject)
+                m_lockObject.AcquireReaderLock(-1);
+                try
                 {
                     motions = new List<KeyframeMotion>(m_motions.Keys);
+                }
+                finally
+                {
+                    m_lockObject.ReleaseReaderLock();
                 }
 
                 foreach (KeyframeMotion m in motions)
@@ -149,9 +154,14 @@ namespace OpenSim.Region.Framework.Scenes
                 }
             }
 
-            lock (timer.m_lockObject)
+            timer.m_lockObject.AcquireWriterLock(-1);
+            try
             {
                 timer.m_motions[motion] = null;
+            }
+            finally
+            {
+                timer.m_lockObject.ReleaseWriterLock();
             }
         }
 
@@ -170,9 +180,14 @@ namespace OpenSim.Region.Framework.Scenes
                 }
             }
 
-            lock (timer.m_lockObject)
+            timer.m_lockObject.AcquireWriterLock(-1);
+            try
             {
                 timer.m_motions.Remove(motion);
+            }
+            finally
+            {
+                timer.m_lockObject.ReleaseWriterLock();
             }
         }
     }

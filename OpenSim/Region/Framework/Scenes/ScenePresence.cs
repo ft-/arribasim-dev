@@ -156,6 +156,7 @@ namespace OpenSim.Region.Framework.Scenes
         /// necessary.
         /// </remarks>
         private List<SceneObjectGroup> m_attachments = new List<SceneObjectGroup>();
+        private ReaderWriterLock m_attachmentsRwLock = new ReaderWriterLock();
 
         public Object AttachmentsSyncLock { get; private set; }
 
@@ -1547,10 +1548,12 @@ namespace OpenSim.Region.Framework.Scenes
         // neighbouring regions we have enabled a child agent in
         // holds the seed cap for the child agent in that region
         private Dictionary<ulong, string> m_knownChildRegions = new Dictionary<ulong, string>();
+        private ReaderWriterLock m_knownChildRegionsRwLock = new ReaderWriterLock();
 
         public void AddNeighbourRegion(ulong regionHandle, string cap)
         {
-            lock (m_knownChildRegions)
+            m_knownChildRegionsRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (!m_knownChildRegions.ContainsKey(regionHandle))
                 {
@@ -1559,17 +1562,26 @@ namespace OpenSim.Region.Framework.Scenes
                     m_knownChildRegions.Add(regionHandle, cap);
                 }
             }
+            finally
+            {
+                m_knownChildRegionsRwLock.ReleaseWriterLock();
+            }
         }
 
         public void RemoveNeighbourRegion(ulong regionHandle)
         {
-            lock (m_knownChildRegions)
+            m_knownChildRegionsRwLock.AcquireWriterLock(-1);
+            try
             {
                 // Checking ContainsKey is redundant as Remove works either way and returns a bool
                 // This is here to allow the Debug output to be conditional on removal
                 //if (m_knownChildRegions.ContainsKey(regionHandle))
                 //    m_log.DebugFormat(" !!! removing known region {0} in {1}. Count = {2}", regionHandle, Scene.RegionInfo.RegionName, m_knownChildRegions.Count);
                 m_knownChildRegions.Remove(regionHandle);
+            }
+            finally
+            {
+                m_knownChildRegionsRwLock.ReleaseWriterLock();
             }
         }
 
@@ -1586,15 +1598,29 @@ namespace OpenSim.Region.Framework.Scenes
         {
             get
             {
-                lock (m_knownChildRegions)
+                m_knownChildRegionsRwLock.AcquireReaderLock(-1);
+                try
+                {
                     return new Dictionary<ulong, string>(m_knownChildRegions);
+                }
+                finally
+                {
+                    m_knownChildRegionsRwLock.ReleaseReaderLock();
+                }
             }
             set
             {
                 // Replacing the reference is atomic but we still need to lock on
                 // the original dictionary object which may be in use elsewhere
-                lock (m_knownChildRegions)
+                m_knownChildRegionsRwLock.AcquireWriterLock(-1);
+                try
+                {
                     m_knownChildRegions = value;
+                }
+                finally
+                {
+                    m_knownChildRegionsRwLock.ReleaseWriterLock();
+                }
             }
         }
 
@@ -1610,8 +1636,15 @@ namespace OpenSim.Region.Framework.Scenes
         {
             get
             {
-                lock (m_knownChildRegions)
+                m_knownChildRegionsRwLock.AcquireReaderLock(-1);
+                try
+                {
                     return m_knownChildRegions.Count;
+                }
+                finally
+                {
+                    m_knownChildRegionsRwLock.ReleaseReaderLock();
+                }
             }
         }
 
@@ -1782,10 +1815,15 @@ namespace OpenSim.Region.Framework.Scenes
             // XXX: If we force an update here, then multiple attachments do appear correctly on a destination region
             // If we do it a little bit earlier (e.g. when converting the child to a root agent) then this does not work.
             // This may be due to viewer code or it may be something we're not doing properly simulator side.
-            lock (m_attachments)
+            m_attachmentsRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (SceneObjectGroup sog in m_attachments)
                     sog.ScheduleGroupForFullUpdate();
+            }
+            finally
+            {
+                m_attachmentsRwLock.ReleaseReaderLock();
             }
 
 //            m_log.DebugFormat(
@@ -4180,13 +4218,18 @@ namespace OpenSim.Region.Framework.Scenes
 
         public void AddAttachment(SceneObjectGroup gobj)
         {
-            lock (m_attachments)
+            m_attachmentsRwLock.AcquireWriterLock(-1);
+            try
             {
                 // This may be true when the attachment comes back
                 // from serialization after login. Clear it.
                 gobj.IsDeleted = false;
 
                 m_attachments.Add(gobj);
+            }
+            finally
+            {
+                m_attachmentsRwLock.ReleaseWriterLock();
             }
         }
 
@@ -4196,8 +4239,15 @@ namespace OpenSim.Region.Framework.Scenes
         /// <returns>A copy of the list which contains the attachments.</returns>
         public List<SceneObjectGroup> GetAttachments()
         {
-            lock (m_attachments)
+            m_attachmentsRwLock.AcquireReaderLock(-1);
+            try
+            {
                 return new List<SceneObjectGroup>(m_attachments);
+            }
+            finally
+            {
+                m_attachmentsRwLock.ReleaseReaderLock();
+            }
         }
 
         /// <summary>
@@ -4211,13 +4261,18 @@ namespace OpenSim.Region.Framework.Scenes
 
             if (attachmentPoint >= 0)
             {
-                lock (m_attachments)
+                m_attachmentsRwLock.AcquireWriterLock(-1);
+                try
                 {
                     foreach (SceneObjectGroup so in m_attachments)
                     {
                         if (attachmentPoint == so.AttachmentPoint)
                             attachments.Add(so);
                     }
+                }
+                finally
+                {
+                    m_attachmentsRwLock.ReleaseWriterLock();
                 }
             }
             
@@ -4226,8 +4281,15 @@ namespace OpenSim.Region.Framework.Scenes
 
         public bool HasAttachments()
         {
-            lock (m_attachments)
+            m_attachmentsRwLock.AcquireReaderLock(-1);
+            try
+            {
                 return m_attachments.Count > 0;
+            }
+            finally
+            {
+                m_attachmentsRwLock.ReleaseReaderLock();
+            }
         }
 
         /// <summary>
@@ -4236,7 +4298,8 @@ namespace OpenSim.Region.Framework.Scenes
         public int ScriptCount()
         {
             int count = 0;
-            lock (m_attachments)
+            m_attachmentsRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (SceneObjectGroup gobj in m_attachments)
                 {
@@ -4245,6 +4308,10 @@ namespace OpenSim.Region.Framework.Scenes
                         count += gobj.ScriptCount();
                     }
                 }
+            }
+            finally
+            {
+                m_attachmentsRwLock.ReleaseReaderLock();
             }
             return count;
         }
@@ -4255,7 +4322,8 @@ namespace OpenSim.Region.Framework.Scenes
         public float ScriptExecutionTime()
         {
             float time = 0.0f;
-            lock (m_attachments)
+            m_attachmentsRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (SceneObjectGroup gobj in m_attachments)
                 {
@@ -4264,6 +4332,10 @@ namespace OpenSim.Region.Framework.Scenes
                         time += gobj.ScriptExecutionTime();
                     }
                 }
+            }
+            finally
+            {
+                m_attachmentsRwLock.ReleaseReaderLock();
             }
             return time;
         }
@@ -4274,7 +4346,8 @@ namespace OpenSim.Region.Framework.Scenes
         public int RunningScriptCount()
         {
             int count = 0;
-            lock (m_attachments)
+            m_attachmentsRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (SceneObjectGroup gobj in m_attachments)
                 {
@@ -4284,12 +4357,17 @@ namespace OpenSim.Region.Framework.Scenes
                     }
                 }
             }
+            finally
+            {
+                m_attachmentsRwLock.ReleaseReaderLock();
+            }
             return count;
         }
 
         public bool HasScriptedAttachments()
         {
-            lock (m_attachments)
+            m_attachmentsRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (SceneObjectGroup gobj in m_attachments)
                 {
@@ -4300,13 +4378,24 @@ namespace OpenSim.Region.Framework.Scenes
                     }
                 }
             }
+            finally
+            {
+                m_attachmentsRwLock.ReleaseReaderLock();
+            }
             return false;
         }
 
         public void RemoveAttachment(SceneObjectGroup gobj)
         {
-            lock (m_attachments)
+            m_attachmentsRwLock.AcquireWriterLock(-1);
+            try
+            {
                 m_attachments.Remove(gobj);
+            }
+            finally
+            {
+                m_attachmentsRwLock.ReleaseWriterLock();
+            }
         }
 
         /// <summary>
@@ -4314,8 +4403,15 @@ namespace OpenSim.Region.Framework.Scenes
         /// </summary>
         public void ClearAttachments()
         {
-            lock (m_attachments)
+            m_attachmentsRwLock.AcquireWriterLock(-1);
+            try
+            {
                 m_attachments.Clear();
+            }
+            finally
+            {
+                m_attachmentsRwLock.ReleaseWriterLock();
+            }
         }
 
         /// <summary>
@@ -4325,7 +4421,8 @@ namespace OpenSim.Region.Framework.Scenes
         {
             bool validated = true;
 
-            lock (m_attachments)
+            m_attachmentsRwLock.AcquireReaderLock(-1);
+            try
             {
                 // Validate
                 foreach (SceneObjectGroup gobj in m_attachments)
@@ -4347,6 +4444,10 @@ namespace OpenSim.Region.Framework.Scenes
                     }
                 }
             }
+            finally
+            {
+                m_attachmentsRwLock.ReleaseReaderLock();
+            }
 
             return validated;
         }
@@ -4363,7 +4464,8 @@ namespace OpenSim.Region.Framework.Scenes
                 if (m_scriptEngines.Length == 0)
                     return;
 
-                lock (m_attachments)
+                m_attachmentsRwLock.AcquireReaderLock(-1);
+                try
                 {
                     foreach (SceneObjectGroup grp in m_attachments)
                     {
@@ -4379,6 +4481,10 @@ namespace OpenSim.Region.Framework.Scenes
                             m.PostObjectEvent(grp.RootPart.UUID, "changed", new Object[] { (int)Changed.ANIMATION });
                         }
                     }
+                }
+                finally
+                {
+                    m_attachmentsRwLock.ReleaseReaderLock();
                 }
             });
         }

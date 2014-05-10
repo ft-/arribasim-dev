@@ -28,6 +28,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using OpenMetaverse;
 
 namespace OpenSim.Region.Framework.Scenes
@@ -50,8 +51,15 @@ namespace OpenSim.Region.Framework.Scenes
         {
             get
             {
-                lock (m_memberObjects)
+                m_memberObjectsRwLock.AcquireReaderLock(-1);
+                try
+                {
                     return m_memberObjects.Count;
+                }
+                finally
+                {
+                    m_memberObjectsRwLock.ReleaseReaderLock();
+                }
             }
         }
         
@@ -67,8 +75,15 @@ namespace OpenSim.Region.Framework.Scenes
         {
             get
             {
-                lock (m_memberObjects)
+                m_memberObjectsRwLock.AcquireReaderLock(-1);
+                try
+                {
                     return new List<SceneObjectGroup>(m_memberObjects);
+                }
+                finally
+                {
+                    m_memberObjectsRwLock.ReleaseReaderLock();
+                }
             }
         }               
         
@@ -79,10 +94,18 @@ namespace OpenSim.Region.Framework.Scenes
         { 
             get
             {
-                if (!HasObjects)
-                    return null;
-                else
-                    return Objects[0].Scene;
+                m_memberObjectsRwLock.AcquireReaderLock(-1);
+                try
+                {
+                    if (!HasObjects)
+                        return null;
+                    else
+                        return Objects[0].Scene;
+                }
+                finally
+                {
+                    m_memberObjectsRwLock.ReleaseReaderLock();
+                }
             }
         }
         
@@ -91,6 +114,7 @@ namespace OpenSim.Region.Framework.Scenes
         /// one will end up matching the item name when rerezzed.
         /// </summary>
         protected List<SceneObjectGroup> m_memberObjects = new List<SceneObjectGroup>();
+        private ReaderWriterLock m_memberObjectsRwLock = new ReaderWriterLock();
         
         public CoalescedSceneObjects(UUID creatorId) 
         {
@@ -110,8 +134,15 @@ namespace OpenSim.Region.Framework.Scenes
         /// <param name="offset">The offset of the object within the group</param>
         public void Add(SceneObjectGroup obj)
         {
-            lock (m_memberObjects)
+            m_memberObjectsRwLock.AcquireWriterLock(-1);
+            try
+            {
                 m_memberObjects.Add(obj);
+            }
+            finally
+            {
+                m_memberObjectsRwLock.ReleaseWriterLock();
+            }
         }
         
         /// <summary>
@@ -121,8 +152,15 @@ namespace OpenSim.Region.Framework.Scenes
         /// <returns>true if the object was there to be removed, false if not.</returns>
         public bool Remove(SceneObjectGroup obj)
         {
-            lock (m_memberObjects)
+            m_memberObjectsRwLock.AcquireWriterLock(-1);
+            try
+            {
                 return m_memberObjects.Remove(obj);
+            }
+            finally
+            {
+                m_memberObjectsRwLock.ReleaseWriterLock();
+            }
         }
         
         /// <summary>
