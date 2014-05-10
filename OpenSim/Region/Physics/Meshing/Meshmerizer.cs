@@ -87,6 +87,8 @@ namespace OpenSim.Region.Physics.Meshing
         private Dictionary<ulong, List<Vector3>> m_uniqueMeshesBoundingHulls = new Dictionary<ulong, List<Vector3>>();
         private ReaderWriterLock m_uniqueMeshesRwLock = new ReaderWriterLock();
 
+        private ReaderWriterLock m_SculptMapCacheRwLock = new ReaderWriterLock();
+
         public Meshmerizer(IConfigSource config)
         {
             IConfig start_config = config.Configs["Startup"];
@@ -608,6 +610,7 @@ namespace OpenSim.Region.Physics.Meshing
             if (cacheSculptMaps && primShape.SculptTexture != UUID.Zero)
             {
                 decodedSculptFileName = System.IO.Path.Combine(decodedSculptMapPath, "smap_" + primShape.SculptTexture.ToString());
+                m_SculptMapCacheRwLock.AcquireReaderLock(-1);
                 try
                 {
                     if (File.Exists(decodedSculptFileName))
@@ -619,6 +622,10 @@ namespace OpenSim.Region.Physics.Meshing
                 {
                     m_log.Error("[SCULPT]: unable to load cached sculpt map " + decodedSculptFileName + " " + e.Message);
 
+                }
+                finally
+                {
+                    m_SculptMapCacheRwLock.ReleaseReaderLock();
                 }
                 //if (idata != null)
                 //    m_log.Debug("[SCULPT]: loaded cached map asset for map ID: " + primShape.SculptTexture.ToString());
@@ -653,8 +660,19 @@ namespace OpenSim.Region.Physics.Meshing
 
                     if (cacheSculptMaps)
                     {
-                        try { idata.Save(decodedSculptFileName, ImageFormat.MemoryBmp); }
-                        catch (Exception e) { m_log.Error("[SCULPT]: unable to cache sculpt map " + decodedSculptFileName + " " + e.Message); }
+                        m_SculptMapCacheRwLock.AcquireWriterLock(-1);
+                        try 
+                        { 
+                            idata.Save(decodedSculptFileName, ImageFormat.MemoryBmp); 
+                        }
+                        catch (Exception e) 
+                        {
+                            m_log.Error("[SCULPT]: unable to cache sculpt map " + decodedSculptFileName + " " + e.Message); 
+                        }
+                        finally
+                        {
+                            m_SculptMapCacheRwLock.ReleaseWriterLock();
+                        }
                     }
                 }
                 catch (DllNotFoundException)
