@@ -82,10 +82,10 @@ namespace OpenSim.Framework
         public void ReadXml(string rawXml)
         {            
             // System.Console.WriteLine("Trying to deserialize [{0}]", rawXml);
-            
+            OSDMap map = (OSDMap)OSDParser.DeserializeLLSDXml(rawXml); 
             lock (this)
             {
-                m_map = (OSDMap)OSDParser.DeserializeLLSDXml(rawXml);         
+                m_map = map;         
                 SanitiseMap(this);
             }
         }
@@ -97,8 +97,12 @@ namespace OpenSim.Framework
 
         public string ToXml()
         {
+            OSDMap map;
             lock (this)
-                return OSDParser.SerializeLLSDXmlString(m_map);
+            {
+                map = m_map;
+            }
+            return OSDParser.SerializeLLSDXmlString(map);
         }
 
         public void CopyFrom(DAMap other)
@@ -106,20 +110,29 @@ namespace OpenSim.Framework
             // Deep copy
             
             string data = null;
+            OSDMap othermap = null;
             lock (other)
             {
                 if (other.CountNamespaces > 0)
                 {
-                    data = OSDParser.SerializeLLSDXmlString(other.m_map);
+                    othermap = other.m_map;
                 }
             }
-            
-            lock (this)
+
+            if(othermap != null)
             {
-                if (data == null)
-                    Clear();
-                else
-                    m_map = (OSDMap)OSDParser.DeserializeLLSDXml(data);
+                data = OSDParser.SerializeLLSDXmlString(othermap);
+            }
+            
+            if (data == null)
+                Clear();
+            else
+            {
+                OSDMap map = (OSDMap)OSDParser.DeserializeLLSDXml(data);
+                lock (this)
+                {
+                    m_map = map;
+                }
             }
         }
 
@@ -215,13 +228,18 @@ namespace OpenSim.Framework
 
             lock (this)
             {
-                if (m_map.TryGetValue(ns, out namespaceOsd))
+                if (!m_map.TryGetValue(ns, out namespaceOsd))
                 {
-                    OSD store;
-
-                    if (((OSDMap)namespaceOsd).TryGetValue(storeName, out store))
-                        return (OSDMap)store;
+                    namespaceOsd = null;
                 }
+            }
+
+            if(namespaceOsd != null)
+            {
+                OSD store;
+
+                if (((OSDMap)namespaceOsd).TryGetValue(storeName, out store))
+                    return (OSDMap)store;
             }
 
             return null;
@@ -269,10 +287,15 @@ namespace OpenSim.Framework
 
             lock (this)
             {
-                if (m_map.TryGetValue(ns, out namespaceOsd))
+                if (!m_map.TryGetValue(ns, out namespaceOsd))
                 {
-                    return ((OSDMap)namespaceOsd).ContainsKey(storeName);
+                    namespaceOsd = null;
                 }
+            }
+
+            if(namespaceOsd != null)
+            {
+                return ((OSDMap)namespaceOsd).ContainsKey(storeName);
             }
 
             return false;
@@ -284,15 +307,19 @@ namespace OpenSim.Framework
 
             lock (this)
             {
-                if (m_map.TryGetValue(ns, out namespaceOsd))
+                if (!m_map.TryGetValue(ns, out namespaceOsd))
                 {
-                    OSD storeOsd;
-
-                    bool result = ((OSDMap)namespaceOsd).TryGetValue(storeName, out storeOsd);
-                    store = (OSDMap)storeOsd;
-
-                    return result;
+                    namespaceOsd = null;
                 }
+            }
+
+            if(namespaceOsd != null)
+            {
+                OSD storeOsd;
+                bool result = ((OSDMap)namespaceOsd).TryGetValue(storeName, out storeOsd);
+                store = (OSDMap)storeOsd;
+
+                return result;
             }
 
             store = null;
@@ -313,13 +340,18 @@ namespace OpenSim.Framework
             {
                 if (m_map.TryGetValue(ns, out namespaceOsd))
                 {
-                    OSDMap namespaceOsdMap = (OSDMap)namespaceOsd;
-                    namespaceOsdMap.Remove(storeName);
-
-                    // Don't keep empty namespaces around
-                    if (namespaceOsdMap.Count <= 0)
-                        m_map.Remove(ns);
+                    namespaceOsd = null;
                 }
+            }
+
+            if(null != namespaceOsd)
+            {
+                OSDMap namespaceOsdMap = (OSDMap)namespaceOsd;
+                namespaceOsdMap.Remove(storeName);
+
+                // Don't keep empty namespaces around
+                if (namespaceOsdMap.Count <= 0)
+                    m_map.Remove(ns);
             }
 
             return false;
