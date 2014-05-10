@@ -60,7 +60,7 @@ public sealed class BSScene : PhysicsScene, IPhysicsParameters
     public Thread m_physicsThread;
 
     public Dictionary<uint, BSPhysObject> PhysObjects;
-    public ReaderWriterLock PhysObjectsRwLock;
+    public ReaderWriterLock PhysObjectsRwLock = new ReaderWriterLock();
 
     public BSShapeCollection Shapes;
 
