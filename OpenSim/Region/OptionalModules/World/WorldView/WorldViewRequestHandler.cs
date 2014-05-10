@@ -47,7 +47,6 @@ namespace OpenSim.Region.OptionalModules.World.WorldView
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         protected WorldViewModule m_WorldViewModule;
-        protected Object m_RequestLock = new Object();
 
         public WorldViewRequestHandler(WorldViewModule fmodule, string rid)
                 : base("GET", "/worldview/" + rid)
@@ -67,15 +66,12 @@ namespace OpenSim.Region.OptionalModules.World.WorldView
 
             try
             {
-                lock (m_RequestLock)
-                {
-                    Dictionary<string, object> request =
-                            new Dictionary<string, object>();
-                    foreach (string name in httpRequest.QueryString)
-                        request[name] = httpRequest.QueryString[name];
+                Dictionary<string, object> request =
+                        new Dictionary<string, object>();
+                foreach (string name in httpRequest.QueryString)
+                    request[name] = httpRequest.QueryString[name];
 
-                    return SendWorldView(request);
-                }
+                return SendWorldView(request);
             }
             catch (Exception e)
             {
