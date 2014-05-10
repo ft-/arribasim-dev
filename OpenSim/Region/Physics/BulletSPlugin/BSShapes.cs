@@ -492,11 +492,15 @@ public class BSShapeMesh : BSShape
                                             PrimitiveBaseShape pbs, OMV.Vector3 size, float lod, CreateShapeCall makeShape)
     {
         BulletShape newShape = new BulletShape();
+        List<List<OMV.Vector3>> hulls;
+        List<OMV.Vector3> boundingHull;
 
         IMesh meshData = null;
         meshData = physicsScene.mesher.CreateMesh(prim.PhysObjectName, pbs, size, lod,
                                         false,  // say it is not physical so a bounding box is not built
-                                        false   // do not cache the mesh and do not use previously built versions
+                                        false,   // do not cache the mesh and do not use previously built versions
+                                        out hulls,
+                                        out boundingHull
                                         );
 
         if (meshData != null)
@@ -582,6 +586,8 @@ public class BSShapeHull : BSShape
     {
         float lod;
         System.UInt64 newHullKey = BSShape.ComputeShapeKey(prim.Size, prim.BaseShape, out lod);
+        List<List<OMV.Vector3>> hulls;
+        List<OMV.Vector3> boundingHull;
 
         BSShapeHull retHull = null;
         HullsRwLock.AcquireWriterLock(-1);
@@ -596,7 +602,7 @@ public class BSShapeHull : BSShape
             {
                 retHull = new BSShapeHull(new BulletShape());
                 // An instance of this mesh has not been created. Build and remember same.
-                BulletShape newShape = retHull.CreatePhysicalHull(physicsScene, prim, newHullKey, prim.BaseShape, prim.Size, lod);
+                BulletShape newShape = retHull.CreatePhysicalHull(physicsScene, prim, newHullKey, prim.BaseShape, prim.Size, lod, out hulls, out boundingHull);
 
                 // Check to see if hull was created (might require an asset).
                 newShape = VerifyMeshCreated(physicsScene, newShape, prim);
@@ -651,23 +657,19 @@ public class BSShapeHull : BSShape
     }
     List<ConvexResult> m_hulls;
     private BulletShape CreatePhysicalHull(BSScene physicsScene, BSPhysObject prim, System.UInt64 newHullKey,
-                                            PrimitiveBaseShape pbs, OMV.Vector3 size, float lod)
+                                            PrimitiveBaseShape pbs, OMV.Vector3 size, float lod,
+                                            out List<List<OMV.Vector3>> allHulls,
+                                            out List<OMV.Vector3> boundingHull)
     {
         BulletShape newShape = new BulletShape();
 
         IMesh meshData = null;
-        List<List<OMV.Vector3>> allHulls = null;
         // Pass true for physicalness as this prevents the creation of bounding box which is not needed
-        meshData = physicsScene.mesher.CreateMesh(prim.PhysObjectName, pbs, size, lod, true /* isPhysical */, false /* shouldCache */);
+        meshData = physicsScene.mesher.CreateMesh(prim.PhysObjectName, pbs, size, lod, true /* isPhysical */, false /* shouldCache */, out allHulls, out boundingHull);
 
         // If we should use the asset's hull info, fetch it out of the locked mesher
         if (meshData != null && BSParam.ShouldUseAssetHulls)
         {
-            Meshmerizer realMesher = physicsScene.mesher as Meshmerizer;
-            if (realMesher != null)
-            {
-                allHulls = realMesher.GetConvexHulls(size);
-            }
             if (allHulls == null)
             {
                 physicsScene.DetailLog("{0},BSShapeHull.CreatePhysicalHull,assetHulls,noAssetHull", prim.LocalID);

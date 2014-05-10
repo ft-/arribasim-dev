@@ -35,6 +35,7 @@ using OpenMetaverse.StructuredData;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO.Compression;
+using System.Threading;
 using PrimMesher;
 using log4net;
 using Nini.Config;
@@ -81,10 +82,10 @@ namespace OpenSim.Region.Physics.Meshing
 
         private float minSizeForComplexMesh = 0.2f; // prims with all dimensions smaller than this will have a bounding box mesh
 
-        private List<List<Vector3>> mConvexHulls = null;
-        private List<Vector3> mBoundingHull = null;
-
         private Dictionary<ulong, Mesh> m_uniqueMeshes = new Dictionary<ulong, Mesh>();
+        private Dictionary<ulong, List<List<Vector3>>> m_uniqueMeshesHulls = new Dictionary<ulong, List<List<Vector3>>>();
+        private Dictionary<ulong, List<Vector3>> m_uniqueMeshesBoundingHulls = new Dictionary<ulong, List<Vector3>>();
+        private ReaderWriterLock m_uniqueMeshesRwLock = new ReaderWriterLock();
 
         public Meshmerizer(IConfigSource config)
         {
@@ -253,7 +254,7 @@ namespace OpenSim.Region.Physics.Meshing
         /// <param name="size"></param>
         /// <param name="lod"></param>
         /// <returns></returns>
-        private Mesh CreateMeshFromPrimMesher(string primName, PrimitiveBaseShape primShape, Vector3 size, float lod)
+        private Mesh CreateMeshFromPrimMesher(string primName, PrimitiveBaseShape primShape, Vector3 size, float lod, out List<List<Vector3>> hulls, out List<Vector3> boundingHull)
         {
 //            m_log.DebugFormat(
 //                "[MESH]: Creating physics proxy for {0}, shape {1}",
@@ -261,6 +262,8 @@ namespace OpenSim.Region.Physics.Meshing
 
             List<Coord> coords;
             List<Face> faces;
+            hulls = null;
+            boundingHull = new List<Vector3>();
 
             if (primShape.SculptEntry)
             {
@@ -269,7 +272,7 @@ namespace OpenSim.Region.Physics.Meshing
                     if (!useMeshiesPhysicsMesh)
                         return null;
 
-                    if (!GenerateCoordsAndFacesFromPrimMeshData(primName, primShape, size, out coords, out faces))
+                    if (!GenerateCoordsAndFacesFromPrimMeshData(primName, primShape, size, out coords, out faces, out hulls, out boundingHull))
                         return null;
                 }
                 else
@@ -319,16 +322,17 @@ namespace OpenSim.Region.Physics.Meshing
         /// <param name="faces">Faces are added to this list by the method.</param>
         /// <returns>true if coords and faces were successfully generated, false if not</returns>
         private bool GenerateCoordsAndFacesFromPrimMeshData(
-            string primName, PrimitiveBaseShape primShape, Vector3 size, out List<Coord> coords, out List<Face> faces)
+            string primName, PrimitiveBaseShape primShape, Vector3 size, out List<Coord> coords, out List<Face> faces,
+                    out List<List<Vector3>> hulls,
+                    out List<Vector3> boundingHull)
         {
+            hulls = null;
+            boundingHull = null;
 //            m_log.DebugFormat("[MESH]: experimental mesh proxy generation for {0}", primName);
 
             coords = new List<Coord>();
             faces = new List<Face>();
             OSD meshOsd = null;
-
-            mConvexHulls = null;
-            mBoundingHull = null;
 
             if (primShape.SculptData.Length <= 0)
             {
@@ -428,7 +432,7 @@ namespace OpenSim.Region.Physics.Meshing
                             Vector3 max = new Vector3(0.5f, 0.5f, 0.5f);
                             if (convexBlock.ContainsKey("Max")) max = convexBlock["Max"].AsVector3();
 
-                            List<Vector3> boundingHull = null;
+                            boundingHull = null;
 
                             if (convexBlock.ContainsKey("BoundingVerts"))
                             {
@@ -449,8 +453,7 @@ namespace OpenSim.Region.Physics.Meshing
                                     boundingHull.Add(pos);
                                 }
 
-                                mBoundingHull = boundingHull;
-                                if (debugDetail) m_log.DebugFormat("{0} prim='{1}': parsed bounding hull. nVerts={2}", LogHeader, primName, mBoundingHull.Count);
+                                if (debugDetail) m_log.DebugFormat("{0} prim='{1}': parsed bounding hull. nVerts={2}", LogHeader, primName, boundingHull.Count);
                             }
 
                             if (convexBlock.ContainsKey("HullList"))
@@ -459,7 +462,7 @@ namespace OpenSim.Region.Physics.Meshing
 
                                 byte[] posBytes = convexBlock["Positions"].AsBinary();
 
-                                List<List<Vector3>> hulls = new List<List<Vector3>>();
+                                hulls = new List<List<Vector3>>();
                                 int posNdx = 0;
 
                                 foreach (byte cnt in hullList)
@@ -485,8 +488,7 @@ namespace OpenSim.Region.Physics.Meshing
                                     hulls.Add(hull);
                                 }
 
-                                mConvexHulls = hulls;
-                                if (debugDetail) m_log.DebugFormat("{0} prim='{1}': parsed hulls. nHulls={2}", LogHeader, primName, mConvexHulls.Count);
+                                if (debugDetail) m_log.DebugFormat("{0} prim='{1}': parsed hulls. nHulls={2}", LogHeader, primName, hulls.Count);
                             }
                             else
                             {
@@ -864,104 +866,88 @@ namespace OpenSim.Region.Physics.Meshing
             return true;
         }
 
-        /// <summary>
-        /// temporary prototype code - please do not use until the interface has been finalized!
-        /// </summary>
-        /// <param name="size">value to scale the hull points by</param>
-        /// <returns>a list of vertices in the bounding hull if it exists and has been successfully decoded, otherwise null</returns>
-        public List<Vector3> GetBoundingHull(Vector3 size)
+        public IMesh CreateMesh(String primName, PrimitiveBaseShape primShape, Vector3 size, float lod, out List<List<Vector3>> hulls, out List<Vector3> boundHull)
         {
-            if (mBoundingHull == null)
-                return null;
-
-            List<Vector3> verts = new List<Vector3>();
-            foreach (var vert in mBoundingHull)
-                verts.Add(vert * size);
-
-            return verts;
+            return CreateMesh(primName, primShape, size, lod, false, true, out hulls, out boundHull);
         }
 
-        /// <summary>
-        /// temporary prototype code - please do not use until the interface has been finalized!
-        /// </summary>
-        /// <param name="size">value to scale the hull points by</param>
-        /// <returns>a list of hulls if they exist and have been successfully decoded, otherwise null</returns>
-        public List<List<Vector3>> GetConvexHulls(Vector3 size)
+        public IMesh CreateMesh(String primName, PrimitiveBaseShape primShape, Vector3 size, float lod, bool isPhysical, out List<List<Vector3>> hulls, out List<Vector3> boundHull)
         {
-            if (mConvexHulls == null)
-                return null;
-
-            List<List<Vector3>> hulls = new List<List<Vector3>>();
-            foreach (var hull in mConvexHulls)
-            {
-                List<Vector3> verts = new List<Vector3>();
-                foreach (var vert in hull)
-                    verts.Add(vert * size);
-                hulls.Add(verts);
-            }
-
-            return hulls;
+            return CreateMesh(primName, primShape, size, lod, isPhysical, true, out hulls, out boundHull);
         }
 
-        public IMesh CreateMesh(String primName, PrimitiveBaseShape primShape, Vector3 size, float lod)
+        public IMesh CreateMesh(String primName, PrimitiveBaseShape primShape, Vector3 size, float lod, bool isPhysical, bool shouldCache, out List<List<Vector3>> hulls, out List<Vector3> boundingHull)
         {
-            return CreateMesh(primName, primShape, size, lod, false, true);
-        }
-
-        public IMesh CreateMesh(String primName, PrimitiveBaseShape primShape, Vector3 size, float lod, bool isPhysical)
-        {
-            return CreateMesh(primName, primShape, size, lod, isPhysical, true);
-        }
-
-        public IMesh CreateMesh(String primName, PrimitiveBaseShape primShape, Vector3 size, float lod, bool isPhysical, bool shouldCache)
-        {
-            lock (this)
-            {
 #if SPAM
-                m_log.DebugFormat("[MESH]: Creating mesh for {0}", primName);
+            m_log.DebugFormat("[MESH]: Creating mesh for {0}", primName);
 #endif
 
-                Mesh mesh = null;
-                ulong key = 0;
+            Mesh mesh = null;
+            ulong key = 0;
 
-                // If this mesh has been created already, return it instead of creating another copy
-                // For large regions with 100k+ prims and hundreds of copies of each, this can save a GB or more of memory
+            // If this mesh has been created already, return it instead of creating another copy
+            // For large regions with 100k+ prims and hundreds of copies of each, this can save a GB or more of memory
+            m_uniqueMeshesRwLock.AcquireReaderLock(-1);
+            try
+            {
                 if (shouldCache)
                 {
                     key = primShape.GetMeshKey(size, lod);
                     if (m_uniqueMeshes.TryGetValue(key, out mesh))
+                    {
+                        m_uniqueMeshesBoundingHulls.TryGetValue(key, out boundingHull);
+                        m_uniqueMeshesHulls.TryGetValue(key, out hulls);
                         return mesh;
+                    }
                 }
 
-                if (size.X < 0.01f) size.X = 0.01f;
-                if (size.Y < 0.01f) size.Y = 0.01f;
-                if (size.Z < 0.01f) size.Z = 0.01f;
-
-                mesh = CreateMeshFromPrimMesher(primName, primShape, size, lod);
-
-                if (mesh != null)
+                LockCookie lc = m_uniqueMeshesRwLock.UpgradeToWriterLock(-1);
+                try
                 {
-                    if ((!isPhysical) && size.X < minSizeForComplexMesh && size.Y < minSizeForComplexMesh && size.Z < minSizeForComplexMesh)
+                    /* recheck since we allow a lot of threading here */
+                    if (m_uniqueMeshes.TryGetValue(key, out mesh))
                     {
-#if SPAM
-                        m_log.Debug("Meshmerizer: prim " + primName + " has a size of " + size.ToString() + " which is below threshold of " + 
-                                minSizeForComplexMesh.ToString() + " - creating simple bounding box");
-#endif
-                        mesh = CreateBoundingBoxMesh(mesh);
-                        mesh.DumpRaw(baseDir, primName, "Z extruded");
+                        m_uniqueMeshesBoundingHulls.TryGetValue(key, out boundingHull);
+                        m_uniqueMeshesHulls.TryGetValue(key, out hulls);
+                        return mesh;
                     }
+                    if (size.X < 0.01f) size.X = 0.01f;
+                    if (size.Y < 0.01f) size.Y = 0.01f;
+                    if (size.Z < 0.01f) size.Z = 0.01f;
 
-                    // trim the vertex and triangle lists to free up memory
-                    mesh.TrimExcess();
+                    mesh = CreateMeshFromPrimMesher(primName, primShape, size, lod, out hulls, out boundingHull);
 
-                    if (shouldCache)
+                    if (mesh != null)
                     {
-                        m_uniqueMeshes.Add(key, mesh);
+                        if ((!isPhysical) && size.X < minSizeForComplexMesh && size.Y < minSizeForComplexMesh && size.Z < minSizeForComplexMesh)
+                        {
+#if SPAM
+                            m_log.Debug("Meshmerizer: prim " + primName + " has a size of " + size.ToString() + " which is below threshold of " + 
+                                    minSizeForComplexMesh.ToString() + " - creating simple bounding box");
+#endif
+                            mesh = CreateBoundingBoxMesh(mesh);
+                            mesh.DumpRaw(baseDir, primName, "Z extruded");
+                        }
+
+                        // trim the vertex and triangle lists to free up memory
+                        mesh.TrimExcess();
+
+                        if (shouldCache)
+                        {
+                            m_uniqueMeshes.Add(key, mesh);
+                        }
                     }
                 }
-
-                return mesh;
+                finally
+                {
+                    m_uniqueMeshesRwLock.DowngradeFromWriterLock(ref lc);
+                }
             }
+            finally
+            {
+                m_uniqueMeshesRwLock.ReleaseReaderLock();
+            }
+            return mesh;
         }
     }
 }

@@ -1572,7 +1572,9 @@ Console.WriteLine("CreateGeom:");
             if (_parent_scene.needsMeshing(_pbs))
             {
                 // Don't need to re-enable body..   it's done in SetMesh
-                mesh = _parent_scene.mesher.CreateMesh(Name, _pbs, _size, _parent_scene.meshSculptLOD, IsPhysical);
+                List<List<Vector3>> hulls;
+                List<Vector3> boundingHull;
+                mesh = _parent_scene.mesher.CreateMesh(Name, _pbs, _size, _parent_scene.meshSculptLOD, IsPhysical, out hulls, out boundingHull);
                 // createmesh returns null when it's a shape that isn't a cube.
                // m_log.Debug(m_localID);
                 if (mesh == null)
@@ -2079,7 +2081,9 @@ Console.WriteLine(" JointCreateFixed");
 
                 if (_parent_scene.needsMeshing(_pbs))
                 {
-                    mesh = _parent_scene.mesher.CreateMesh(Name, _pbs, _size, meshlod, IsPhysical);
+                    List<List<Vector3>> hulls;
+                    List<Vector3> boundingHull;
+                    mesh = _parent_scene.mesher.CreateMesh(Name, _pbs, _size, meshlod, IsPhysical, out hulls, out boundingHull);
                     if (mesh == null)
                         CheckMeshAsset();
                     else
@@ -2187,7 +2191,9 @@ Console.WriteLine(" JointCreateFixed");
                     meshlod = _parent_scene.MeshSculptphysicalLOD;
 
                 // createmesh returns null when it doesn't mesh.
-                mesh = _parent_scene.mesher.CreateMesh(Name, _pbs, _size, meshlod, IsPhysical);
+                List<List<Vector3>> hulls;
+                List<Vector3> boundingHull;
+                mesh = _parent_scene.mesher.CreateMesh(Name, _pbs, _size, meshlod, IsPhysical, out hulls, out boundingHull);
                 if (mesh == null)
                     CheckMeshAsset();
                 else

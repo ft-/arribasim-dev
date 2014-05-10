@@ -26,6 +26,7 @@
  */
 
 using System;
+using System.Collections.Generic;
 using OpenSim.Framework;
 using OpenMetaverse;
 using Nini.Config;
@@ -62,20 +63,22 @@ namespace OpenSim.Region.Physics.Manager
 
     public class ZeroMesher : IMesher
     {
-        public IMesh CreateMesh(String primName, PrimitiveBaseShape primShape, Vector3 size, float lod)
+        public IMesh CreateMesh(String primName, PrimitiveBaseShape primShape, Vector3 size, float lod, out List<List<Vector3>> hulls, out List<Vector3> boundHull)
         {
-            return CreateMesh(primName, primShape, size, lod, false, false);
+            return CreateMesh(primName, primShape, size, lod, false, false, out hulls, out boundHull);
         }
 
-        public IMesh CreateMesh(String primName, PrimitiveBaseShape primShape, Vector3 size, float lod, bool isPhysical)
+        public IMesh CreateMesh(String primName, PrimitiveBaseShape primShape, Vector3 size, float lod, bool isPhysical, out List<List<Vector3>> hulls, out List<Vector3> boundHull)
         {
-            return CreateMesh(primName, primShape, size, lod, false, false);
+            return CreateMesh(primName, primShape, size, lod, false, false, out hulls, out boundHull);
         }
 
-        public IMesh CreateMesh(String primName, PrimitiveBaseShape primShape, Vector3 size, float lod, bool isPhysical, bool shouldCache)
+        public IMesh CreateMesh(String primName, PrimitiveBaseShape primShape, Vector3 size, float lod, bool isPhysical, bool shouldCache, out List<List<Vector3>> hulls, out List<Vector3> boundHull)
         {
             // Remove the reference to the encoded JPEG2000 data so it can be GCed
             primShape.SculptData = OpenMetaverse.Utils.EmptyBytes;
+            hulls = null;
+            boundHull = new List<Vector3>();
 
             return null;
         }

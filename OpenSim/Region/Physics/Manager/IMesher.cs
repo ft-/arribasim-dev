@@ -34,9 +34,9 @@ namespace OpenSim.Region.Physics.Manager
 {
     public interface IMesher
     {
-        IMesh CreateMesh(String primName, PrimitiveBaseShape primShape, Vector3 size, float lod);
-        IMesh CreateMesh(String primName, PrimitiveBaseShape primShape, Vector3 size, float lod, bool isPhysical);
-        IMesh CreateMesh(String primName, PrimitiveBaseShape primShape, Vector3 size, float lod, bool isPhysical, bool shouldCache);
+        IMesh CreateMesh(String primName, PrimitiveBaseShape primShape, Vector3 size, float lod, out List<List<Vector3>> hulls, out List<Vector3> boundHull);
+        IMesh CreateMesh(String primName, PrimitiveBaseShape primShape, Vector3 size, float lod, bool isPhysical, out List<List<Vector3>> hulls, out List<Vector3> boundHull);
+        IMesh CreateMesh(String primName, PrimitiveBaseShape primShape, Vector3 size, float lod, bool isPhysical, bool shouldCache, out List<List<Vector3>> hulls, out List<Vector3> boundHull);
     }
 
     // Values for level of detail to be passed to the mesher.
