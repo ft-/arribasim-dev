@@ -28,6 +28,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Threading;
 using log4net;
 using Mono.Addins;
 using Nini.Config;
@@ -47,6 +48,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Inventory.Transfer
 
         /// <summary>
         private List<Scene> m_Scenelist = new List<Scene>();
+        private ReaderWriterLock m_ScenelistRwLock = new ReaderWriterLock();
 
         private IMessageTransferModule m_TransferModule;
         private bool m_Enabled = true;
@@ -74,7 +76,15 @@ namespace OpenSim.Region.CoreModules.Avatar.Inventory.Transfer
             if (!m_Enabled)
                 return;
 
-            m_Scenelist.Add(scene);
+            m_ScenelistRwLock.AcquireWriterLock(-1);
+            try
+            {
+                m_Scenelist.Add(scene);
+            }
+            finally
+            {
+                m_ScenelistRwLock.ReleaseWriterLock();
+            }
 
 //            scene.RegisterModuleInterface<IInventoryTransferModule>(this);
 
@@ -103,7 +113,15 @@ namespace OpenSim.Region.CoreModules.Avatar.Inventory.Transfer
         {
             scene.EventManager.OnNewClient -= OnNewClient;
             scene.EventManager.OnIncomingInstantMessage -= OnGridInstantMessage;
-            m_Scenelist.Remove(scene);
+            m_ScenelistRwLock.AcquireWriterLock(-1);
+            try
+            {
+                m_Scenelist.Remove(scene);
+            }
+            finally
+            {
+                m_ScenelistRwLock.ReleaseWriterLock();
+            }
         }
 
         public void PostInitialise()
@@ -134,7 +152,8 @@ namespace OpenSim.Region.CoreModules.Avatar.Inventory.Transfer
 
         private Scene FindClientScene(UUID agentId)
         {
-            lock (m_Scenelist)
+            m_ScenelistRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (Scene scene in m_Scenelist)
                 {
@@ -142,6 +161,10 @@ namespace OpenSim.Region.CoreModules.Avatar.Inventory.Transfer
                     if (presence != null)
                         return scene;
                 }
+            }
+            finally
+            {
+                m_ScenelistRwLock.ReleaseReaderLock();
             }
             return null;
         }
