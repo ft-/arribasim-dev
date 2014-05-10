@@ -59,6 +59,7 @@ namespace OpenSim.Region.OptionalModules.Scripting.JsonStore
         private Scene m_scene = null;
 
         private Dictionary<UUID,JsonStore> m_JsonValueStore;
+        private ReaderWriterLock m_JsonValueStoreRwLock = new ReaderWriterLock();
 
         private UUID m_sharedStore;
 
@@ -206,9 +207,14 @@ namespace OpenSim.Region.OptionalModules.Scripting.JsonStore
         {
             JsonStoreStats stats;
 
-            lock (m_JsonValueStore)
+            m_JsonValueStoreRwLock.AcquireReaderLock(-1);
+            try
             {
                 stats.StoreCount = m_JsonValueStore.Count;
+            }
+            finally
+            {
+                m_JsonValueStoreRwLock.ReleaseReaderLock();
             }
             
             return stats;
@@ -231,13 +237,18 @@ namespace OpenSim.Region.OptionalModules.Scripting.JsonStore
                 return false;
             }
 
-            lock (m_JsonValueStore)
+            m_JsonValueStoreRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (m_JsonValueStore.ContainsKey(objectID))
                     return true;
                 
                 JsonStore map = new JsonObjectStore(m_scene,objectID);
                 m_JsonValueStore.Add(objectID,map);
+            }
+            finally
+            {
+                m_JsonValueStoreRwLock.ReleaseWriterLock();
             }
             
             return true;
@@ -268,8 +279,15 @@ namespace OpenSim.Region.OptionalModules.Scripting.JsonStore
                 return false;
             }
 
-            lock (m_JsonValueStore)
-                m_JsonValueStore.Add(result,map);
+            m_JsonValueStoreRwLock.AcquireWriterLock(-1);
+            try
+            {
+                m_JsonValueStore.Add(result, map);
+            }
+            finally
+            {
+                m_JsonValueStoreRwLock.ReleaseWriterLock();
+            }
             
             return true;
         }
@@ -283,8 +301,15 @@ namespace OpenSim.Region.OptionalModules.Scripting.JsonStore
         {
             if (! m_enabled) return false;
 
-            lock (m_JsonValueStore)
+            m_JsonValueStoreRwLock.AcquireWriterLock(-1);
+            try
+            {
                 return m_JsonValueStore.Remove(storeID);
+            }
+            finally
+            {
+                m_JsonValueStoreRwLock.ReleaseWriterLock();
+            }
         }
 
         // -----------------------------------------------------------------
@@ -296,8 +321,15 @@ namespace OpenSim.Region.OptionalModules.Scripting.JsonStore
         {
             if (! m_enabled) return false;
 
-            lock (m_JsonValueStore)
+            m_JsonValueStoreRwLock.AcquireReaderLock(-1);
+            try
+            {
                 return m_JsonValueStore.ContainsKey(storeID);
+            }
+            finally
+            {
+                m_JsonValueStoreRwLock.ReleaseReaderLock();
+            }
         }
 
         // -----------------------------------------------------------------
@@ -310,13 +342,18 @@ namespace OpenSim.Region.OptionalModules.Scripting.JsonStore
             if (! m_enabled) return JsonStoreNodeType.Undefined;
 
             JsonStore map = null;
-            lock (m_JsonValueStore)
+            m_JsonValueStoreRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (! m_JsonValueStore.TryGetValue(storeID,out map))
                 {
                     m_log.InfoFormat("[JsonStore] Missing store {0}",storeID);
                     return JsonStoreNodeType.Undefined;
                 }
+            }
+            finally
+            {
+                m_JsonValueStoreRwLock.ReleaseReaderLock();
             }
             
             try
@@ -342,13 +379,18 @@ namespace OpenSim.Region.OptionalModules.Scripting.JsonStore
             if (! m_enabled) return JsonStoreValueType.Undefined;
 
             JsonStore map = null;
-            lock (m_JsonValueStore)
+            m_JsonValueStoreRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (! m_JsonValueStore.TryGetValue(storeID,out map))
                 {
                     m_log.InfoFormat("[JsonStore] Missing store {0}",storeID);
                     return JsonStoreValueType.Undefined;
                 }
+            }
+            finally
+            {
+                m_JsonValueStoreRwLock.ReleaseReaderLock();
             }
             
             try
@@ -374,13 +416,18 @@ namespace OpenSim.Region.OptionalModules.Scripting.JsonStore
             if (! m_enabled) return false;
 
             JsonStore map = null;
-            lock (m_JsonValueStore)
+            m_JsonValueStoreRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (! m_JsonValueStore.TryGetValue(storeID,out map))
                 {
                     m_log.InfoFormat("[JsonStore] Missing store {0}",storeID);
                     return false;
                 }
+            }
+            finally
+            {
+                m_JsonValueStoreRwLock.ReleaseReaderLock();
             }
             
             try
@@ -415,13 +462,18 @@ namespace OpenSim.Region.OptionalModules.Scripting.JsonStore
             if (! m_enabled) return false;
 
             JsonStore map = null;
-            lock (m_JsonValueStore)
+            m_JsonValueStoreRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (! m_JsonValueStore.TryGetValue(storeID,out map))
                 {
                     m_log.InfoFormat("[JsonStore] Missing store {0}",storeID);
                     return false;
                 }
+            }
+            finally
+            {
+                m_JsonValueStoreRwLock.ReleaseReaderLock();
             }
             
             try
@@ -447,12 +499,17 @@ namespace OpenSim.Region.OptionalModules.Scripting.JsonStore
             if (! m_enabled) return -1;
 
             JsonStore map = null;
-            lock (m_JsonValueStore)
+            m_JsonValueStoreRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (! m_JsonValueStore.TryGetValue(storeID,out map))
                     return -1;
             }
-
+            finally
+            {
+                m_JsonValueStoreRwLock.ReleaseReaderLock();
+            }
+            
             try
             {
                 lock (map)
@@ -480,10 +537,15 @@ namespace OpenSim.Region.OptionalModules.Scripting.JsonStore
             if (! m_enabled) return false;
 
             JsonStore map = null;
-            lock (m_JsonValueStore)
+            m_JsonValueStoreRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (! m_JsonValueStore.TryGetValue(storeID,out map))
                     return false;
+            }
+            finally
+            {
+                m_JsonValueStoreRwLock.ReleaseReaderLock();
             }
 
             try
@@ -508,6 +570,7 @@ namespace OpenSim.Region.OptionalModules.Scripting.JsonStore
         // -----------------------------------------------------------------
         public void TakeValue(UUID storeID, string path, bool useJson, TakeValueCallback cback)
         {
+            bool gotItem;
             if (! m_enabled)
             {
                 cback(String.Empty);
@@ -515,13 +578,20 @@ namespace OpenSim.Region.OptionalModules.Scripting.JsonStore
             }
 
             JsonStore map = null;
-            lock (m_JsonValueStore)
+            m_JsonValueStoreRwLock.AcquireReaderLock(-1);
+            try
             {
-                if (! m_JsonValueStore.TryGetValue(storeID,out map))
-                {
-                    cback(String.Empty);
-                    return;
-                }
+                gotItem = m_JsonValueStore.TryGetValue(storeID, out map);
+            }
+            finally
+            {
+                m_JsonValueStoreRwLock.ReleaseReaderLock();
+            }
+
+            if (!gotItem)
+            {
+                cback(String.Empty);
+                return;
             }
 
             try
@@ -547,6 +617,7 @@ namespace OpenSim.Region.OptionalModules.Scripting.JsonStore
         // -----------------------------------------------------------------
         public void ReadValue(UUID storeID, string path, bool useJson, TakeValueCallback cback)
         {
+            bool gotItem;
             if (! m_enabled)
             {
                 cback(String.Empty);
@@ -554,13 +625,20 @@ namespace OpenSim.Region.OptionalModules.Scripting.JsonStore
             }
 
             JsonStore map = null;
-            lock (m_JsonValueStore)
+            m_JsonValueStoreRwLock.AcquireReaderLock(-1);
+            try
             {
-                if (! m_JsonValueStore.TryGetValue(storeID,out map))
-                {
-                    cback(String.Empty);
-                    return;
-                }
+                gotItem = m_JsonValueStore.TryGetValue(storeID, out map);
+            }
+            finally
+            {
+                m_JsonValueStoreRwLock.ReleaseReaderLock();
+            }
+
+            if (!gotItem)
+            {
+                cback(String.Empty);
+                return;
             }
 
             try
