@@ -38,6 +38,7 @@ using OpenSim.Framework;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
 using OpenSim.Services.Interfaces;
+using System.Threading;
 using DirFindFlags = OpenMetaverse.DirectoryManager.DirFindFlags;
 
 namespace OpenSim.Groups
@@ -49,6 +50,7 @@ namespace OpenSim.Groups
             LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         private List<Scene> m_sceneList = new List<Scene>();
+        private ReaderWriterLock m_sceneListRwLock = new ReaderWriterLock();
 
         private IMessageTransferModule m_msgTransferModule = null;
         
@@ -177,11 +179,15 @@ namespace OpenSim.Groups
                     m_log.Warn("[Groups]: Could not get UserManagementModule");
             }
 
-            lock (m_sceneList)
+            m_sceneListRwLock.AcquireWriterLock(-1);
+            try
             {
                 m_sceneList.Add(scene);
             }
-
+            finally
+            {
+                m_sceneListRwLock.ReleaseWriterLock();
+            }
 
         }
 
@@ -197,9 +203,14 @@ namespace OpenSim.Groups
             scene.EventManager.OnMakeChildAgent -= OnMakeChild;
             scene.EventManager.OnIncomingInstantMessage -= OnGridInstantMessage;
 
-            lock (m_sceneList)
+            m_sceneListRwLock.AcquireWriterLock(-1);
+            try
             {
                 m_sceneList.Remove(scene);
+            }
+            finally
+            {
+                m_sceneListRwLock.ReleaseWriterLock();
             }
         }
 
@@ -1311,12 +1322,17 @@ namespace OpenSim.Groups
 
             // TODO: Probably isn't nessesary to update every client in every scene.
             // Need to examine client updates and do only what's nessesary.
-            lock (m_sceneList)
+            m_sceneListRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (Scene scene in m_sceneList)
                 {
                     scene.ForEachClient(delegate(IClientAPI client) { SendAgentGroupDataUpdate(client, dataForClientID); });
                 }
+            }
+            finally
+            {
+                m_sceneListRwLock.ReleaseReaderLock();
             }
         }
 
