@@ -79,6 +79,7 @@ namespace OpenSim.Region.CoreModules.World.WorldMap
         private Dictionary<ulong, int> m_blacklistedregions = new Dictionary<ulong, int>();
         private Dictionary<ulong, string> m_cachedRegionMapItemsAddress = new Dictionary<ulong, string>();
         private List<UUID> m_rootAgents = new List<UUID>();
+        private ReaderWriterLock m_rootAgentsRwLock = new ReaderWriterLock();
         private volatile bool threadrunning = false;
 
         private IServiceThrottleModule m_ServiceThrottle;
@@ -103,7 +104,7 @@ namespace OpenSim.Region.CoreModules.World.WorldMap
             if (!m_Enabled)
                 return;
 
-            lock (scene)
+            lock (m_scene)
             {
                 m_scene = scene;
 
@@ -354,9 +355,14 @@ namespace OpenSim.Region.CoreModules.World.WorldMap
         /// <param name="AgentId">AgentID that logged out</param>
         private void ClientLoggedOut(UUID AgentId, Scene scene)
         {
-            lock (m_rootAgents)
+            m_rootAgentsRwLock.AcquireWriterLock(-1);
+            try
             {
                 m_rootAgents.Remove(AgentId);
+            }
+            finally
+            {
+                m_rootAgentsRwLock.ReleaseWriterLock();
             }
         }
         #endregion
@@ -403,10 +409,15 @@ namespace OpenSim.Region.CoreModules.World.WorldMap
         {
             // m_log.DebugFormat("[WORLD MAP]: Handle MapItem request {0} {1}", regionhandle, itemtype);
 
-            lock (m_rootAgents)
+            m_rootAgentsRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (!m_rootAgents.Contains(remoteClient.AgentId))
                     return;
+            }
+            finally
+            {
+                m_rootAgentsRwLock.ReleaseReaderLock();
             }
             uint xstart = 0;
             uint ystart = 0;
@@ -559,16 +570,21 @@ namespace OpenSim.Region.CoreModules.World.WorldMap
                     if (st.agentID != UUID.Zero)
                     {
                         bool dorequest = true;
-                        lock (m_rootAgents)
+                        m_rootAgentsRwLock.AcquireReaderLock(-1);
+                        try
                         {
                             if (!m_rootAgents.Contains(st.agentID))
                                 dorequest = false;
                         }
+                        finally
+                        {
+                            m_rootAgentsRwLock.ReleaseReaderLock();
+                        }
 
                         if (dorequest &&  !m_blacklistedregions.ContainsKey(st.regionhandle))
                         {
-                            while (nAsyncRequests >= MAX_ASYNC_REQUESTS) // hit the break
-                                Thread.Sleep(80);
+                            //while (nAsyncRequests >= MAX_ASYNC_REQUESTS) // hit the break
+                            //    Thread.Sleep(80);
 
                             RequestMapItemsDelegate d = RequestMapItemsAsync;
                             d.BeginInvoke(st.agentID, st.flags, st.EstateID, st.godlike, st.itemtype, st.regionhandle, RequestMapItemsCompleted, null);
@@ -604,10 +620,16 @@ namespace OpenSim.Region.CoreModules.World.WorldMap
                 if (st.agentID != UUID.Zero)
                 {
                     bool dorequest = true;
-                    lock (m_rootAgents)
+
+                    m_rootAgentsRwLock.AcquireReaderLock(-1);
+                    try
                     {
                         if (!m_rootAgents.Contains(st.agentID))
                             dorequest = false;
+                    }
+                    finally
+                    {
+                        m_rootAgentsRwLock.ReleaseReaderLock();
                     }
 
                     if (dorequest && !m_blacklistedregions.ContainsKey(st.regionhandle))
@@ -1535,20 +1557,30 @@ namespace OpenSim.Region.CoreModules.World.WorldMap
 
         private void MakeRootAgent(ScenePresence avatar)
         {
-            lock (m_rootAgents)
+            m_rootAgentsRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (!m_rootAgents.Contains(avatar.UUID))
                 {
                     m_rootAgents.Add(avatar.UUID);
                 }
             }
+            finally
+            {
+                m_rootAgentsRwLock.ReleaseWriterLock();
+            }
         }
 
         private void MakeChildAgent(ScenePresence avatar)
         {
-            lock (m_rootAgents)
+            m_rootAgentsRwLock.AcquireWriterLock(-1);
+            try
             {
                 m_rootAgents.Remove(avatar.UUID);
+            }
+            finally
+            {
+                m_rootAgentsRwLock.ReleaseWriterLock();
             }
         }
 
