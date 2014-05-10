@@ -30,6 +30,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Net;
 using System.Reflection;
+using System.Threading;
 using log4net;
 using Nini.Config;
 using Nwc.XmlRpc;
@@ -80,6 +81,7 @@ namespace OpenSim.Region.OptionalModules.World.MoneyModule
         /// Scenes by Region Handle
         /// </summary>
         private Dictionary<ulong, Scene> m_scenel = new Dictionary<ulong, Scene>();
+        private ReaderWriterLock m_scenelRwLock = new ReaderWriterLock();
 
         // private int m_stipend = 1000;
 
@@ -140,7 +142,8 @@ namespace OpenSim.Region.OptionalModules.World.MoneyModule
                 scene.RegisterModuleInterface<IMoneyModule>(this);
                 IHttpServer httpServer = MainServer.Instance;
 
-                lock (m_scenel)
+                m_scenelRwLock.AcquireWriterLock(-1);
+                try
                 {
                     if (m_scenel.Count == 0)
                     {
@@ -160,14 +163,11 @@ namespace OpenSim.Region.OptionalModules.World.MoneyModule
                        
                     }
 
-                    if (m_scenel.ContainsKey(scene.RegionInfo.RegionHandle))
-                    {
-                        m_scenel[scene.RegionInfo.RegionHandle] = scene;
-                    }
-                    else
-                    {
-                        m_scenel.Add(scene.RegionInfo.RegionHandle, scene);
-                    }
+                    m_scenel.Add(scene.RegionInfo.RegionHandle, scene);
+                }
+                finally
+                {
+                    m_scenelRwLock.ReleaseWriterLock();
                 }
 
                 scene.EventManager.OnNewClient += OnNewClient;
@@ -183,6 +183,24 @@ namespace OpenSim.Region.OptionalModules.World.MoneyModule
 
         public void RemoveRegion(Scene scene)
         {
+            m_scenelRwLock.AcquireWriterLock(-1);
+            try
+            {
+                scene.EventManager.OnNewClient -= OnNewClient;
+                scene.EventManager.OnMoneyTransfer -= MoneyTransferAction;
+                scene.EventManager.OnClientClosed -= ClientClosed;
+                scene.EventManager.OnAvatarEnteringNewParcel -= AvatarEnteringParcel;
+                scene.EventManager.OnMakeChildAgent -= MakeChildAgent;
+                scene.EventManager.OnClientClosed -= ClientLoggedOut;
+                scene.EventManager.OnValidateLandBuy -= ValidateLandBuy;
+                scene.EventManager.OnLandBuy -= processLandBuy;
+
+                m_scenel.Remove(scene.RegionInfo.RegionHandle);
+            }
+            finally
+            {
+                m_scenelRwLock.ReleaseWriterLock();
+            }
         }
 
         public void RegionLoaded(Scene scene)
@@ -339,7 +357,8 @@ namespace OpenSim.Region.OptionalModules.World.MoneyModule
 
         private SceneObjectPart findPrim(UUID objectID)
         {
-            lock (m_scenel)
+            m_scenelRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (Scene s in m_scenel.Values)
                 {
@@ -349,6 +368,10 @@ namespace OpenSim.Region.OptionalModules.World.MoneyModule
                         return part;
                     }
                 }
+            }
+            finally
+            {
+                m_scenelRwLock.ReleaseReaderLock();
             }
             return null;
         }
@@ -586,7 +609,8 @@ namespace OpenSim.Region.OptionalModules.World.MoneyModule
             ScenePresence tPresence = null;
             IClientAPI rclient = null;
 
-            lock (m_scenel)
+            m_scenelRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (Scene _scene in m_scenel.Values)
                 {
@@ -604,12 +628,17 @@ namespace OpenSim.Region.OptionalModules.World.MoneyModule
                     }
                 }
             }
+            finally
+            {
+                m_scenelRwLock.ReleaseReaderLock();
+            }
             return null;
         }
 
         private Scene LocateSceneClientIn(UUID AgentId)
         {
-            lock (m_scenel)
+            m_scenelRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (Scene _scene in m_scenel.Values)
                 {
@@ -623,6 +652,10 @@ namespace OpenSim.Region.OptionalModules.World.MoneyModule
                     }
                 }
             }
+            finally
+            {
+                m_scenelRwLock.ReleaseReaderLock();
+            }
             return null;
         }
 
@@ -632,10 +665,15 @@ namespace OpenSim.Region.OptionalModules.World.MoneyModule
         /// <returns></returns>
         public Scene GetRandomScene()
         {
-            lock (m_scenel)
+            m_scenelRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (Scene rs in m_scenel.Values)
                     return rs;
+            }
+            finally
+            {
+                m_scenelRwLock.ReleaseReaderLock();
             }
             return null;
         }
@@ -647,7 +685,8 @@ namespace OpenSim.Region.OptionalModules.World.MoneyModule
         /// <returns></returns>
         public Scene GetSceneByUUID(UUID RegionID)
         {
-            lock (m_scenel)
+            m_scenelRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (Scene rs in m_scenel.Values)
                 {
@@ -656,6 +695,10 @@ namespace OpenSim.Region.OptionalModules.World.MoneyModule
                         return rs;
                     }
                 }
+            }
+            finally
+            {
+                m_scenelRwLock.ReleaseReaderLock();
             }
             return null;
         }
