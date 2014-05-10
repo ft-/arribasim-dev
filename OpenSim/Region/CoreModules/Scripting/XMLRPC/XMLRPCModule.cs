@@ -98,7 +98,7 @@ namespace OpenSim.Region.CoreModules.Scripting.XMLRPC
         private List<Scene> m_scenes = new List<Scene>();
         private int RemoteReplyScriptTimeout = 9000;
         private int RemoteReplyScriptWait = 300;
-        private object XMLRPCListLock = new object();
+        private ReaderWriterLock XMLRPCListLock = new ReaderWriterLock();
 
         #region ISharedRegionModule Members
 
@@ -234,9 +234,15 @@ namespace OpenSim.Region.CoreModules.Scripting.XMLRPC
             {
                 newChannel = (channelID == UUID.Zero) ? UUID.Random() : channelID;
                 RPCChannelInfo rpcChanInfo = new RPCChannelInfo(localID, itemID, newChannel);
-                lock (XMLRPCListLock)
+
+                XMLRPCListLock.AcquireWriterLock(-1);
+                try
                 {
                     m_openChannels.Add(newChannel, rpcChanInfo);
+                }
+                finally
+                {
+                    XMLRPCListLock.ReleaseWriterLock();
                 }
             }
 
@@ -251,7 +257,8 @@ namespace OpenSim.Region.CoreModules.Scripting.XMLRPC
             {
                 ArrayList tmp = new ArrayList();
 
-                lock (XMLRPCListLock)
+                XMLRPCListLock.AcquireWriterLock(-1);
+                try
                 {
                     foreach (RPCChannelInfo li in m_openChannels.Values)
                     {
@@ -264,6 +271,10 @@ namespace OpenSim.Region.CoreModules.Scripting.XMLRPC
                     IEnumerator tmpEnumerator = tmp.GetEnumerator();
                     while (tmpEnumerator.MoveNext())
                         m_openChannels.Remove((UUID) tmpEnumerator.Current);
+                }
+                finally
+                {
+                    XMLRPCListLock.ReleaseWriterLock();
                 }
             }
         }
@@ -322,12 +333,17 @@ namespace OpenSim.Region.CoreModules.Scripting.XMLRPC
 
         public bool hasRequests()
         {
-            lock (XMLRPCListLock)
+            XMLRPCListLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_rpcPending != null)
                     return (m_rpcPending.Count > 0);
                 else
                     return false;
+            }
+            finally
+            {
+                XMLRPCListLock.ReleaseReaderLock();
             }
         }
 
@@ -335,7 +351,8 @@ namespace OpenSim.Region.CoreModules.Scripting.XMLRPC
         {
             if (m_rpcPending != null)
             {
-                lock (XMLRPCListLock)
+                XMLRPCListLock.AcquireReaderLock(-1);
+                try
                 {
                     foreach (UUID luid in m_rpcPending.Keys)
                     {
@@ -347,13 +364,18 @@ namespace OpenSim.Region.CoreModules.Scripting.XMLRPC
                         }
                     }
                 }
+                finally
+                {
+                    XMLRPCListLock.ReleaseReaderLock();
+                }
             }
             return null;
         }
 
         public void RemoveCompletedRequest(UUID id)
         {
-            lock (XMLRPCListLock)
+            XMLRPCListLock.AcquireWriterLock(-1);
+            try
             {
                 RPCRequestInfo tmp;
                 if (m_rpcPending.TryGetValue(id, out tmp))
@@ -365,6 +387,10 @@ namespace OpenSim.Region.CoreModules.Scripting.XMLRPC
                 {
                     m_log.Error("[XML RPC MODULE]: UNABLE TO REMOVE COMPLETED REQUEST");
                 }
+            }
+            finally
+            {
+                XMLRPCListLock.ReleaseWriterLock();
             }
         }
 
@@ -382,7 +408,8 @@ namespace OpenSim.Region.CoreModules.Scripting.XMLRPC
         {
             if (m_pendingSRDResponses != null)
             {
-                lock (XMLRPCListLock)
+                XMLRPCListLock.AcquireReaderLock(-1);
+                try
                 {
                     foreach (UUID luid in m_pendingSRDResponses.Keys)
                     {
@@ -395,13 +422,18 @@ namespace OpenSim.Region.CoreModules.Scripting.XMLRPC
                         }
                     }
                 }
+                finally
+                {
+                    XMLRPCListLock.ReleaseReaderLock();
+                }
             }
             return null;
         }
 
         public void RemoveCompletedSRDRequest(UUID id)
         {
-            lock (XMLRPCListLock)
+            XMLRPCListLock.AcquireWriterLock(-1);
+            try
             {
                 SendRemoteDataRequest tmpReq;
                 if (m_pendingSRDResponses.TryGetValue(id, out tmpReq))
@@ -409,19 +441,28 @@ namespace OpenSim.Region.CoreModules.Scripting.XMLRPC
                     m_pendingSRDResponses.Remove(id);
                 }
             }
+            finally
+            {
+                XMLRPCListLock.ReleaseWriterLock();
+            }
         }
 
         public void CancelSRDRequests(UUID itemID)
         {
             if (m_pendingSRDResponses != null)
             {
-                lock (XMLRPCListLock)
+                XMLRPCListLock.AcquireWriterLock(-1);
+                try
                 {
                     foreach (SendRemoteDataRequest li in m_pendingSRDResponses.Values)
                     {
                         if (li.ItemID.Equals(itemID))
                             m_pendingSRDResponses.Remove(li.GetReqID());
                     }
+                }
+                finally
+                {
+                    XMLRPCListLock.ReleaseWriterLock();
                 }
             }
         }
@@ -447,12 +488,17 @@ namespace OpenSim.Region.CoreModules.Scripting.XMLRPC
 
                     RPCRequestInfo rpcInfo;
 
-                    lock (XMLRPCListLock)
+                    XMLRPCListLock.AcquireWriterLock(-1);
+                    try
                     {
                         rpcInfo =
                             new RPCRequestInfo(rpcChanInfo.GetLocalID(), rpcChanInfo.GetItemID(), channel, strVal,
                                                intVal);
                         m_rpcPending.Add(rpcInfo.GetMessageID(), rpcInfo);
+                    }
+                    finally
+                    {
+                        XMLRPCListLock.ReleaseWriterLock();
                     }
 
                     int timeoutCtr = 0;
