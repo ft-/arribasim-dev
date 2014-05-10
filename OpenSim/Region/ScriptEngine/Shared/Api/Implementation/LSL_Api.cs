@@ -12371,30 +12371,53 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             public DateTime lastRef;
         }
 
-        protected static Dictionary<UUID, Notecard> m_Notecards =
+        private static Dictionary<UUID, Notecard> m_Notecards =
             new Dictionary<UUID, Notecard>();
+        private static ReaderWriterLock m_NotecardsRwLock = new ReaderWriterLock();
 
         public static void Cache(UUID assetID, string text)
         {
             CheckCache();
 
-            lock (m_Notecards)
+            m_NotecardsRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_Notecards.ContainsKey(assetID))
                     return;
 
-                Notecard nc = new Notecard();
-                nc.lastRef = DateTime.Now;
-                nc.text = SLUtil.ParseNotecardToList(text).ToArray();
-                m_Notecards[assetID] = nc;
+                LockCookie lc = m_NotecardsRwLock.UpgradeToWriterLock(-1);
+                try
+                {
+                    /* check again */
+                    if (m_Notecards.ContainsKey(assetID))
+                        return;
+
+                    Notecard nc = new Notecard();
+                    nc.lastRef = DateTime.Now;
+                    nc.text = SLUtil.ParseNotecardToList(text).ToArray();
+                    m_Notecards[assetID] = nc;
+                }
+                finally
+                {
+                    m_NotecardsRwLock.DowngradeFromWriterLock(ref lc);
+                }
+            }
+            finally
+            {
+                m_NotecardsRwLock.ReleaseReaderLock();
             }
         }
 
         public static bool IsCached(UUID assetID)
         {
-            lock (m_Notecards)
+            m_NotecardsRwLock.AcquireReaderLock(-1);
+            try
             {
                 return m_Notecards.ContainsKey(assetID);
+            }
+            finally
+            {
+                m_NotecardsRwLock.ReleaseReaderLock();
             }
         }
 
@@ -12403,10 +12426,15 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             if (!IsCached(assetID))
                 return -1;
 
-            lock (m_Notecards)
+            m_NotecardsRwLock.AcquireWriterLock(-1);
+            try
             {
                 m_Notecards[assetID].lastRef = DateTime.Now;
                 return m_Notecards[assetID].text.Length;
+            }
+            finally
+            {
+                m_NotecardsRwLock.ReleaseWriterLock();
             }
         }
 
@@ -12426,7 +12454,8 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             if (!IsCached(assetID))
                 return "";
 
-            lock (m_Notecards)
+            m_NotecardsRwLock.AcquireWriterLock(-1);
+            try
             {
                 m_Notecards[assetID].lastRef = DateTime.Now;
 
@@ -12436,6 +12465,10 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                 data = m_Notecards[assetID].text[lineNumber];
 
                 return data;
+            }
+            finally
+            {
+                m_NotecardsRwLock.ReleaseWriterLock();
             }
         }
 
@@ -12463,14 +12496,29 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
         public static void CheckCache()
         {
-            lock (m_Notecards)
+            m_NotecardsRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (UUID key in new List<UUID>(m_Notecards.Keys))
                 {
                     Notecard nc = m_Notecards[key];
                     if (nc.lastRef.AddSeconds(30) < DateTime.Now)
-                        m_Notecards.Remove(key);
+                    {
+                        LockCookie lc = m_NotecardsRwLock.UpgradeToWriterLock(-1);
+                        try
+                        {
+                            m_Notecards.Remove(key);
+                        }
+                        finally
+                        {
+                            m_NotecardsRwLock.DowngradeFromWriterLock(ref lc);
+                        }
+                    }
                 }
+            }
+            finally
+            {
+                m_NotecardsRwLock.ReleaseReaderLock();
             }
         }
     }

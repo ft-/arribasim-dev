@@ -28,6 +28,7 @@
 using System;
 using System.Reflection;
 using System.Collections.Generic;
+using System.Threading;
 using OpenMetaverse;
 using OpenSim.Framework;
 using log4net;
@@ -74,7 +75,15 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
         {
             get
             {
-                return SenseRepeaters.Count;
+                SenseRepeatListLock.AcquireReaderLock(-1);
+                try
+                {
+                    return SenseRepeaters.Count;
+                }
+                finally
+                {
+                    SenseRepeatListLock.ReleaseReaderLock();
+                }
             }
         }
 
@@ -134,7 +143,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
         /// Always lock SenseRepeatListLock when updating this list.
         /// </remarks>
         private List<SensorInfo> SenseRepeaters = new List<SensorInfo>();
-        private object SenseRepeatListLock = new object();
+        private ReaderWriterLock SenseRepeatListLock = new ReaderWriterLock();
 
         public void SetSenseRepeatEvent(uint m_localID, UUID m_itemID,
                                         string name, UUID keyID, int type, double range,
@@ -168,18 +177,22 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
 
         private void AddSenseRepeater(SensorInfo senseRepeater)
         {
-            lock (SenseRepeatListLock)
+            SenseRepeatListLock.AcquireWriterLock(-1);
+            try
             {
-                List<SensorInfo> newSenseRepeaters = new List<SensorInfo>(SenseRepeaters);
-                newSenseRepeaters.Add(senseRepeater);
-                SenseRepeaters = newSenseRepeaters;
+                SenseRepeaters.Add(senseRepeater);
+            }
+            finally
+            {
+                SenseRepeatListLock.ReleaseWriterLock();
             }
         }
 
         public void UnSetSenseRepeaterEvents(uint m_localID, UUID m_itemID)
         {
             // Remove from timer
-            lock (SenseRepeatListLock)
+            SenseRepeatListLock.AcquireWriterLock(-1);
+            try
             {
                 List<SensorInfo> newSenseRepeaters = new List<SensorInfo>();
                 foreach (SensorInfo ts in SenseRepeaters)
@@ -192,20 +205,32 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
 
                 SenseRepeaters = newSenseRepeaters;
             }
+            finally
+            {
+                SenseRepeatListLock.ReleaseWriterLock();
+            }
         }
 
         public void CheckSenseRepeaterEvents()
         {
             // Go through all timers
-            foreach (SensorInfo ts in SenseRepeaters)
+            SenseRepeatListLock.AcquireReaderLock(-1);
+            try
             {
-                // Time has passed?
-                if (ts.next.ToUniversalTime() < DateTime.Now.ToUniversalTime())
+                foreach (SensorInfo ts in SenseRepeaters)
                 {
-                    SensorSweep(ts);
-                    // set next interval
-                    ts.next = DateTime.Now.ToUniversalTime().AddSeconds(ts.interval);
+                    // Time has passed?
+                    if (ts.next.ToUniversalTime() < DateTime.Now.ToUniversalTime())
+                    {
+                        SensorSweep(ts);
+                        // set next interval
+                        ts.next = DateTime.Now.ToUniversalTime().AddSeconds(ts.interval);
+                    }
                 }
+            }
+            finally
+            {
+                SenseRepeatListLock.ReleaseReaderLock();
             }
         }
 
@@ -641,17 +666,25 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
         {
             List<Object> data = new List<Object>();
 
-            foreach (SensorInfo ts in SenseRepeaters)
+            SenseRepeatListLock.AcquireReaderLock(-1);
+            try
             {
-                if (ts.itemID == itemID)
+                foreach (SensorInfo ts in SenseRepeaters)
                 {
-                    data.Add(ts.interval);
-                    data.Add(ts.name);
-                    data.Add(ts.keyID);
-                    data.Add(ts.type);
-                    data.Add(ts.range);
-                    data.Add(ts.arc);
+                    if (ts.itemID == itemID)
+                    {
+                        data.Add(ts.interval);
+                        data.Add(ts.name);
+                        data.Add(ts.keyID);
+                        data.Add(ts.type);
+                        data.Add(ts.range);
+                        data.Add(ts.arc);
+                    }
                 }
+            }
+            finally
+            {
+                SenseRepeatListLock.ReleaseReaderLock();
             }
 
             return data.ToArray();
@@ -697,10 +730,15 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
         {
             List<SensorInfo> retList = new List<SensorInfo>();
 
-            lock (SenseRepeatListLock)
+            SenseRepeatListLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (SensorInfo i in SenseRepeaters)
                     retList.Add(i.Clone());
+            }
+            finally
+            {
+                SenseRepeatListLock.ReleaseReaderLock();
             }
 
             return retList;

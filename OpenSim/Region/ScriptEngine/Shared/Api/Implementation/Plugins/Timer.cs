@@ -30,6 +30,7 @@ using System.Collections;
 using System.Collections.Generic;
 using OpenMetaverse;
 using OpenSim.Region.ScriptEngine.Shared.Api;
+using System.Threading;
 
 namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
 {
@@ -56,8 +57,15 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
         {
             get
             {
-                lock (TimerListLock)
+                TimerListLock.AcquireReaderLock(-1);
+                try
+                {
                     return Timers.Count;
+                }
+                finally
+                {
+                    TimerListLock.ReleaseReaderLock();
+                }
             }
         }
 
@@ -75,7 +83,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
         }
 
         private Dictionary<string,TimerInfo> Timers = new Dictionary<string,TimerInfo>();
-        private object TimerListLock = new object();
+        private ReaderWriterLock TimerListLock = new ReaderWriterLock();
 
         public void SetTimerEvent(uint m_localID, UUID m_itemID, double sec)
         {
@@ -97,10 +105,15 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
             ts.next = DateTime.Now.Ticks + ts.interval;
 
             string key = MakeTimerKey(m_localID, m_itemID);
-            lock (TimerListLock)
+            TimerListLock.AcquireWriterLock(-1);
+            try
             {
                 // Adds if timer doesn't exist, otherwise replaces with new timer
                 Timers[key] = ts;
+            }
+            finally
+            {
+                TimerListLock.ReleaseWriterLock();
             }
         }
 
@@ -108,12 +121,17 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
         {
             // Remove from timer
             string key = MakeTimerKey(m_localID, m_itemID);
-            lock (TimerListLock)
+            TimerListLock.AcquireWriterLock(-1);
+            try
             {
                 if (Timers.ContainsKey(key))
                 {
                     Timers.Remove(key);
                 }
+            }
+            finally
+            {
+                TimerListLock.ReleaseWriterLock();
             }
         }
 
@@ -123,7 +141,8 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
             if (Timers.Count == 0)
                 return;
 
-            lock (TimerListLock)
+            TimerListLock.AcquireReaderLock(-1);
+            try
             {
                 // Go through all timers
                 Dictionary<string, TimerInfo>.ValueCollection tvals = Timers.Values;
@@ -144,13 +163,18 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
                     }
                 }
             }
+            finally
+            {
+                TimerListLock.ReleaseReaderLock();
+            }
         }
 
         public Object[] GetSerializationData(UUID itemID)
         {
             List<Object> data = new List<Object>();
 
-            lock (TimerListLock)
+            TimerListLock.AcquireReaderLock(-1);
+            try
             {
                 Dictionary<string, TimerInfo>.ValueCollection tvals = Timers.Values;
                 foreach (TimerInfo ts in tvals)
@@ -161,6 +185,10 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
                         data.Add(ts.next-DateTime.Now.Ticks);
                     }
                 }
+            }
+            finally
+            {
+                TimerListLock.ReleaseReaderLock();
             }
             return data.ToArray();
         }
@@ -180,9 +208,14 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
                 ts.next = DateTime.Now.Ticks + (long)data[idx+1];
                 idx += 2;
 
-                lock (TimerListLock)
+                TimerListLock.AcquireWriterLock(-1);
+                try
                 {
                     Timers.Add(MakeTimerKey(localID, itemID), ts);
+                }
+                finally
+                {
+                    TimerListLock.ReleaseWriterLock();
                 }
             }
         }
@@ -191,10 +224,15 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
         {
             List<TimerInfo> retList = new List<TimerInfo>();
 
-            lock (TimerListLock)
+            TimerListLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (TimerInfo i in Timers.Values)
                     retList.Add(i.Clone());
+            }
+            finally
+            {
+                TimerListLock.ReleaseReaderLock();
             }
 
             return retList;

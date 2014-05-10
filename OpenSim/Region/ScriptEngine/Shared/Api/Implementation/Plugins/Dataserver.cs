@@ -28,6 +28,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using OpenMetaverse;
 using OpenSim.Region.ScriptEngine.Shared;
 using OpenSim.Region.ScriptEngine.Shared.Api;
@@ -42,13 +43,21 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
         {
             get
             {
-                lock (DataserverRequests)
+                DataServerRequestsRwLock.AcquireReaderLock(-1);
+                try
+                {
                     return DataserverRequests.Count;
+                }
+                finally
+                {
+                    DataServerRequestsRwLock.ReleaseReaderLock();
+                }
             }
         }
 
         private Dictionary<string, DataserverRequest> DataserverRequests =
                 new Dictionary<string, DataserverRequest>();
+        private ReaderWriterLock DataServerRequestsRwLock = new ReaderWriterLock();
 
         public Dataserver(AsyncCommandManager CmdManager)
         {
@@ -69,7 +78,8 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
         public UUID RegisterRequest(uint localID, UUID itemID,
                                       string identifier)
         {
-            lock (DataserverRequests)
+            DataServerRequestsRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (DataserverRequests.ContainsKey(identifier))
                     return UUID.Zero;
@@ -88,19 +98,35 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
 
                 return ds.ID;
             }
+            finally
+            {
+                DataServerRequestsRwLock.ReleaseWriterLock();
+            }
         }
 
         public void DataserverReply(string identifier, string reply)
         {
             DataserverRequest ds;
-
-            lock (DataserverRequests)
+            DataServerRequestsRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (!DataserverRequests.ContainsKey(identifier))
                     return;
 
                 ds = DataserverRequests[identifier];
-                DataserverRequests.Remove(identifier);
+                LockCookie lc = DataServerRequestsRwLock.UpgradeToWriterLock(-1);
+                try
+                {
+                    DataserverRequests.Remove(identifier);
+                }
+                finally
+                {
+                    DataServerRequestsRwLock.DowngradeFromWriterLock(ref lc);
+                }
+            }
+            finally
+            {
+                DataServerRequestsRwLock.ReleaseReaderLock();
             }
 
             m_CmdManager.m_ScriptEngine.PostObjectEvent(ds.localID,
@@ -112,25 +138,55 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
 
         public void RemoveEvents(uint localID, UUID itemID)
         {
-            lock (DataserverRequests)
+            DataServerRequestsRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (DataserverRequest ds in new List<DataserverRequest>(DataserverRequests.Values))
                 {
                     if (ds.itemID == itemID)
-                        DataserverRequests.Remove(ds.handle);
+                    {
+                        LockCookie lc = DataServerRequestsRwLock.UpgradeToWriterLock(-1);
+                        try
+                        {
+                            DataserverRequests.Remove(ds.handle);
+                        }
+                        finally
+                        {
+                            DataServerRequestsRwLock.DowngradeFromWriterLock(ref lc);
+                        }
+                    }
                 }
+            }
+            finally
+            {
+                DataServerRequestsRwLock.ReleaseReaderLock();
             }
         }
 
         public void ExpireRequests()
         {
-            lock (DataserverRequests)
+            DataServerRequestsRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (DataserverRequest ds in new List<DataserverRequest>(DataserverRequests.Values))
                 {
                     if (ds.startTime > DateTime.Now.AddSeconds(30))
-                        DataserverRequests.Remove(ds.handle);
+                    {
+                        LockCookie lc = DataServerRequestsRwLock.UpgradeToWriterLock(-1);
+                        try
+                        {
+                            DataserverRequests.Remove(ds.handle);
+                        }
+                        finally
+                        {
+                            DataServerRequestsRwLock.DowngradeFromWriterLock(ref lc);
+                        }
+                    }
                 }
+            }
+            finally
+            {
+                DataServerRequestsRwLock.ReleaseReaderLock();
             }
         }
     }
