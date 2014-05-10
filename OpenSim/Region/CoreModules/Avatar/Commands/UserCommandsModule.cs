@@ -30,6 +30,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using log4net;
 using Mono.Addins;
 using NDesk.Options;
@@ -60,6 +61,7 @@ namespace OpenSim.Region.CoreModules.Avatars.Commands
             = new Regex(@"^(?<x>\d+)/(?<y>\d+)/(?<z>\d+)$", RegexOptions.Compiled);
 
         private Dictionary<UUID, Scene> m_scenes = new Dictionary<UUID, Scene>();
+        private ReaderWriterLock m_scenesRwLock = new ReaderWriterLock();
 
         public string Name { get { return "User Commands Module"; } }
         
@@ -84,8 +86,15 @@ namespace OpenSim.Region.CoreModules.Avatars.Commands
         {
 //            m_log.DebugFormat("[USER COMMANDS MODULE]: REGION {0} ADDED", scene.RegionInfo.RegionName);
 
-            lock (m_scenes)
+            m_scenesRwLock.AcquireWriterLock(-1);
+            try
+            {
                 m_scenes[scene.RegionInfo.RegionID] = scene;
+            }
+            finally
+            {
+                m_scenesRwLock.ReleaseWriterLock();
+            }
 
             scene.AddCommand(
                 "Users",
@@ -102,8 +111,15 @@ namespace OpenSim.Region.CoreModules.Avatars.Commands
         {
 //            m_log.DebugFormat("[USER COMMANDS MODULE]: REGION {0} REMOVED", scene.RegionInfo.RegionName);
 
-            lock (m_scenes)
+            m_scenesRwLock.AcquireWriterLock(-1);
+            try
+            {
                 m_scenes.Remove(scene.RegionInfo.RegionID);
+            }
+            finally
+            {
+                m_scenesRwLock.ReleaseWriterLock();
+            }
         }
 
         public void RegionLoaded(Scene scene)
@@ -115,7 +131,8 @@ namespace OpenSim.Region.CoreModules.Avatars.Commands
         {
             ScenePresence userFound = null;
 
-            lock (m_scenes)
+            m_scenesRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (Scene scene in m_scenes.Values)
                 {
@@ -126,6 +143,10 @@ namespace OpenSim.Region.CoreModules.Avatars.Commands
                         break;
                     }
                 }
+            }
+            finally
+            {
+                m_scenesRwLock.ReleaseReaderLock();
             }
 
             return userFound;
