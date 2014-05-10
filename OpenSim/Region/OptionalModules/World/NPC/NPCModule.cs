@@ -51,6 +51,7 @@ namespace OpenSim.Region.OptionalModules.World.NPC
 
         private Dictionary<UUID, NPCAvatar> m_avatars =
                 new Dictionary<UUID, NPCAvatar>();
+        private ReaderWriterLock m_avatarsRwLock = new ReaderWriterLock();
 
         public bool Enabled { get; private set; }
 
@@ -100,8 +101,15 @@ namespace OpenSim.Region.OptionalModules.World.NPC
             if (sp == null || sp.IsChildAgent)
                 return false;
 
-            lock (m_avatars)
+            m_avatarsRwLock.AcquireReaderLock(-1);
+            try
+            {
                 return m_avatars.ContainsKey(agentId);
+            }
+            finally
+            {
+                m_avatarsRwLock.ReleaseReaderLock();
+            }
         }
 
         public bool SetNPCAppearance(UUID agentId,
@@ -111,9 +119,16 @@ namespace OpenSim.Region.OptionalModules.World.NPC
             if (npc == null || npc.IsChildAgent)
                 return false;
 
-            lock (m_avatars)
+            m_avatarsRwLock.AcquireReaderLock(-1);
+            try
+            {
                 if (!m_avatars.ContainsKey(agentId))
                     return false;
+            }
+            finally
+            {
+                m_avatarsRwLock.ReleaseReaderLock();
+            }
 
             // Delete existing npc attachments
             if(scene.AttachmentsModule != null)
@@ -192,7 +207,8 @@ namespace OpenSim.Region.OptionalModules.World.NPC
             }
             */
 
-            lock (m_avatars)
+            m_avatarsRwLock.AcquireWriterLock(-1);
+            try
             {
                 scene.AuthenticateHandler.AddNewCircuit(npcAvatar.CircuitCode,
                         acd);
@@ -222,12 +238,17 @@ namespace OpenSim.Region.OptionalModules.World.NPC
                     return UUID.Zero;
                 }
             }
+            finally
+            {
+                m_avatarsRwLock.ReleaseWriterLock();
+            }
         }
 
         public bool MoveToTarget(UUID agentID, Scene scene, Vector3 pos,
                 bool noFly, bool landAtTarget, bool running)
         {
-            lock (m_avatars)
+            m_avatarsRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_avatars.ContainsKey(agentID))
                 {
@@ -246,13 +267,18 @@ namespace OpenSim.Region.OptionalModules.World.NPC
                     }
                 }
             }
+            finally
+            {
+                m_avatarsRwLock.ReleaseReaderLock();
+            }
 
             return false;
         }
 
         public bool StopMoveToTarget(UUID agentID, Scene scene)
         {
-            lock (m_avatars)
+            m_avatarsRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_avatars.ContainsKey(agentID))
                 {
@@ -266,6 +292,10 @@ namespace OpenSim.Region.OptionalModules.World.NPC
                     }
                 }
             }
+            finally
+            {
+                m_avatarsRwLock.ReleaseReaderLock();
+            }
 
             return false;
         }
@@ -277,7 +307,8 @@ namespace OpenSim.Region.OptionalModules.World.NPC
 
         public bool Say(UUID agentID, Scene scene, string text, int channel)
         {
-            lock (m_avatars)
+            m_avatarsRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_avatars.ContainsKey(agentID))
                 {
@@ -286,13 +317,18 @@ namespace OpenSim.Region.OptionalModules.World.NPC
                     return true;
                 }
             }
+            finally
+            {
+                m_avatarsRwLock.ReleaseReaderLock();
+            }
 
             return false;
         }
 
         public bool Shout(UUID agentID, Scene scene, string text, int channel)
         {
-            lock (m_avatars)
+            m_avatarsRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_avatars.ContainsKey(agentID))
                 {
@@ -301,13 +337,18 @@ namespace OpenSim.Region.OptionalModules.World.NPC
                     return true;
                 }
             }
+            finally
+            {
+                m_avatarsRwLock.ReleaseReaderLock();
+            }
 
             return false;
         }
 
         public bool Sit(UUID agentID, UUID partID, Scene scene)
         {
-            lock (m_avatars)
+            m_avatarsRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_avatars.ContainsKey(agentID))
                 {
@@ -320,6 +361,10 @@ namespace OpenSim.Region.OptionalModules.World.NPC
                     }
                 }
             }
+            finally
+            {
+                m_avatarsRwLock.ReleaseReaderLock();
+            }
 
             return false;
         }
@@ -327,7 +372,8 @@ namespace OpenSim.Region.OptionalModules.World.NPC
         public bool Whisper(UUID agentID, Scene scene, string text,
                 int channel)
         {
-            lock (m_avatars)
+            m_avatarsRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_avatars.ContainsKey(agentID))
                 {
@@ -336,13 +382,18 @@ namespace OpenSim.Region.OptionalModules.World.NPC
                     return true;
                 }
             }
+            finally
+            {
+                m_avatarsRwLock.ReleaseReaderLock();
+            }
 
             return false;
         }
 
         public bool Stand(UUID agentID, Scene scene)
         {
-            lock (m_avatars)
+            m_avatarsRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_avatars.ContainsKey(agentID))
                 {
@@ -355,28 +406,42 @@ namespace OpenSim.Region.OptionalModules.World.NPC
                     }
                 }
             }
+            finally
+            {
+                m_avatarsRwLock.ReleaseReaderLock();
+            }
 
             return false;
         }
 
         public bool Touch(UUID agentID, UUID objectID)
         {
-            lock (m_avatars)
+            m_avatarsRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_avatars.ContainsKey(agentID))
                     return m_avatars[agentID].Touch(objectID);
 
                 return false;
             }
+            finally
+            {
+                m_avatarsRwLock.ReleaseReaderLock();
+            }
         }
 
         public UUID GetOwner(UUID agentID)
         {
-            lock (m_avatars)
+            m_avatarsRwLock.AcquireReaderLock(-1);
+            try
             {
                 NPCAvatar av;
                 if (m_avatars.TryGetValue(agentID, out av))
                     return av.OwnerID;
+            }
+            finally
+            {
+                m_avatarsRwLock.ReleaseReaderLock();
             }
 
             return UUID.Zero;
@@ -384,18 +449,24 @@ namespace OpenSim.Region.OptionalModules.World.NPC
 
         public INPC GetNPC(UUID agentID, Scene scene)
         {
-            lock (m_avatars)
+            m_avatarsRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_avatars.ContainsKey(agentID))
                     return m_avatars[agentID];
                 else
                     return null;
             }
+            finally
+            {
+                m_avatarsRwLock.ReleaseReaderLock();
+            }
         }
 
         public bool DeleteNPC(UUID agentID, Scene scene)
         {
-            lock (m_avatars)
+            m_avatarsRwLock.AcquireWriterLock(-1);
+            try
             {
                 NPCAvatar av;
                 if (m_avatars.TryGetValue(agentID, out av))
@@ -416,6 +487,10 @@ namespace OpenSim.Region.OptionalModules.World.NPC
                     return true;
                 }
             }
+            finally
+            {
+                m_avatarsRwLock.ReleaseWriterLock();
+            }
             /*
             m_log.DebugFormat("[NPC MODULE]: Could not find {0} to remove",
                     agentID);
@@ -425,13 +500,18 @@ namespace OpenSim.Region.OptionalModules.World.NPC
 
         public bool CheckPermissions(UUID npcID, UUID callerID)
         {
-            lock (m_avatars)
+            m_avatarsRwLock.AcquireReaderLock(-1);
+            try
             {
                 NPCAvatar av;
                 if (m_avatars.TryGetValue(npcID, out av))
                     return CheckPermissions(av, callerID);
                 else
                     return false;
+            }
+            finally
+            {
+                m_avatarsRwLock.ReleaseReaderLock();
             }
         }
 
