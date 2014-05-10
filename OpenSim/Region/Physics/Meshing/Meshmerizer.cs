@@ -262,7 +262,7 @@ namespace OpenSim.Region.Physics.Meshing
 
             List<Coord> coords;
             List<Face> faces;
-            hulls = null;
+            hulls = new List<List<Vector3>>();
             boundingHull = new List<Vector3>();
 
             if (primShape.SculptEntry)
@@ -326,8 +326,8 @@ namespace OpenSim.Region.Physics.Meshing
                     out List<List<Vector3>> hulls,
                     out List<Vector3> boundingHull)
         {
-            hulls = null;
-            boundingHull = null;
+            hulls = new List<List<Vector3>>();
+            boundingHull = new List<Vector3>();
 //            m_log.DebugFormat("[MESH]: experimental mesh proxy generation for {0}", primName);
 
             coords = new List<Coord>();
@@ -905,11 +905,14 @@ namespace OpenSim.Region.Physics.Meshing
                 try
                 {
                     /* recheck since we allow a lot of threading here */
-                    if (m_uniqueMeshes.TryGetValue(key, out mesh))
+                    if (shouldCache)
                     {
-                        m_uniqueMeshesBoundingHulls.TryGetValue(key, out boundingHull);
-                        m_uniqueMeshesHulls.TryGetValue(key, out hulls);
-                        return mesh;
+                        if (m_uniqueMeshes.TryGetValue(key, out mesh))
+                        {
+                            m_uniqueMeshesBoundingHulls.TryGetValue(key, out boundingHull);
+                            m_uniqueMeshesHulls.TryGetValue(key, out hulls);
+                            return mesh;
+                        }
                     }
                     if (size.X < 0.01f) size.X = 0.01f;
                     if (size.Y < 0.01f) size.Y = 0.01f;
@@ -935,6 +938,8 @@ namespace OpenSim.Region.Physics.Meshing
                         if (shouldCache)
                         {
                             m_uniqueMeshes.Add(key, mesh);
+                            m_uniqueMeshesHulls.Add(key, hulls);
+                            m_uniqueMeshesBoundingHulls.Add(key, boundingHull);
                         }
                     }
                 }
