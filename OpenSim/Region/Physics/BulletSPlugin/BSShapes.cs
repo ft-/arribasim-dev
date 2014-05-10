@@ -28,6 +28,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 
 using OpenSim.Framework;
 using OpenSim.Region.Physics.Manager;
@@ -369,7 +370,8 @@ public class BSShapeNative : BSShape
 public class BSShapeMesh : BSShape
 {
     private static string LogHeader = "[BULLETSIM SHAPE MESH]";
-    public static Dictionary<System.UInt64, BSShapeMesh> Meshes = new Dictionary<System.UInt64, BSShapeMesh>();
+    private static Dictionary<System.UInt64, BSShapeMesh> Meshes = new Dictionary<System.UInt64, BSShapeMesh>();
+    private static ReaderWriterLock MeshesRwLock = new ReaderWriterLock();
 
     public BSShapeMesh(BulletShape pShape) : base(pShape)
     {
@@ -380,7 +382,8 @@ public class BSShapeMesh : BSShape
         System.UInt64 newMeshKey = BSShape.ComputeShapeKey(prim.Size, prim.BaseShape, out lod);
 
         BSShapeMesh retMesh = null;
-        lock (Meshes)
+        MeshesRwLock.AcquireWriterLock(-1);
+        try
         {
             if (Meshes.TryGetValue(newMeshKey, out retMesh))
             {
@@ -407,6 +410,10 @@ public class BSShapeMesh : BSShape
                 retMesh.physShapeInfo = newShape;
             }
         }
+        finally
+        {
+            MeshesRwLock.ReleaseWriterLock();
+        }
         physicsScene.DetailLog("{0},BSShapeMesh,getReference,mesh={1},size={2},lod={3}", prim.LocalID, retMesh, prim.Size, lod);
         return retMesh;
     }
@@ -430,11 +437,16 @@ public class BSShapeMesh : BSShape
     }
     public override void Dereference(BSScene physicsScene)
     {
-        lock (Meshes)
+        MeshesRwLock.AcquireWriterLock(-1);
+        try
         {
             this.DecrementReference();
             physicsScene.DetailLog("{0},BSShapeMesh.Dereference,shape={1}", BSScene.DetailLogZero, this);
             // TODO: schedule aging and destruction of unused meshes.
+        }
+        finally
+        {
+            MeshesRwLock.ReleaseWriterLock();
         }
     }
     // Loop through all the known meshes and return the description based on the physical address.
@@ -442,7 +454,8 @@ public class BSShapeMesh : BSShape
     {
         bool ret = false;
         BSShapeMesh foundDesc = null;
-        lock (Meshes)
+        MeshesRwLock.AcquireReaderLock(-1);
+        try
         {
             foreach (BSShapeMesh sm in Meshes.Values)
             {
@@ -454,6 +467,10 @@ public class BSShapeMesh : BSShape
                 }
 
             }
+        }
+        finally
+        {
+            MeshesRwLock.ReleaseReaderLock();
         }
         outMesh = foundDesc;
         return ret;
@@ -477,13 +494,10 @@ public class BSShapeMesh : BSShape
         BulletShape newShape = new BulletShape();
 
         IMesh meshData = null;
-        lock (physicsScene.mesher)
-        {
-            meshData = physicsScene.mesher.CreateMesh(prim.PhysObjectName, pbs, size, lod,
-                                            false,  // say it is not physical so a bounding box is not built
-                                            false   // do not cache the mesh and do not use previously built versions
-                                            );
-        }
+        meshData = physicsScene.mesher.CreateMesh(prim.PhysObjectName, pbs, size, lod,
+                                        false,  // say it is not physical so a bounding box is not built
+                                        false   // do not cache the mesh and do not use previously built versions
+                                        );
 
         if (meshData != null)
         {
@@ -559,6 +573,7 @@ public class BSShapeHull : BSShape
 #pragma warning restore 414
 
     public static Dictionary<System.UInt64, BSShapeHull> Hulls = new Dictionary<System.UInt64, BSShapeHull>();
+    private static ReaderWriterLock HullsRwLock = new ReaderWriterLock();
 
     public BSShapeHull(BulletShape pShape) : base(pShape)
     {
@@ -569,7 +584,8 @@ public class BSShapeHull : BSShape
         System.UInt64 newHullKey = BSShape.ComputeShapeKey(prim.Size, prim.BaseShape, out lod);
 
         BSShapeHull retHull = null;
-        lock (Hulls)
+        HullsRwLock.AcquireWriterLock(-1);
+        try
         {
             if (Hulls.TryGetValue(newHullKey, out retHull))
             {
@@ -594,6 +610,10 @@ public class BSShapeHull : BSShape
                 retHull.physShapeInfo = newShape;
             }
         }
+        finally
+        {
+            HullsRwLock.ReleaseWriterLock();
+        }
         physicsScene.DetailLog("{0},BSShapeHull,getReference,hull={1},size={2},lod={3}", prim.LocalID, retHull, prim.Size, lod);
         return retHull;
     }
@@ -617,11 +637,16 @@ public class BSShapeHull : BSShape
     }
     public override void Dereference(BSScene physicsScene)
     {
-        lock (Hulls)
+        HullsRwLock.AcquireWriterLock(-1);
+        try
         {
             this.DecrementReference();
             physicsScene.DetailLog("{0},BSShapeHull.Dereference,shape={1}", BSScene.DetailLogZero, this);
             // TODO: schedule aging and destruction of unused meshes.
+        }
+        finally
+        {
+            HullsRwLock.ReleaseWriterLock();
         }
     }
     List<ConvexResult> m_hulls;
@@ -632,23 +657,20 @@ public class BSShapeHull : BSShape
 
         IMesh meshData = null;
         List<List<OMV.Vector3>> allHulls = null;
-        lock (physicsScene.mesher)
-        {
-            // Pass true for physicalness as this prevents the creation of bounding box which is not needed
-            meshData = physicsScene.mesher.CreateMesh(prim.PhysObjectName, pbs, size, lod, true /* isPhysical */, false /* shouldCache */);
+        // Pass true for physicalness as this prevents the creation of bounding box which is not needed
+        meshData = physicsScene.mesher.CreateMesh(prim.PhysObjectName, pbs, size, lod, true /* isPhysical */, false /* shouldCache */);
 
-            // If we should use the asset's hull info, fetch it out of the locked mesher
-            if (meshData != null && BSParam.ShouldUseAssetHulls)
+        // If we should use the asset's hull info, fetch it out of the locked mesher
+        if (meshData != null && BSParam.ShouldUseAssetHulls)
+        {
+            Meshmerizer realMesher = physicsScene.mesher as Meshmerizer;
+            if (realMesher != null)
             {
-                Meshmerizer realMesher = physicsScene.mesher as Meshmerizer;
-                if (realMesher != null)
-                {
-                    allHulls = realMesher.GetConvexHulls(size);
-                }
-                if (allHulls == null)
-                {
-                    physicsScene.DetailLog("{0},BSShapeHull.CreatePhysicalHull,assetHulls,noAssetHull", prim.LocalID);
-                }
+                allHulls = realMesher.GetConvexHulls(size);
+            }
+            if (allHulls == null)
+            {
+                physicsScene.DetailLog("{0},BSShapeHull.CreatePhysicalHull,assetHulls,noAssetHull", prim.LocalID);
             }
         }
 
@@ -847,7 +869,8 @@ public class BSShapeHull : BSShape
     {
         bool ret = false;
         BSShapeHull foundDesc = null;
-        lock (Hulls)
+        HullsRwLock.AcquireReaderLock(-1);
+        try
         {
             foreach (BSShapeHull sh in Hulls.Values)
             {
@@ -860,6 +883,10 @@ public class BSShapeHull : BSShape
 
             }
         }
+        finally
+        {
+            HullsRwLock.ReleaseReaderLock();
+        }
         outHull = foundDesc;
         return ret;
     }
@@ -869,7 +896,8 @@ public class BSShapeHull : BSShape
 public class BSShapeCompound : BSShape
 {
     private static string LogHeader = "[BULLETSIM SHAPE COMPOUND]";
-    public static Dictionary<string, BSShapeCompound> CompoundShapes = new Dictionary<string, BSShapeCompound>();
+    private static Dictionary<string, BSShapeCompound> CompoundShapes = new Dictionary<string, BSShapeCompound>();
+    private static ReaderWriterLock CompoundShapesRwLock = new ReaderWriterLock();
 
     public BSShapeCompound(BulletShape pShape) : base(pShape)
     {
@@ -878,9 +906,17 @@ public class BSShapeCompound : BSShape
     {
         // Base compound shapes are not shared so this returns a raw shape.
         // A built compound shape can be reused in linksets.
-        BSShapeCompound ret = new BSShapeCompound(CreatePhysicalCompoundShape(physicsScene));
-        CompoundShapes.Add(ret.AddrString, ret);
-        return ret;
+        CompoundShapesRwLock.AcquireWriterLock(-1);
+        try
+        {
+            BSShapeCompound ret = new BSShapeCompound(CreatePhysicalCompoundShape(physicsScene));
+            CompoundShapes.Add(ret.AddrString, ret);
+            return ret;
+        }
+        finally
+        {
+            CompoundShapesRwLock.ReleaseWriterLock();
+        }
     }
     public override BSShape GetReference(BSScene physicsScene, BSPhysObject prim)
     {
@@ -919,18 +955,30 @@ public class BSShapeCompound : BSShape
                     DereferenceAnonCollisionShape(physicsScene, childShape);
                 }
 
-                lock (CompoundShapes)
+                CompoundShapesRwLock.AcquireWriterLock(-1);
+                try
+                {
                     CompoundShapes.Remove(physShapeInfo.AddrString);
+                }
+                finally
+                {
+                    CompoundShapesRwLock.ReleaseWriterLock();
+                }
                 physicsScene.PE.DeleteCollisionShape(physicsScene.World, physShapeInfo);
             }
         }
     }
     public static bool TryGetCompoundByPtr(BulletShape pShape, out BSShapeCompound outCompound)
     {
-        lock (CompoundShapes)
+        CompoundShapesRwLock.AcquireReaderLock(-1);
+        try
         {
             string addr = pShape.AddrString;
             return CompoundShapes.TryGetValue(addr, out outCompound);
+        }
+        finally
+        {
+            CompoundShapesRwLock.ReleaseReaderLock();
         }
     }
     private static BulletShape CreatePhysicalCompoundShape(BSScene physicsScene)
@@ -1009,7 +1057,8 @@ public class BSShapeConvexHull : BSShape
     private static string LogHeader = "[BULLETSIM SHAPE CONVEX HULL]";
 #pragma warning restore 414
 
-    public static Dictionary<System.UInt64, BSShapeConvexHull> ConvexHulls = new Dictionary<System.UInt64, BSShapeConvexHull>();
+    private static Dictionary<System.UInt64, BSShapeConvexHull> ConvexHulls = new Dictionary<System.UInt64, BSShapeConvexHull>();
+    private static ReaderWriterLock ConvexHullsRwLock = new ReaderWriterLock();
 
     public BSShapeConvexHull(BulletShape pShape) : base(pShape)
     {
@@ -1023,7 +1072,8 @@ public class BSShapeConvexHull : BSShape
                                 prim.LocalID, newMeshKey.ToString("X"), prim.Size, lod);
 
         BSShapeConvexHull retConvexHull = null;
-        lock (ConvexHulls)
+        ConvexHullsRwLock.AcquireWriterLock(-1);
+        try
         {
             if (ConvexHulls.TryGetValue(newMeshKey, out retConvexHull))
             {
@@ -1060,6 +1110,10 @@ public class BSShapeConvexHull : BSShape
                 retConvexHull.physShapeInfo = convexShape;
             }
         }
+        finally
+        {
+            ConvexHullsRwLock.ReleaseWriterLock();
+        }
         return retConvexHull;
     }
     public override BSShape GetReference(BSScene physicsScene, BSPhysObject prim)
@@ -1072,11 +1126,16 @@ public class BSShapeConvexHull : BSShape
     // Dereferencing a compound shape releases the hold on all the child shapes.
     public override void Dereference(BSScene physicsScene)
     {
-        lock (ConvexHulls)
+        ConvexHullsRwLock.AcquireWriterLock(-1);
+        try
         {
             this.DecrementReference();
             physicsScene.DetailLog("{0},BSShapeConvexHull.Dereference,shape={1}", BSScene.DetailLogZero, this);
             // TODO: schedule aging and destruction of unused meshes.
+        }
+        finally
+        {
+            ConvexHullsRwLock.ReleaseWriterLock();
         }
     }
     // Loop through all the known hulls and return the description based on the physical address.
@@ -1084,7 +1143,8 @@ public class BSShapeConvexHull : BSShape
     {
         bool ret = false;
         BSShapeConvexHull foundDesc = null;
-        lock (ConvexHulls)
+        ConvexHullsRwLock.AcquireReaderLock(-1);
+        try
         {
             foreach (BSShapeConvexHull sh in ConvexHulls.Values)
             {
@@ -1097,6 +1157,10 @@ public class BSShapeConvexHull : BSShape
 
             }
         }
+        finally
+        {
+            ConvexHullsRwLock.ReleaseReaderLock();
+        }
         outHull = foundDesc;
         return ret;
     }
@@ -1108,7 +1172,8 @@ public class BSShapeGImpact : BSShape
     private static string LogHeader = "[BULLETSIM SHAPE GIMPACT]";
 #pragma warning restore 414
 
-    public static Dictionary<System.UInt64, BSShapeGImpact> GImpacts = new Dictionary<System.UInt64, BSShapeGImpact>();
+    private static Dictionary<System.UInt64, BSShapeGImpact> GImpacts = new Dictionary<System.UInt64, BSShapeGImpact>();
+    private static ReaderWriterLock GImpactsRwLock = new ReaderWriterLock();
 
     public BSShapeGImpact(BulletShape pShape) : base(pShape)
     {
@@ -1122,7 +1187,8 @@ public class BSShapeGImpact : BSShape
                                 prim.LocalID, newMeshKey.ToString("X"), prim.Size, lod);
 
         BSShapeGImpact retGImpact = null;
-        lock (GImpacts)
+        GImpactsRwLock.AcquireWriterLock(-1);
+        try
         {
             if (GImpacts.TryGetValue(newMeshKey, out retGImpact))
             {
@@ -1149,6 +1215,10 @@ public class BSShapeGImpact : BSShape
 
                 retGImpact.physShapeInfo = newShape;
             }
+        }
+        finally
+        {
+            GImpactsRwLock.ReleaseWriterLock();
         }
         return retGImpact;
     }
@@ -1181,11 +1251,16 @@ public class BSShapeGImpact : BSShape
     // Dereferencing a compound shape releases the hold on all the child shapes.
     public override void Dereference(BSScene physicsScene)
     {
-        lock (GImpacts)
+        GImpactsRwLock.AcquireWriterLock(-1);
+        try
         {
             this.DecrementReference();
             physicsScene.DetailLog("{0},BSShapeGImpact.Dereference,shape={1}", BSScene.DetailLogZero, this);
             // TODO: schedule aging and destruction of unused meshes.
+        }
+        finally
+        {
+            GImpactsRwLock.ReleaseWriterLock();
         }
     }
     // Loop through all the known hulls and return the description based on the physical address.
@@ -1193,7 +1268,8 @@ public class BSShapeGImpact : BSShape
     {
         bool ret = false;
         BSShapeGImpact foundDesc = null;
-        lock (GImpacts)
+        GImpactsRwLock.AcquireReaderLock(-1);
+        try
         {
             foreach (BSShapeGImpact sh in GImpacts.Values)
             {
@@ -1205,6 +1281,10 @@ public class BSShapeGImpact : BSShape
                 }
 
             }
+        }
+        finally
+        {
+            GImpactsRwLock.ReleaseReaderLock();
         }
         outHull = foundDesc;
         return ret;

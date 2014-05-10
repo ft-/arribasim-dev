@@ -915,50 +915,53 @@ namespace OpenSim.Region.Physics.Meshing
 
         public IMesh CreateMesh(String primName, PrimitiveBaseShape primShape, Vector3 size, float lod, bool isPhysical, bool shouldCache)
         {
+            lock (this)
+            {
 #if SPAM
-            m_log.DebugFormat("[MESH]: Creating mesh for {0}", primName);
+                m_log.DebugFormat("[MESH]: Creating mesh for {0}", primName);
 #endif
 
-            Mesh mesh = null;
-            ulong key = 0;
+                Mesh mesh = null;
+                ulong key = 0;
 
-            // If this mesh has been created already, return it instead of creating another copy
-            // For large regions with 100k+ prims and hundreds of copies of each, this can save a GB or more of memory
-            if (shouldCache)
-            {
-                key = primShape.GetMeshKey(size, lod);
-                if (m_uniqueMeshes.TryGetValue(key, out mesh))
-                    return mesh;
-            }
-
-            if (size.X < 0.01f) size.X = 0.01f;
-            if (size.Y < 0.01f) size.Y = 0.01f;
-            if (size.Z < 0.01f) size.Z = 0.01f;
-
-            mesh = CreateMeshFromPrimMesher(primName, primShape, size, lod);
-
-            if (mesh != null)
-            {
-                if ((!isPhysical) && size.X < minSizeForComplexMesh && size.Y < minSizeForComplexMesh && size.Z < minSizeForComplexMesh)
-                {
-#if SPAM
-                m_log.Debug("Meshmerizer: prim " + primName + " has a size of " + size.ToString() + " which is below threshold of " + 
-                            minSizeForComplexMesh.ToString() + " - creating simple bounding box");
-#endif
-                    mesh = CreateBoundingBoxMesh(mesh);
-                    mesh.DumpRaw(baseDir, primName, "Z extruded");
-                }
-
-                // trim the vertex and triangle lists to free up memory
-                mesh.TrimExcess();
-
+                // If this mesh has been created already, return it instead of creating another copy
+                // For large regions with 100k+ prims and hundreds of copies of each, this can save a GB or more of memory
                 if (shouldCache)
                 {
-                    m_uniqueMeshes.Add(key, mesh);
+                    key = primShape.GetMeshKey(size, lod);
+                    if (m_uniqueMeshes.TryGetValue(key, out mesh))
+                        return mesh;
                 }
-            }
 
-            return mesh;
+                if (size.X < 0.01f) size.X = 0.01f;
+                if (size.Y < 0.01f) size.Y = 0.01f;
+                if (size.Z < 0.01f) size.Z = 0.01f;
+
+                mesh = CreateMeshFromPrimMesher(primName, primShape, size, lod);
+
+                if (mesh != null)
+                {
+                    if ((!isPhysical) && size.X < minSizeForComplexMesh && size.Y < minSizeForComplexMesh && size.Z < minSizeForComplexMesh)
+                    {
+#if SPAM
+                        m_log.Debug("Meshmerizer: prim " + primName + " has a size of " + size.ToString() + " which is below threshold of " + 
+                                minSizeForComplexMesh.ToString() + " - creating simple bounding box");
+#endif
+                        mesh = CreateBoundingBoxMesh(mesh);
+                        mesh.DumpRaw(baseDir, primName, "Z extruded");
+                    }
+
+                    // trim the vertex and triangle lists to free up memory
+                    mesh.TrimExcess();
+
+                    if (shouldCache)
+                    {
+                        m_uniqueMeshes.Add(key, mesh);
+                    }
+                }
+
+                return mesh;
+            }
         }
     }
 }
