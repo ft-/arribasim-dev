@@ -573,11 +573,8 @@ namespace SecondLife
                     bool retried = false;
                     do
                     {
-                        lock (CScodeProvider)
-                        {
-                            results = CScodeProvider.CompileAssemblyFromSource(
-                                parameters, Script);
-                        }
+                        results = CScodeProvider.CompileAssemblyFromSource(
+                            parameters, Script);
 
                         // Deal with an occasional segv in the compiler.
                         // Rarely, if ever, occurs twice in succession.
@@ -604,7 +601,7 @@ namespace SecondLife
                     } while (!complete);
                     break;
                 default:
-                    throw new Exception("Compiler is not able to recongnize " +
+                    throw new Exception("Compiler is not able to recognize " +
                                         "language type \"" + lang.ToString() + "\"");
             }
 
