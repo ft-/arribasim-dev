@@ -30,6 +30,7 @@ using Mono.Addins;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Threading;
 using Nini.Config;
 using OpenSim.Framework;
 using OpenSim.Services.Connectors;
@@ -50,6 +51,7 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Authorization
 
         private bool m_Enabled = false;
         private List<Scene> m_scenes = new List<Scene>();
+        private ReaderWriterLock m_scenesRwLock = new ReaderWriterLock();
 
         public Type ReplaceableInterface 
         {
@@ -98,16 +100,32 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Authorization
             if (!m_Enabled)
                 return;
 
-            if (!m_scenes.Contains(scene))
+            m_scenesRwLock.AcquireWriterLock(-1);
+            try
             {
-                m_scenes.Add(scene);
-                scene.RegisterModuleInterface<IAuthorizationService>(this);
+                if (!m_scenes.Contains(scene))
+                {
+                    m_scenes.Add(scene);
+                    scene.RegisterModuleInterface<IAuthorizationService>(this);
+                }
             }
-            
+            finally
+            {
+                m_scenesRwLock.ReleaseWriterLock();
+            }
         }
 
         public void RemoveRegion(Scene scene)
         {
+            m_scenesRwLock.AcquireWriterLock(-1);
+            try
+            {
+                m_scenes.Remove(scene);
+            }
+            finally
+            {
+                m_scenesRwLock.ReleaseWriterLock();
+            }
         }
 
         public void RegionLoaded(Scene scene)
@@ -130,7 +148,8 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Authorization
             
             // get the scene this call is being made for
             Scene scene = null;
-            lock (m_scenes)
+            m_scenesRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (Scene nextScene in m_scenes)
                 {
@@ -139,6 +158,10 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Authorization
                         scene = nextScene;
                     }
                 }
+            }
+            finally
+            {
+                m_scenesRwLock.ReleaseReaderLock();
             }
             
             if (scene != null)
