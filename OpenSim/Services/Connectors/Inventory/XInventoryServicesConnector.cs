@@ -476,7 +476,7 @@ namespace OpenSim.Services.Connectors
                 sendData.Add(kvp.Key, kvp.Value);
 
             string reply = string.Empty;
-            lock (m_Lock)
+            //lock (m_Lock)
                 reply = SynchronousRestFormsRequester.MakeRequest("POST",
                          m_ServerURI + "/xinventory",
                          ServerUtils.BuildQueryString(sendData));
