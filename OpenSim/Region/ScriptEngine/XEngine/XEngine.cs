@@ -158,6 +158,9 @@ namespace OpenSim.Region.ScriptEngine.XEngine
         private Dictionary<string, int> m_AddingAssemblies =
                 new Dictionary<string, int>();
 
+        private Dictionary<string, Dictionary<KeyValuePair<int, int>, KeyValuePair<int, int>>> m_AssemblyLineMaps = 
+            new Dictionary<string, Dictionary<KeyValuePair<int, int>, KeyValuePair<int, int>>>();
+
         // This will list AppDomains by script asset
 
         private Dictionary<UUID, AppDomain> m_AppDomains =
@@ -1191,12 +1194,21 @@ namespace OpenSim.Region.ScriptEngine.XEngine
 
             try
             {
-                m_Compiler.PerformScriptCompile(script, assetID.ToString(), item.OwnerID, out assembly, out linemap);
+                assembly = m_Compiler.GetCompilerOutput(assetID.ToString());
 
                 lock (m_AddingAssemblies)
                 {
-                    if (!m_AddingAssemblies.ContainsKey(assembly)) {
+                    if (!m_AddingAssemblies.ContainsKey(assembly))
+                    {
+                        string assemblyMe;
+                        m_Compiler.PerformScriptCompile(script, assetID.ToString(), item.OwnerID, out assemblyMe, out linemap);
+                        if(assembly != assemblyMe)
+                        {
+                            m_log.DebugFormat("[XEngine]: Assembly name mismatch for {0} to {1} != {2}", assetID.ToString(), assembly, assemblyMe);
+                        }
+
                         m_AddingAssemblies[assembly] = 1;
+                        m_AssemblyLineMaps[assembly] = linemap;
                     } else {
                         m_AddingAssemblies[assembly]++;
                     }
@@ -1373,7 +1385,7 @@ namespace OpenSim.Region.ScriptEngine.XEngine
                     }
 
                     instance.AppDomain = appDomain;
-                    instance.LineMap = linemap;
+                    instance.LineMap = m_AssemblyLineMaps[assembly];
 
                     m_Scripts[itemID] = instance;
                 }
@@ -1545,6 +1557,7 @@ namespace OpenSim.Region.ScriptEngine.XEngine
                         catch (Exception)
                         {
                         }
+                        m_AssemblyLineMaps.Remove(m_Assemblies[assetID]);
                         m_Assemblies.Remove(assetID);
                     }
                 }
