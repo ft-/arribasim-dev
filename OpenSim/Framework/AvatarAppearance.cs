@@ -29,6 +29,7 @@ using System;
 using System.Reflection;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using OpenMetaverse;
 using OpenMetaverse.StructuredData;
 using log4net;
@@ -60,7 +61,8 @@ namespace OpenSim.Framework
         protected byte[] m_visualparams;
         protected Primitive.TextureEntry m_texture;
         protected AvatarWearable[] m_wearables;
-        protected Dictionary<int, List<AvatarAttachment>> m_attachments;
+        private Dictionary<int, List<AvatarAttachment>> m_attachments;
+        private ReaderWriterLock m_attachmentsRwLock = new ReaderWriterLock();
         protected float m_avatarHeight = 0;
         protected Vector3 m_avatarSize = new Vector3(0.45f, 0.6f, 1.9f); // sl Z cloud value
         protected Vector3 m_avatarBoxSize = new Vector3(0.45f, 0.6f, 1.9f);
@@ -497,7 +499,8 @@ namespace OpenSim.Framework
         /// </remarks>
         public List<AvatarAttachment> GetAttachments()
         {
-            lock (m_attachments)
+            m_attachmentsRwLock.AcquireReaderLock(-1);
+            try
             {
 				List<AvatarAttachment> alist = new List<AvatarAttachment>();
                 foreach (KeyValuePair<int, List<AvatarAttachment>> kvp in m_attachments)
@@ -507,6 +510,10 @@ namespace OpenSim.Framework
                 }
 				return alist;
 			}
+            finally
+            {
+                m_attachmentsRwLock.ReleaseReaderLock();
+            }
         }
 
         internal void AppendAttachment(AvatarAttachment attach)
@@ -515,12 +522,17 @@ namespace OpenSim.Framework
 //                "[AVATAR APPEARNCE]: Appending itemID={0}, assetID={1} at {2}",
 //                attach.ItemID, attach.AssetID, attach.AttachPoint);
 
-            lock (m_attachments)
+            m_attachmentsRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (!m_attachments.ContainsKey(attach.AttachPoint))
                     m_attachments[attach.AttachPoint] = new List<AvatarAttachment>();
     
                 m_attachments[attach.AttachPoint].Add(attach);
+            }
+            finally
+            {
+                m_attachmentsRwLock.ReleaseWriterLock();
             }
         }
 
@@ -530,10 +542,15 @@ namespace OpenSim.Framework
 //                "[AVATAR APPEARANCE]: Replacing itemID={0}, assetID={1} at {2}",
 //                attach.ItemID, attach.AssetID, attach.AttachPoint);
 
-            lock (m_attachments)
+            m_attachmentsRwLock.AcquireWriterLock(-1);
+            try
             {
                 m_attachments[attach.AttachPoint] = new List<AvatarAttachment>();
                 m_attachments[attach.AttachPoint].Add(attach);
+            }
+            finally
+            {
+                m_attachmentsRwLock.ReleaseWriterLock();
             }
         }
 
@@ -561,59 +578,64 @@ namespace OpenSim.Framework
             if (attachpoint == 0)
                 return false;
 
-            lock (m_attachments)
+            if (item == UUID.Zero)
             {
-                if (item == UUID.Zero)
+                m_attachmentsRwLock.AcquireWriterLock(-1);
+                try
                 {
                     if (m_attachments.ContainsKey(attachpoint))
                     {
                         m_attachments.Remove(attachpoint);
                         return true;
                     }
-                    
-                    return false;
+                }
+                finally
+                {
+                    m_attachmentsRwLock.ReleaseWriterLock();
                 }
 
-                // When a user logs in, the attachment item ids are pulled from persistence in the Avatars table.  However,
-                // the asset ids are not saved.  When the avatar enters a simulator the attachments are set again.  If
-                // we simply perform an item check here then the asset ids (which are now present) are never set, and NPC attachments
-                // later fail unless the attachment is detached and reattached.
-                //
-                // Therefore, we will carry on with the set if the existing attachment has no asset id.
-                AvatarAttachment existingAttachment = GetAttachmentForItem(item);
-                if (existingAttachment != null)
-                {
+                return false;
+            }
+
+            // When a user logs in, the attachment item ids are pulled from persistence in the Avatars table.  However,
+            // the asset ids are not saved.  When the avatar enters a simulator the attachments are set again.  If
+            // we simply perform an item check here then the asset ids (which are now present) are never set, and NPC attachments
+            // later fail unless the attachment is detached and reattached.
+            //
+            // Therefore, we will carry on with the set if the existing attachment has no asset id.
+            AvatarAttachment existingAttachment = GetAttachmentForItem(item);
+            if (existingAttachment != null)
+            {
 //                    m_log.DebugFormat(
 //                        "[AVATAR APPEARANCE]: Found existing attachment for {0}, asset {1} at point {2}", 
 //                        existingAttachment.ItemID, existingAttachment.AssetID, existingAttachment.AttachPoint);
 
-                    if (existingAttachment.AssetID != UUID.Zero && existingAttachment.AttachPoint == (attachpoint & 0x7F))
-                    {
-                        m_log.DebugFormat(
-                            "[AVATAR APPEARANCE]: Ignoring attempt to attach an already attached item {0} at point {1}", 
-                            item, attachpoint);
-
-                        return false;
-                    }
-                    else
-                    {
-                        // Remove it here so that the later append does not add a second attachment but we still update
-                        // the assetID
-                        DetachAttachment(existingAttachment.ItemID);
-                    }
-                }
-                
-                // check if this is an append or a replace, 0x80 marks it as an append
-                if ((attachpoint & 0x80) > 0)
+                if (existingAttachment.AssetID != UUID.Zero && existingAttachment.AttachPoint == (attachpoint & 0x7F))
                 {
-                    // strip the append bit
-                    int point = attachpoint & 0x7F;
-                    AppendAttachment(new AvatarAttachment(point, item, asset));
+                    m_log.DebugFormat(
+                        "[AVATAR APPEARANCE]: Ignoring attempt to attach an already attached item {0} at point {1}", 
+                        item, attachpoint);
+
+                    return false;
                 }
                 else
                 {
-                    ReplaceAttachment(new AvatarAttachment(attachpoint,item, asset));
+                    // Remove it here so that the later append does not add a second attachment but we still update
+                    // the assetID
+                    DetachAttachment(existingAttachment.ItemID);
                 }
+            }
+                
+            // check if this is an append or a replace, 0x80 marks it as an append
+            if ((attachpoint & 0x80) > 0)
+            {
+                // strip the append bit
+                int point = attachpoint & 0x7F;
+                AppendAttachment(new AvatarAttachment(point, item, asset));
+            }
+            else
+            {
+                ReplaceAttachment(new AvatarAttachment(attachpoint,item, asset));
             }
 
             return true;
@@ -626,7 +648,8 @@ namespace OpenSim.Framework
         /// <returns>Returns null if this item is not attached.</returns>
         public AvatarAttachment GetAttachmentForItem(UUID itemID)
         {
-            lock (m_attachments)
+            m_attachmentsRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (KeyValuePair<int, List<AvatarAttachment>> kvp in m_attachments)
                 {
@@ -635,13 +658,18 @@ namespace OpenSim.Framework
                         return kvp.Value[index];
                 }
             }
+            finally
+            {
+                m_attachmentsRwLock.ReleaseReaderLock();
+            }
 
             return null;
         }
 
         public int GetAttachpoint(UUID itemID)
         {
-            lock (m_attachments)
+            m_attachmentsRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (KeyValuePair<int, List<AvatarAttachment>> kvp in m_attachments)
                 {
@@ -650,12 +678,17 @@ namespace OpenSim.Framework
                         return kvp.Key;
                 }
             }
+            finally
+            {
+                m_attachmentsRwLock.ReleaseReaderLock();
+            }
             return 0;
         }
 
         public bool DetachAttachment(UUID itemID)
         {
-            lock (m_attachments)
+            m_attachmentsRwLock.AcquireWriterLock(-1);
+            try
             {
                 foreach (KeyValuePair<int, List<AvatarAttachment>> kvp in m_attachments)
                 {
@@ -677,14 +710,25 @@ namespace OpenSim.Framework
                     }
                 }
             }
+            finally
+            {
+                m_attachmentsRwLock.ReleaseWriterLock();
+            }
 
             return false;
         }
 
         public void ClearAttachments()
         {
-            lock (m_attachments)
+            m_attachmentsRwLock.AcquireWriterLock(-1);
+            try
+            {
                 m_attachments.Clear();
+            }
+            finally
+            {
+                m_attachmentsRwLock.ReleaseWriterLock();
+            }
         }
 
         #region Packing Functions
