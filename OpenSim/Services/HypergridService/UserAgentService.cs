@@ -399,7 +399,6 @@ namespace OpenSim.Services.HypergridService
             return travel.ServiceToken == token;
         }
 
-        [Obsolete]
         public List<UUID> StatusNotification(List<string> friends, UUID foreignUserID, bool online)
         {
             if (m_FriendsService == null || m_PresenceService == null)
@@ -480,7 +479,6 @@ namespace OpenSim.Services.HypergridService
                 return new List<UUID>();
         }
 
-        [Obsolete]
         protected void ForwardStatusNotificationToSim(UUID regionID, UUID foreignUserID, string user, bool online)
         {
             UUID userID;

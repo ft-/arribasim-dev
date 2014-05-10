@@ -105,7 +105,6 @@ namespace OpenSim.Services.Interfaces
         UUID GetUUID(String first, String last);
 
         // Returns the local friends online
-        [Obsolete]
         List<UUID> StatusNotification(List<string> friends, UUID userID, bool online);
 
         bool IsAgentComingHome(UUID sessionID, string thisGridExternalName);

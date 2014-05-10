@@ -179,7 +179,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.ScriptBase
             {
                 ev.Invoke(m_Script, args);
             }
-            catch(EventAbortException e)
+            catch(EventAbortException)
             {
 
             }
