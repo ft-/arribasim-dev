@@ -28,6 +28,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Reflection;
 using System.Text;
 using log4net;
@@ -53,8 +54,9 @@ namespace OpenSim.Framework.Monitoring
         /// <remarks>
         /// Do not add or remove directly from this dictionary.
         /// </remarks>
-        public static SortedDictionary<string, SortedDictionary<string, SortedDictionary<string, Check>>> RegisteredChecks
+        private static SortedDictionary<string, SortedDictionary<string, SortedDictionary<string, Check>>> RegisteredChecks
             = new SortedDictionary<string, SortedDictionary<string, SortedDictionary<string, Check>>>();
+        private static ReaderWriterLock RegisteredChecksRwLock = new ReaderWriterLock();
 
         public static void RegisterConsoleCommands(ICommandConsole console)
         {
@@ -135,7 +137,8 @@ namespace OpenSim.Framework.Monitoring
             SortedDictionary<string, SortedDictionary<string, Check>> category = null, newCategory;
             SortedDictionary<string, Check> container = null, newContainer;
 
-            lock (RegisteredChecks)
+            RegisteredChecksRwLock.AcquireWriterLock(-1);
+            try
             {
                 // Check name is not unique across category/container/shortname key.
                 // XXX: For now just return false.  This is to avoid problems in regression tests where all tests
@@ -160,6 +163,10 @@ namespace OpenSim.Framework.Monitoring
                 newCategory[check.Container] = newContainer;
                 RegisteredChecks[check.Category] = newCategory;
             }
+            finally
+            {
+                RegisteredChecksRwLock.ReleaseWriterLock();
+            }
 
             return true;
         }
@@ -174,7 +181,8 @@ namespace OpenSim.Framework.Monitoring
             SortedDictionary<string, SortedDictionary<string, Check>> category = null, newCategory;
             SortedDictionary<string, Check> container = null, newContainer;
 
-            lock (RegisteredChecks)
+            RegisteredChecksRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (!TryGetCheckParents(check, out category, out container))
                     return false;
@@ -190,6 +198,10 @@ namespace OpenSim.Framework.Monitoring
 
                 return true;
             }
+            finally
+            {
+                RegisteredChecksRwLock.ReleaseWriterLock();
+            }
         }
 
         public static bool TryGetCheckParents(
@@ -200,7 +212,8 @@ namespace OpenSim.Framework.Monitoring
             category = null;
             container = null;
 
-            lock (RegisteredChecks)
+            RegisteredChecksRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (RegisteredChecks.TryGetValue(check.Category, out category))
                 {
@@ -211,13 +224,18 @@ namespace OpenSim.Framework.Monitoring
                     }
                 }
             }
+            finally
+            {
+                RegisteredChecksRwLock.ReleaseReaderLock();
+            }
 
             return false;
         }
 
         public static void CheckChecks()
         {
-            lock (RegisteredChecks)
+            RegisteredChecksRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (SortedDictionary<string, SortedDictionary<string, Check>> category in RegisteredChecks.Values)
                 {
@@ -232,13 +250,25 @@ namespace OpenSim.Framework.Monitoring
                     }
                 }
             }
+            finally
+            {
+                RegisteredChecksRwLock.ReleaseReaderLock();
+            }
         }
 
         private static void OutputAllChecksToConsole(ICommandConsole con)
         {
-            foreach (var category in RegisteredChecks.Values)
+            RegisteredChecksRwLock.AcquireReaderLock(-1);
+            try
             {
-                OutputCategoryChecksToConsole(con, category);
+                foreach (var category in RegisteredChecks.Values)
+                {
+                    OutputCategoryChecksToConsole(con, category);
+                }
+            }
+            finally
+            {
+                RegisteredChecksRwLock.ReleaseReaderLock();
             }
         }
 

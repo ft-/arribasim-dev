@@ -30,6 +30,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 
 using OpenSim.Framework;
 using OpenMetaverse.StructuredData;
@@ -56,8 +57,9 @@ namespace OpenSim.Framework.Monitoring
         /// <remarks>
         /// Do not add or remove directly from this dictionary.
         /// </remarks>
-        public static SortedDictionary<string, SortedDictionary<string, SortedDictionary<string, Stat>>> RegisteredStats
+        private static SortedDictionary<string, SortedDictionary<string, SortedDictionary<string, Stat>>> RegisteredStats
             = new SortedDictionary<string, SortedDictionary<string, SortedDictionary<string, Stat>>>();
+        private static ReaderWriterLock RegisteredStatsRwLock = new ReaderWriterLock();
 
 //        private static AssetStatsCollector assetStats;
 //        private static UserStatsCollector userStats;
@@ -361,7 +363,8 @@ namespace OpenSim.Framework.Monitoring
             SortedDictionary<string, SortedDictionary<string, Stat>> category = null, newCategory;
             SortedDictionary<string, Stat> container = null, newContainer;
 
-            lock (RegisteredStats)
+            RegisteredStatsRwLock.AcquireWriterLock(-1);
+            try
             {
                 // Stat name is not unique across category/container/shortname key.
                 // XXX: For now just return false.  This is to avoid problems in regression tests where all tests
@@ -386,6 +389,10 @@ namespace OpenSim.Framework.Monitoring
                 newCategory[stat.Container] = newContainer;
                 RegisteredStats[stat.Category] = newCategory;
             }
+            finally
+            {
+                RegisteredStatsRwLock.ReleaseWriterLock();
+            }
 
             return true;
         }
@@ -400,7 +407,8 @@ namespace OpenSim.Framework.Monitoring
             SortedDictionary<string, SortedDictionary<string, Stat>> category = null, newCategory;
             SortedDictionary<string, Stat> container = null, newContainer;
 
-            lock (RegisteredStats)
+            RegisteredStatsRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (!TryGetStatParents(stat, out category, out container))
                     return false;
@@ -416,6 +424,10 @@ namespace OpenSim.Framework.Monitoring
 
                 return true;
             }
+            finally
+            {
+                RegisteredStatsRwLock.ReleaseWriterLock();
+            }
         }
 
         public static bool TryGetStat(string category, string container, string statShortName, out Stat stat)
@@ -423,7 +435,8 @@ namespace OpenSim.Framework.Monitoring
             stat = null;
             SortedDictionary<string, SortedDictionary<string, Stat>> categoryStats;
 
-            lock (RegisteredStats)
+            RegisteredStatsRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (!TryGetStatsForCategory(category, out categoryStats))
                     return false;
@@ -435,13 +448,24 @@ namespace OpenSim.Framework.Monitoring
 
                 return containerStats.TryGetValue(statShortName, out stat);
             }
+            finally
+            {
+                RegisteredStatsRwLock.ReleaseReaderLock();
+            }
         }
 
         public static bool TryGetStatsForCategory(
             string category, out SortedDictionary<string, SortedDictionary<string, Stat>> stats)
         {
-            lock (RegisteredStats)
+            RegisteredStatsRwLock.AcquireReaderLock(-1);
+            try
+            {
                 return RegisteredStats.TryGetValue(category, out stats);
+            }
+            finally
+            {
+                RegisteredStatsRwLock.ReleaseReaderLock();
+            }
         }
 
         /// <summary>
@@ -456,7 +480,8 @@ namespace OpenSim.Framework.Monitoring
         {
             SortedDictionary<string, SortedDictionary<string, Stat>> categoryStats;
 
-            lock (RegisteredStats)
+            RegisteredStatsRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (!RegisteredStats.TryGetValue(category, out categoryStats))
                     return null;
@@ -476,6 +501,10 @@ namespace OpenSim.Framework.Monitoring
 
                 return stats;
             }
+            finally
+            {
+                RegisteredStatsRwLock.ReleaseReaderLock();
+            }
         }
 
         public static bool TryGetStatParents(
@@ -486,7 +515,8 @@ namespace OpenSim.Framework.Monitoring
             category = null;
             container = null;
 
-            lock (RegisteredStats)
+            RegisteredStatsRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (RegisteredStats.TryGetValue(stat.Category, out category))
                 {
@@ -497,13 +527,18 @@ namespace OpenSim.Framework.Monitoring
                     }
                 }
             }
+            finally
+            {
+                RegisteredStatsRwLock.ReleaseReaderLock();
+            }
 
             return false;
         }
 
         public static void RecordStats()
         {
-            lock (RegisteredStats)
+            RegisteredStatsRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (SortedDictionary<string, SortedDictionary<string, Stat>> category in RegisteredStats.Values)
                 {
@@ -516,6 +551,10 @@ namespace OpenSim.Framework.Monitoring
                         }
                     }
                 }
+            }
+            finally
+            {
+                RegisteredStatsRwLock.ReleaseReaderLock();
             }
         }
     }
