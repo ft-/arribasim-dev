@@ -4921,7 +4921,8 @@ namespace OpenSim.Region.Framework.Scenes
         /// <param name='avatarId'></param>
         protected internal bool AddSittingAvatar(ScenePresence sp)
         {
-            lock (ParentGroup.m_sittingAvatars)
+            ParentGroup.m_sittingAvatarsRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (IsSitTargetSet && SitTargetAvatar == UUID.Zero)
                     SitTargetAvatar = sp.UUID;
@@ -4938,6 +4939,10 @@ namespace OpenSim.Region.Framework.Scenes
 
                 return false;
             }
+            finally
+            {
+                ParentGroup.m_sittingAvatarsRwLock.ReleaseWriterLock();
+            }
         }
 
         /// <summary>
@@ -4950,7 +4955,8 @@ namespace OpenSim.Region.Framework.Scenes
         /// <param name='avatarId'></param>
         protected internal bool RemoveSittingAvatar(ScenePresence sp)
         {
-            lock (ParentGroup.m_sittingAvatars)
+            ParentGroup.m_sittingAvatarsRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (SitTargetAvatar == sp.UUID)
                     SitTargetAvatar = UUID.Zero;
@@ -4970,6 +4976,10 @@ namespace OpenSim.Region.Framework.Scenes
 
                 return false;
             }
+            finally
+            {
+                ParentGroup.m_sittingAvatarsRwLock.ReleaseWriterLock();
+            }
         }
 
         /// <summary>
@@ -4979,12 +4989,17 @@ namespace OpenSim.Region.Framework.Scenes
         /// <returns>A hashset of the sitting avatars.  Returns null if there are no sitting avatars.</returns>
         public HashSet<ScenePresence> GetSittingAvatars()
         {
-            lock (ParentGroup.m_sittingAvatars)
+            ParentGroup.m_sittingAvatarsRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_sittingAvatars == null)
                     return null;
                 else
                     return new HashSet<ScenePresence>(m_sittingAvatars);
+            }
+            finally
+            {
+                ParentGroup.m_sittingAvatarsRwLock.ReleaseReaderLock();
             }
         }
 
@@ -4995,12 +5010,17 @@ namespace OpenSim.Region.Framework.Scenes
         /// <returns></returns>
         public int GetSittingAvatarsCount()
         {
-            lock (ParentGroup.m_sittingAvatars)
+            ParentGroup.m_sittingAvatarsRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_sittingAvatars == null)
                     return 0;
                 else
                     return m_sittingAvatars.Count;
+            }
+            finally
+            {
+                ParentGroup.m_sittingAvatarsRwLock.ReleaseReaderLock();
             }
         }
     }

@@ -838,6 +838,7 @@ namespace OpenSim.Region.Framework.Scenes
         /// Do not manipulate this list directly - use the Add/Remove sitting avatar methods on SceneObjectPart.
         /// </remarks>
         protected internal List<ScenePresence> m_sittingAvatars = new List<ScenePresence>();
+        protected internal ReaderWriterLock m_sittingAvatarsRwLock = new ReaderWriterLock();
 
         #endregion
 
@@ -1673,7 +1674,16 @@ namespace OpenSim.Region.Framework.Scenes
 
             dupe.Backup = false;
             dupe.m_parts = new MapAndArray<OpenMetaverse.UUID, SceneObjectPart>();
-            dupe.m_sittingAvatars = new List<ScenePresence>();
+            dupe.m_sittingAvatarsRwLock.AcquireReaderLock(-1);
+            try
+            {
+                dupe.m_sittingAvatars = new List<ScenePresence>();
+            }
+            finally
+            {
+                dupe.m_sittingAvatarsRwLock.ReleaseReaderLock();
+            }
+            
             dupe.CopyRootPart(m_rootPart, OwnerID, GroupID, userExposed);
             dupe.m_rootPart.LinkNum = m_rootPart.LinkNum;
 
@@ -3795,8 +3805,15 @@ namespace OpenSim.Region.Framework.Scenes
         /// <returns>A list of the sitting avatars.  Returns an empty list if there are no sitting avatars.</returns>
         public List<ScenePresence> GetSittingAvatars()
         {
-            lock (m_sittingAvatars)
+            m_sittingAvatarsRwLock.AcquireReaderLock(-1);
+            try
+            {
                 return new List<ScenePresence>(m_sittingAvatars);
+            }
+            finally
+            {
+                m_sittingAvatarsRwLock.ReleaseReaderLock();
+            }
         }
 
         /// <summary>
@@ -3806,8 +3823,15 @@ namespace OpenSim.Region.Framework.Scenes
         /// <returns></returns>
         public int GetSittingAvatarsCount()
         {
-            lock (m_sittingAvatars)
+            m_sittingAvatarsRwLock.AcquireReaderLock(-1);
+            try
+            {
                 return m_sittingAvatars.Count;
+            }
+            finally
+            {
+                m_sittingAvatarsRwLock.ReleaseReaderLock();
+            }
         }
 
         public override string ToString()
