@@ -116,6 +116,7 @@ namespace OpenSim.Region.CoreModules.Scripting.LSLHttp
         /// Indexs the URL request metadata (which script requested it, outstanding requests, etc.) by the full URL
         /// </summary>
         private Dictionary<string, UrlData> m_UrlMap = new Dictionary<string, UrlData>();
+        private ReaderWriterLock m_UrlMapRwLock = new ReaderWriterLock();
 
         private uint m_HttpsPort = 0;
         private IHttpServer m_HttpServer = null;
@@ -214,7 +215,8 @@ namespace OpenSim.Region.CoreModules.Scripting.LSLHttp
         {
             UUID urlcode = UUID.Random();
 
-            lock (m_UrlMap)
+            m_UrlMapRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (m_UrlMap.Count >= TotalUrls)
                 {
@@ -246,6 +248,10 @@ namespace OpenSim.Region.CoreModules.Scripting.LSLHttp
 
                 engine.PostScriptEvent(itemID, "http_request", new Object[] { urlcode.ToString(), "URL_REQUEST_GRANTED", url });
             }
+            finally
+            {
+                m_UrlMapRwLock.ReleaseWriterLock();
+            }
 
             return urlcode;
         }
@@ -260,7 +266,8 @@ namespace OpenSim.Region.CoreModules.Scripting.LSLHttp
                 return urlcode;
             }
 
-            lock (m_UrlMap)
+            m_UrlMapRwLock.AcquireWriterLock(-1);
+            try
             {
                 if (m_UrlMap.Count >= TotalUrls)
                 {
@@ -292,13 +299,18 @@ namespace OpenSim.Region.CoreModules.Scripting.LSLHttp
 
                 engine.PostScriptEvent(itemID, "http_request", new Object[] { urlcode.ToString(), "URL_REQUEST_GRANTED", url });
             }
+            finally
+            {
+                m_UrlMapRwLock.ReleaseWriterLock();
+            }
 
             return urlcode;
         }
 
         public void ReleaseURL(string url)
         {
-            lock (m_UrlMap)
+            m_UrlMapRwLock.AcquireWriterLock(-1);
+            try
             {
                 UrlData data;
 
@@ -317,11 +329,16 @@ namespace OpenSim.Region.CoreModules.Scripting.LSLHttp
                 RemoveUrl(data);
                 m_UrlMap.Remove(url);
             }
+            finally
+            {
+                m_UrlMapRwLock.ReleaseWriterLock();
+            }
         }
         
         public void HttpContentType(UUID request, string type)
         {
-            lock (m_UrlMap)
+            m_UrlMapRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_RequestMap.ContainsKey(request))
                 {
@@ -333,11 +350,16 @@ namespace OpenSim.Region.CoreModules.Scripting.LSLHttp
                     m_log.Info("[HttpRequestHandler] There is no http-in request with id " + request.ToString());
                 }
             }
+            finally
+            {
+                m_UrlMapRwLock.ReleaseReaderLock();
+            }
         }
         
         public void HttpResponse(UUID request, int status, string body)
         {
-            lock (m_UrlMap)
+            m_UrlMapRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_RequestMap.ContainsKey(request))
                 {
@@ -366,11 +388,16 @@ namespace OpenSim.Region.CoreModules.Scripting.LSLHttp
                     m_log.Info("[HttpRequestHandler] There is no http-in request with id " + request.ToString());
                 }
             }
+            finally
+            {
+                m_UrlMapRwLock.ReleaseReaderLock();
+            }
         }
 
         public string GetHttpHeader(UUID requestId, string header)
         {
-            lock (m_UrlMap)
+            m_UrlMapRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (m_RequestMap.ContainsKey(requestId))
                 {
@@ -384,21 +411,33 @@ namespace OpenSim.Region.CoreModules.Scripting.LSLHttp
                     m_log.Warn("[HttpRequestHandler] There was no http-in request with id " + requestId);
                 }
             }
+            finally
+            {
+                m_UrlMapRwLock.ReleaseReaderLock();
+            }
 
             return String.Empty;
         }
 
         public int GetFreeUrls()
         {
-            lock (m_UrlMap)
+            m_UrlMapRwLock.AcquireReaderLock(-1);
+            try
+            {
                 return TotalUrls - m_UrlMap.Count;
+            }
+            finally
+            {
+                m_UrlMapRwLock.ReleaseReaderLock();
+            }
         }
 
         public void ScriptRemoved(UUID itemID)
         {
 //            m_log.DebugFormat("[URL MODULE]: Removing script {0}", itemID);
-            
-            lock (m_UrlMap)
+
+            m_UrlMapRwLock.AcquireWriterLock(-1);
+            try
             {
                 List<string> removeURLs = new List<string>();
 
@@ -416,11 +455,16 @@ namespace OpenSim.Region.CoreModules.Scripting.LSLHttp
                 foreach (string urlname in removeURLs)
                     m_UrlMap.Remove(urlname);
             }
+            finally
+            {
+                m_UrlMapRwLock.ReleaseWriterLock();
+            }
         }
 
         public void ObjectRemoved(UUID objectID)
         {
-            lock (m_UrlMap)
+            m_UrlMapRwLock.AcquireWriterLock(-1);
+            try
             {
                 List<string> removeURLs = new List<string>();
 
@@ -439,6 +483,10 @@ namespace OpenSim.Region.CoreModules.Scripting.LSLHttp
                 foreach (string urlname in removeURLs)
                     m_UrlMap.Remove(urlname);
             }
+            finally
+            {
+                m_UrlMapRwLock.ReleaseWriterLock();
+            }
         }
 
         private void RemoveUrl(UrlData data)
@@ -451,7 +499,8 @@ namespace OpenSim.Region.CoreModules.Scripting.LSLHttp
             Hashtable response = new Hashtable();
             UrlData urlData;
 
-            lock (m_UrlMap)
+            m_UrlMapRwLock.AcquireReaderLock(-1);
+            try
             {
                 // We need to return a 404 here in case the request URL was removed at exactly the same time that a
                 // request was made.  In this case, the request thread can outrace llRemoveURL() and still be polling
@@ -475,13 +524,25 @@ namespace OpenSim.Region.CoreModules.Scripting.LSLHttp
                     response["content_type"] = "text/plain";
                     response["keepalive"] = false;
                     response["reusecontext"] = false;
-    
-                    //remove from map
-                    urlData.requests.Remove(requestID);
-                    m_RequestMap.Remove(requestID);
+
+                    LockCookie lc = m_UrlMapRwLock.UpgradeToWriterLock(-1);
+                    try
+                    {
+                        //remove from map
+                        urlData.requests.Remove(requestID);
+                        m_RequestMap.Remove(requestID);
+                    }
+                    finally
+                    {
+                        m_UrlMapRwLock.DowngradeFromWriterLock(ref lc);
+                    }
 
                     return response;
                 }
+            }
+            finally
+            {
+                m_UrlMapRwLock.ReleaseReaderLock();
             }
 
             return response;
@@ -489,7 +550,8 @@ namespace OpenSim.Region.CoreModules.Scripting.LSLHttp
 
         private bool HasEvents(UUID requestID, UUID sessionID)
         {
-            lock (m_UrlMap)
+            m_UrlMapRwLock.AcquireReaderLock(-1);
+            try
             {
                 // We return true here because an external URL request that happened at the same time as an llRemoveURL()
                 // can still make it through to HttpRequestHandler().  That will return without setting up a request
@@ -516,13 +578,18 @@ namespace OpenSim.Region.CoreModules.Scripting.LSLHttp
 
                 return urlData.requests[requestID].requestDone;
             }
+            finally
+            {
+                m_UrlMapRwLock.ReleaseReaderLock();
+            }
         }
 
         private Hashtable GetEvents(UUID requestID, UUID sessionID)
         {
             Hashtable response;
 
-            lock (m_UrlMap)
+            m_UrlMapRwLock.AcquireReaderLock(-1);
+            try
             {
                 UrlData url = null;
                 RequestData requestData = null;
@@ -556,9 +623,21 @@ namespace OpenSim.Region.CoreModules.Scripting.LSLHttp
                 response["keepalive"] = false;
                 response["reusecontext"] = false;
 
-                //remove from map
-                url.requests.Remove(requestID);
-                m_RequestMap.Remove(requestID);
+                LockCookie lc = m_UrlMapRwLock.UpgradeToWriterLock(-1);
+                try
+                {
+                    //remove from map
+                    url.requests.Remove(requestID);
+                    m_RequestMap.Remove(requestID);
+                }
+                finally
+                {
+                    m_UrlMapRwLock.DowngradeFromWriterLock(ref lc);
+                }
+            }
+            finally
+            {
+                m_UrlMapRwLock.ReleaseReaderLock();
             }
 
             return response;
@@ -588,7 +667,8 @@ namespace OpenSim.Region.CoreModules.Scripting.LSLHttp
 
                 UrlData urlData = null;
 
-                lock (m_UrlMap)
+                m_UrlMapRwLock.AcquireReaderLock(-1);
+                try
                 {
                     string url;
 
@@ -647,8 +727,20 @@ namespace OpenSim.Region.CoreModules.Scripting.LSLHttp
                     requestData.headers["x-query-string"] = queryString;
                     requestData.headers["x-script-url"] = urlData.url;
 
-                    urlData.requests.Add(requestID, requestData);
-                    m_RequestMap.Add(requestID, urlData);
+                    LockCookie lc = m_UrlMapRwLock.UpgradeToWriterLock(-1);
+                    try
+                    {
+                        urlData.requests.Add(requestID, requestData);
+                        m_RequestMap.Add(requestID, urlData);
+                    }
+                    finally
+                    {
+                        m_UrlMapRwLock.DowngradeFromWriterLock(ref lc);
+                    }
+                }
+                finally
+                {
+                    m_UrlMapRwLock.ReleaseReaderLock();
                 }
 
                 urlData.engine.PostScriptEvent(
