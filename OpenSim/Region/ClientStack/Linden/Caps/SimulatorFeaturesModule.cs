@@ -28,6 +28,7 @@
 using System;
 using System.Collections;
 using System.Reflection;
+using System.Threading;
 using log4net;
 using Nini.Config;
 using Mono.Addins;
@@ -67,6 +68,7 @@ namespace OpenSim.Region.ClientStack.Linden
         /// Simulator features
         /// </summary>
         private OSDMap m_features = new OSDMap();
+        private ReaderWriterLock m_featuresRwLock = new ReaderWriterLock();
 
         private string m_SearchURL = string.Empty;
         private bool m_ExportSupported = false;
@@ -126,7 +128,8 @@ namespace OpenSim.Region.ClientStack.Linden
         /// </remarks>
         private void AddDefaultFeatures()
         {
-            lock (m_features)
+            m_featuresRwLock.AcquireWriterLock(-1);
+            try
             {
                 m_features["MeshRezEnabled"] = true;
                 m_features["MeshUploadEnabled"] = true;
@@ -151,6 +154,10 @@ namespace OpenSim.Region.ClientStack.Linden
                     m_features["OpenSimExtras"] = extrasMap;
 
             }
+            finally
+            {
+                m_featuresRwLock.ReleaseWriterLock();
+            }
         }
 
         public void RegisterCaps(UUID agentID, Caps caps)
@@ -165,26 +172,54 @@ namespace OpenSim.Region.ClientStack.Linden
 
         public void AddFeature(string name, OSD value)
         {
-            lock (m_features)
+            m_featuresRwLock.AcquireWriterLock(-1);
+            try
+            {
                 m_features[name] = value;
+            }
+            finally
+            {
+                m_featuresRwLock.ReleaseWriterLock();
+            }
         }
 
         public bool RemoveFeature(string name)
         {
-            lock (m_features)
+            m_featuresRwLock.AcquireWriterLock(-1);
+            try
+            {
                 return m_features.Remove(name);
+            }
+            finally
+            {
+                m_featuresRwLock.ReleaseWriterLock();
+            }
         }
 
         public bool TryGetFeature(string name, out OSD value)
         {
-            lock (m_features)
+            m_featuresRwLock.AcquireReaderLock(-1);
+            try
+            {
                 return m_features.TryGetValue(name, out value);
+            }
+            finally
+            {
+                m_featuresRwLock.ReleaseReaderLock();
+            }
         }
 
         public OSDMap GetFeatures()
         {
-            lock (m_features)
+            m_featuresRwLock.AcquireReaderLock(-1);
+            try
+            {
                 return new OSDMap(m_features);
+            }
+            finally
+            {
+                m_featuresRwLock.ReleaseReaderLock();
+            }
         }
 
         private OSDMap DeepCopy()
@@ -192,9 +227,17 @@ namespace OpenSim.Region.ClientStack.Linden
             // This isn't the cheapest way of doing this but the rate
             // of occurrence is low (on sim entry only) and it's a sure
             // way to get a true deep copy.
-            OSD copy = OSDParser.DeserializeLLSDXml(OSDParser.SerializeLLSDXmlString(m_features));
+            m_featuresRwLock.AcquireReaderLock(-1);
+            try
+            {
+                OSD copy = OSDParser.DeserializeLLSDXml(OSDParser.SerializeLLSDXmlString(m_features));
 
-            return (OSDMap)copy;
+                return (OSDMap)copy;
+            }
+            finally
+            {
+                m_featuresRwLock.ReleaseReaderLock();
+            }
         }
 
         private Hashtable HandleSimulatorFeaturesRequest(Hashtable mDhttpMethod, UUID agentID)
