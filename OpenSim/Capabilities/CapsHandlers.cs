@@ -28,6 +28,7 @@
 using OpenSim.Framework.Servers.HttpServer;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace OpenSim.Framework.Capabilities
 {
@@ -39,6 +40,7 @@ namespace OpenSim.Framework.Capabilities
     public class CapsHandlers
     {
         private Dictionary<string, IRequestHandler> m_capsHandlers = new Dictionary<string, IRequestHandler>();
+        private ReaderWriterLock m_capsHandlersRwLock = new ReaderWriterLock();
         private IHttpServer m_httpListener;
         private string m_httpListenerHostName;
         private uint m_httpListenerPort;
@@ -86,18 +88,30 @@ namespace OpenSim.Framework.Capabilities
         /// handler to be removed</param>
         public void Remove(string capsName)
         {
-            lock (m_capsHandlers)
+            m_capsHandlersRwLock.AcquireWriterLock(-1);
+            try
             {
                 m_httpListener.RemoveStreamHandler("POST", m_capsHandlers[capsName].Path);
                 m_httpListener.RemoveStreamHandler("GET", m_capsHandlers[capsName].Path);
                 m_capsHandlers.Remove(capsName);
             }
+            finally
+            {
+                m_capsHandlersRwLock.ReleaseWriterLock();
+            }
         }
 
         public bool ContainsCap(string cap)
         {
-            lock (m_capsHandlers)
+            m_capsHandlersRwLock.AcquireReaderLock(-1);
+            try
+            {
                 return m_capsHandlers.ContainsKey(cap);
+            }
+            finally
+            {
+                m_capsHandlersRwLock.ReleaseReaderLock();
+            }
         }
 
         /// <summary>
@@ -113,13 +127,21 @@ namespace OpenSim.Framework.Capabilities
         {
             get
             {
-                lock (m_capsHandlers)
+                m_capsHandlersRwLock.AcquireReaderLock(-1);
+                try
+                {
                     return m_capsHandlers[idx];
+                }
+                finally
+                {
+                    m_capsHandlersRwLock.ReleaseReaderLock();
+                }
             }
 
             set
             {
-                lock (m_capsHandlers)
+                m_capsHandlersRwLock.AcquireWriterLock(-1);
+                try
                 {
                     if (m_capsHandlers.ContainsKey(idx))
                     {
@@ -132,6 +154,10 @@ namespace OpenSim.Framework.Capabilities
                     m_capsHandlers[idx] = value;
                     m_httpListener.AddStreamHandler(value);
                 }
+                finally
+                {
+                    m_capsHandlersRwLock.ReleaseWriterLock();
+                }
             }
         }
 
@@ -143,11 +169,16 @@ namespace OpenSim.Framework.Capabilities
         {
             get
             {
-                lock (m_capsHandlers)
+                m_capsHandlersRwLock.AcquireReaderLock(-1);
+                try
                 {
                     string[] __keys = new string[m_capsHandlers.Keys.Count];
                     m_capsHandlers.Keys.CopyTo(__keys, 0);
                     return __keys;
+                }
+                finally
+                {
+                    m_capsHandlersRwLock.ReleaseReaderLock();
                 }
             }
         }
@@ -167,7 +198,8 @@ namespace OpenSim.Framework.Capabilities
 
             string baseUrl = protocol + m_httpListenerHostName + ":" + m_httpListenerPort.ToString();
 
-            lock (m_capsHandlers)
+            m_capsHandlersRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (string capsName in m_capsHandlers.Keys)
                 {
@@ -179,6 +211,10 @@ namespace OpenSim.Framework.Capabilities
 
                     caps[capsName] = baseUrl + m_capsHandlers[capsName].Path;
                 }
+            }
+            finally
+            {
+                m_capsHandlersRwLock.ReleaseReaderLock();
             }
 
             return caps;
@@ -192,8 +228,15 @@ namespace OpenSim.Framework.Capabilities
         /// </returns>
         public Dictionary<string, IRequestHandler> GetCapsHandlers()
         {
-            lock (m_capsHandlers)
+            m_capsHandlersRwLock.AcquireReaderLock(-1);
+            try
+            {
                 return new Dictionary<string, IRequestHandler>(m_capsHandlers);
+            }
+            finally
+            {
+                m_capsHandlersRwLock.ReleaseReaderLock();
+            }
         }
     }
 }
