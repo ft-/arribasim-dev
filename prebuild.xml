@@ -1,21 +1,6 @@
 <?xml version="1.0" ?>
 <Prebuild version="1.10" xmlns="http://dnpb.sourceforge.net/schemas/prebuild-1.10.xsd">
   <Solution activeConfig="Release" name="OpenSim" path="./" version="0.5.0-$Rev$">
-    <Configuration name="Debug">
-      <Options>
-        <CompilerDefines>TRACE;DEBUG</CompilerDefines>
-        <OptimizeCode>false</OptimizeCode>
-        <CheckUnderflowOverflow>false</CheckUnderflowOverflow>
-        <AllowUnsafe>false</AllowUnsafe>
-        <WarningLevel>4</WarningLevel>
-        <WarningsAsErrors>false</WarningsAsErrors>
-        <SuppressWarnings/>
-        <OutputPath>bin</OutputPath>
-        <DebugInformation>true</DebugInformation>
-        <IncrementalBuild>true</IncrementalBuild>
-        <NoStdLib>false</NoStdLib>
-      </Options>
-    </Configuration>
     <Configuration name="Release">
       <Options>
         <CompilerDefines>TRACE</CompilerDefines>
@@ -31,51 +16,23 @@
         <NoStdLib>false</NoStdLib>
       </Options>
     </Configuration>
+    <Configuration name="Debug">
+      <Options>
+        <CompilerDefines>TRACE;DEBUG</CompilerDefines>
+        <OptimizeCode>false</OptimizeCode>
+        <CheckUnderflowOverflow>false</CheckUnderflowOverflow>
+        <AllowUnsafe>false</AllowUnsafe>
+        <WarningLevel>4</WarningLevel>
+        <WarningsAsErrors>false</WarningsAsErrors>
+        <SuppressWarnings/>
+        <OutputPath>bin</OutputPath>
+        <DebugInformation>true</DebugInformation>
+        <IncrementalBuild>true</IncrementalBuild>
+        <NoStdLib>false</NoStdLib>
+      </Options>
+    </Configuration>
 
     <!-- Core OpenSim Projects -->
-<!--
-        <Project frameworkVersion="v4_0" name="OpenSim.Model" path="OpenSim/Model" type="Library">
-          <Configuration name="Debug">
-            <Options>
-              <OutputPath>../../../bin/</OutputPath>
-            </Options>
-          </Configuration>
-          <Configuration name="Release">
-            <Options>
-              <OutputPath>../../../bin/</OutputPath>
-            </Options>
-          </Configuration>
-
-          <ReferencePath>../../../bin/</ReferencePath>
-          <Reference name="System"/>
-          <Reference name="System.Xml"/>
-          <Files>
-            <Match pattern="*.cs" recurse="true"/>
-          </Files>
-        </Project>
--->
-
-    <Project frameworkVersion="v4_0" name="SmartThreadPool" path="ThirdParty/SmartThreadPool" type="Library">
-      <Configuration name="Debug">
-        <Options>
-          <OutputPath>../../bin/</OutputPath>
-        </Options>
-      </Configuration>
-      <Configuration name="Release">
-        <Options>
-          <OutputPath>../../bin/</OutputPath>
-        </Options>
-      </Configuration>
-
-      <ReferencePath>../../bin/</ReferencePath>
-      <Reference name="System"/>
-      <Reference name="System.Xml"/>
-      <Reference name="System.Data"/>
-      <Reference name="System.Web"/>
-      <Files>
-        <Match pattern="*.cs" recurse="false"/>
-      </Files>
-    </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Framework" path="OpenSim/Framework" type="Library">
       <Configuration name="Debug">
@@ -107,7 +64,7 @@
       <Reference name="log4net" path="../../bin/"/>
       <Reference name="Mono.Addins" path="../../bin/"/>
       <Reference name="Mono.Addins.Setup" path="../../bin/"/>
-      <Reference name="SmartThreadPool"/>
+      <Reference name="SmartThreadPool" path="../../bin/"/>
       <Files>
         <Match pattern="*.cs" recurse="false"/>
         <Match path="Client" pattern="*.cs" recurse="true"/>
@@ -194,7 +151,7 @@
       <Reference name="XMLRPC" path="../../../../bin/"/>
       <Reference name="log4net" path="../../../../bin/"/>
       <Reference name="HttpServer_OpenSim" path="../../../../bin/"/>
-      <Reference name="SmartThreadPool"/>
+      <Reference name="SmartThreadPool" path="../../../../bin/"/>
 
       <Files>
         <Match pattern="*.cs" recurse="true">
@@ -426,7 +383,6 @@
       <Reference name="OpenMetaverseTypes" path="../../../../bin/"/>
       <Reference name="OpenSim.Framework"/>
       <Reference name="OpenSim.Framework.Console"/>
-      <Reference name="nunit.framework" path="../../../../bin/"/>
       <Reference name="Nini" path="../../../../bin/"/>
       <Reference name="log4net" path="../../../../bin/"/>
 
@@ -2128,7 +2084,7 @@
       <Reference name="Nini" path="../../../../bin/"/>
       <Reference name="Nini" path="../../../../bin/"/>
       <Reference name="log4net" path="../../../../bin/"/>
-      <Reference name="SmartThreadPool"/>
+      <Reference name="SmartThreadPool" path="../../../../bin/"/>
 
       <Files>
         <Match pattern="*.cs" recurse="false"/>
@@ -2268,7 +2224,7 @@
       <Reference name="OpenSim.Region.ScriptEngine.Shared.CodeTools"/>
       <Reference name="OpenSim.Region.ScriptEngine.Shared.Api"/>
       <Reference name="OpenSim.Region.ScriptEngine.Shared.Api.Runtime"/>
-      <Reference name="SmartThreadPool"/>
+      <Reference name="SmartThreadPool" path="../../../../../bin/"/>
       <Reference name="Axiom.MathLib" path="../../../../../bin/"/>
       <Reference name="Nini" path="../../../../../bin/"/>
       <Reference name="log4net" path="../../../../../bin/"/>
@@ -2346,7 +2302,7 @@
       <Reference name="OpenSim.Region.ScriptEngine.Shared.Api"/>
       <Reference name="OpenSim.Region.ScriptEngine.Shared.Api.Runtime"/>
       <Reference name="OpenSim.Region.ScriptEngine.XEngine.Api.Runtime"/>
-      <Reference name="SmartThreadPool"/>
+      <Reference name="SmartThreadPool" path="../../../../bin/"/>
       <Reference name="Nini" path="../../../../bin/"/>
       <Reference name="log4net" path="../../../../bin/"/>
 
