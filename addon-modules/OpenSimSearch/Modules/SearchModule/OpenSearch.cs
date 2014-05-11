@@ -1,21 +1,18 @@
+using log4net;
+using Mono.Addins;
+using Nini.Config;
+using Nwc.XmlRpc;
+using OpenMetaverse;
+using OpenSim.Framework;
+using OpenSim.Region.Framework.Interfaces;
+using OpenSim.Region.Framework.Scenes;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Xml;
-using OpenMetaverse;
-using log4net;
-using Nini.Config;
-using Nwc.XmlRpc;
-using OpenSim.Framework;
-using OpenSim.Region.Framework.Interfaces;
-using OpenSim.Region.Framework.Scenes;
-using OpenSim.Services.Interfaces;
-using Mono.Addins;
-
 using DirFindFlags = OpenMetaverse.DirectoryManager.DirFindFlags;
 
 [assembly: Addin("OpenSimSearch", "0.3")]
