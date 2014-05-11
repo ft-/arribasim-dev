@@ -25,17 +25,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Reflection;
-
+using log4net;
 using OpenSim.Framework;
 using OpenSim.Region.Framework.Scenes;
-using OpenSim.Services.Interfaces;
+using System.Collections.Generic;
+using System.Reflection;
 using GridRegion = OpenSim.Services.Interfaces.GridRegion;
-
-using OpenMetaverse;
-using log4net;
 
 namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Grid
 {

@@ -28,15 +28,11 @@
 using log4net;
 using Mono.Addins;
 using Nini.Config;
-using System;
-using System.Collections.Generic;
-using System.Reflection;
-using OpenSim.Framework;
-using OpenSim.Server.Base;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
 using OpenSim.Services.Interfaces;
-using OpenMetaverse;
+using System;
+using System.Reflection;
 
 namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Authorization
 {

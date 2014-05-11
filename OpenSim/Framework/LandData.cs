@@ -25,12 +25,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using OpenMetaverse;
 using System;
 using System.Collections.Generic;
 using System.Xml;
 using System.Xml.Serialization;
-
-using OpenMetaverse;
 
 namespace OpenSim.Framework
 {

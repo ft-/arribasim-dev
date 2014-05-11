@@ -25,24 +25,18 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections;
-using System.IO;
-using System.Net;
-using System.Reflection;
-using System.Text;
 using log4net;
 using Mono.Addins;
 using Nini.Config;
 using OpenMetaverse;
-using OpenMetaverse.StructuredData;
 using OpenSim.Framework;
-using OpenSim.Framework.Communications;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
-using OpenSim.Region.Framework.Scenes.Serialization;
-using OpenSim.Services.Interfaces;
 using OpenSim.Services.Connectors.Simulation;
+using OpenSim.Services.Interfaces;
+using System;
+using System.Net;
+using System.Reflection;
 using GridRegion = OpenSim.Services.Interfaces.GridRegion;
 
 namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Simulation

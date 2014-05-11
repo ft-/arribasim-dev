@@ -25,13 +25,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using HttpServer;
+using log4net;
+using OpenMetaverse;
 using System;
 using System.Collections;
 using System.Reflection;
 using System.Text;
-using HttpServer;
-using log4net;
-using OpenMetaverse;
 
 namespace OpenSim.Framework.Servers.HttpServer
 {

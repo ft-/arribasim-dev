@@ -25,15 +25,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Threading;
-
+using OpenMetaverse;
 using OpenSim.Framework;
 using OpenSim.Region.Framework.Interfaces;
-
-using OpenMetaverse;
+using System;
+using System.Collections.Generic;
+using System.Threading;
 
 namespace OpenSim.Groups
 {

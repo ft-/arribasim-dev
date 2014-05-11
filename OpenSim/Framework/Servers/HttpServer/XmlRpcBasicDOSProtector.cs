@@ -25,9 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System.Net;
 using Nwc.XmlRpc;
-using OpenSim.Framework;
+using System.Net;
 
 
 namespace OpenSim.Framework.Servers.HttpServer

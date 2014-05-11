@@ -28,24 +28,20 @@
 // Uncomment to make asset Get requests for existing 
 // #define WAIT_ON_INPROGRESS_REQUESTS
 
-using System;
-using System.IO;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Formatters.Binary;
-using System.Threading;
-using System.Timers;
 using log4net;
-using Nini.Config;
 using Mono.Addins;
+using Nini.Config;
 using OpenMetaverse;
 using OpenSim.Framework;
-using OpenSim.Framework.Console;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
 using OpenSim.Services.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.Timers;
 
 
 //[assembly: Addin("FlotsamAssetCache", "1.1")]

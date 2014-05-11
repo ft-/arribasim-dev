@@ -25,28 +25,25 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.IO;
-using System.Net;
-using System.Net.Sockets;
-using System.Security.Cryptography.X509Certificates;
-using System.Reflection;
-using System.Globalization;
-using System.Text;
-using System.Threading;
-using System.Xml;
 using HttpServer;
 using log4net;
 using Nwc.XmlRpc;
 using OpenMetaverse.StructuredData;
-using CoolHTTPListener = HttpServer.HttpListener;
-using HttpListener=System.Net.HttpListener;
-using LogPrio=HttpServer.LogPrio;
 using OpenSim.Framework.Monitoring;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
 using System.IO.Compression;
+using System.Net;
+using System.Net.Sockets;
+using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
+using System.Text;
+using System.Threading;
+using System.Xml;
+using CoolHTTPListener = HttpServer.HttpListener;
+using LogPrio = HttpServer.LogPrio;
 
 namespace OpenSim.Framework.Servers.HttpServer
 {

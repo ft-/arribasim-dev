@@ -25,6 +25,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using Nini.Config;
+using OpenMetaverse.StructuredData;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -32,10 +35,6 @@ using System.Linq;
 using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading;
-using log4net;
-using Nini.Config;
-using OpenMetaverse.StructuredData;
-using OpenSim.Framework;
 
 namespace OpenSim.Framework.Monitoring
 {

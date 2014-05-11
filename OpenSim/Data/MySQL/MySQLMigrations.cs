@@ -25,15 +25,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Data.Common;
-using System.IO;
-using System.Reflection;
-using System.Text.RegularExpressions;
-using log4net;
 using MySql.Data.MySqlClient;
+using System;
+using System.Data.Common;
+using System.Reflection;
 
 namespace OpenSim.Data.MySQL
 {

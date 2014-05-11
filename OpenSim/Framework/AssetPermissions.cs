@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Reflection;
-
+﻿using log4net;
 using Nini.Config;
-using log4net;
-
 using OpenMetaverse;
+using System;
+using System.Reflection;
 
 namespace OpenSim.Framework
 {

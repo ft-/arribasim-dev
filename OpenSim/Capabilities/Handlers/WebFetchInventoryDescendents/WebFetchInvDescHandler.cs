@@ -25,20 +25,16 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using OpenMetaverse;
+using OpenSim.Framework;
+using OpenSim.Framework.Capabilities;
+using OpenSim.Framework.Servers.HttpServer;
+using OpenSim.Services.Interfaces;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
-using log4net;
-using Nini.Config;
-using OpenMetaverse;
-using OpenMetaverse.StructuredData;
-using OpenSim.Framework;
-using OpenSim.Framework.Capabilities;
-using OpenSim.Region.Framework.Interfaces;
-using OpenSim.Framework.Servers.HttpServer;
-using OpenSim.Services.Interfaces;
-using Caps = OpenSim.Framework.Capabilities.Caps;
 
 namespace OpenSim.Capabilities.Handlers
 {

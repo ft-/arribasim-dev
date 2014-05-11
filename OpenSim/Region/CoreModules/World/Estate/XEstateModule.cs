@@ -25,23 +25,18 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Reflection;
 using log4net;
+using Mono.Addins;
 using Nini.Config;
-using Nwc.XmlRpc;
 using OpenMetaverse;
 using OpenSim.Framework;
-using OpenSim.Framework.Communications;
-using OpenSim.Region.Framework.Interfaces;
-using OpenSim.Region.Framework.Scenes;
-using OpenSim.Services.Interfaces;
-using OpenSim.Server.Base;
 using OpenSim.Framework.Servers;
 using OpenSim.Framework.Servers.HttpServer;
-using Mono.Addins;
+using OpenSim.Region.Framework.Interfaces;
+using OpenSim.Region.Framework.Scenes;
+using System;
+using System.Collections.Generic;
+using System.Reflection;
 
 namespace OpenSim.Region.CoreModules.World.Estate
 {

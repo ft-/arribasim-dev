@@ -25,7 +25,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System.Xml;
 using OpenMetaverse;
 
 namespace OpenSim.Framework

@@ -25,13 +25,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using OpenMetaverse;
+using OpenSim.Region.Framework.Scenes;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using OpenSim.Region.Framework.Scenes;
-using OpenMetaverse;
 using System.Drawing;
+using System.Linq;
 
 namespace OpenSim.Region.CoreModules.World.Archiver
 {

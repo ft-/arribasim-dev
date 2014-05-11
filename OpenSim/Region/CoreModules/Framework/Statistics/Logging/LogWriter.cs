@@ -25,10 +25,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
 using System;
 using System.IO;
 using System.Text;
-using log4net;
 
 namespace OpenSim.Region.CoreModules.Framework.Statistics.Logging
 {

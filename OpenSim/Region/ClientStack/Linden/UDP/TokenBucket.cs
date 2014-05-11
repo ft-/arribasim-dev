@@ -25,13 +25,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using OpenSim.Framework;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
-using OpenSim.Framework;
-
-using log4net;
 
 namespace OpenSim.Region.ClientStack.LindenUDP
 {

@@ -25,12 +25,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System.Reflection;
-using System.Text;
 using log4net;
 using OpenMetaverse;
-using OpenSim.Framework;
 using OpenSim.Services.Interfaces;
+using System.Reflection;
+using System.Text;
 
 namespace OpenSim.Framework.Serialization
 {

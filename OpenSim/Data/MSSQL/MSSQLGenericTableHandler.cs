@@ -25,15 +25,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using OpenMetaverse;
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Reflection;
-using log4net;
 using System.Data.SqlClient;
-using OpenMetaverse;
-using OpenSim.Framework;
-using OpenSim.Region.Framework.Interfaces;
+using System.Reflection;
 using System.Text;
 
 namespace OpenSim.Data.MSSQL

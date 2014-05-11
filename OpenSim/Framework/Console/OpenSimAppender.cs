@@ -25,9 +25,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
 using log4net.Appender;
 using log4net.Core;
+using System;
 
 namespace OpenSim.Framework.Console
 {

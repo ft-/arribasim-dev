@@ -25,10 +25,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using OpenMetaverse.StructuredData;
 using System;
 using System.Timers;
-
-using OpenMetaverse.StructuredData;
 
 namespace OpenSim.Framework.Monitoring
 {

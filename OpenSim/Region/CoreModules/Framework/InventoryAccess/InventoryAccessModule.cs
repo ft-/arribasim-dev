@@ -25,28 +25,19 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Net;
-using System.Xml;
-using System.Reflection;
-using System.Text;
-using System.Threading;
-
+using log4net;
+using Mono.Addins;
+using Nini.Config;
+using OpenMetaverse;
 using OpenSim.Framework;
-using OpenSim.Framework.Capabilities;
-using OpenSim.Framework.Client;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
 using OpenSim.Region.Framework.Scenes.Serialization;
 using OpenSim.Services.Interfaces;
-
-using GridRegion = OpenSim.Services.Interfaces.GridRegion;
-
-using OpenMetaverse;
-using log4net;
-using Nini.Config;
-using Mono.Addins;
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Text;
 using PermissionMask = OpenSim.Framework.PermissionMask;
 
 namespace OpenSim.Region.CoreModules.Framework.InventoryAccess

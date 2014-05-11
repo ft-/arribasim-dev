@@ -25,10 +25,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using HttpServer;
 using System.IO;
 using System.Net;
 using System.Text;
-using HttpServer;
 
 namespace OpenSim.Framework.Servers.HttpServer
 {

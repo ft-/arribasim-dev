@@ -25,13 +25,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
+using log4net;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Reflection;
-using System.Text;
-using log4net;
+using System.Threading;
 
 namespace OpenSim.Framework.Monitoring
 {

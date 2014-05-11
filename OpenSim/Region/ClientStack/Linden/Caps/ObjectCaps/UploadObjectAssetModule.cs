@@ -25,29 +25,22 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections;
-using System.Collections.Specialized;
-using System.Reflection;
-using System.IO;
-using System.Web;
-using Mono.Addins;
 using log4net;
+using Mono.Addins;
 using Nini.Config;
 using OpenMetaverse;
-using OpenMetaverse.StructuredData;
 using OpenMetaverse.Messages.Linden;
+using OpenMetaverse.StructuredData;
 using OpenSim.Framework;
-using OpenSim.Framework.Servers;
 using OpenSim.Framework.Servers.HttpServer;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
-using OpenSim.Services.Interfaces;
+using System;
+using System.Collections;
+using System.Reflection;
 using Caps = OpenSim.Framework.Capabilities.Caps;
-using OSD = OpenMetaverse.StructuredData.OSD;
-using OSDMap = OpenMetaverse.StructuredData.OSDMap;
-using OpenSim.Framework.Capabilities;
 using ExtraParamType = OpenMetaverse.ExtraParamType;
+using OSDMap = OpenMetaverse.StructuredData.OSDMap;
 
 namespace OpenSim.Region.ClientStack.Linden
 {

@@ -25,14 +25,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Security;
-using System.Timers;
 using log4net;
 using Mono.Addins;
 using Nini.Config;
@@ -41,6 +33,13 @@ using OpenSim.Framework;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
 using OpenSim.Services.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Security;
+using System.Timers;
 using RegionFlags = OpenMetaverse.RegionFlags;
 
 namespace OpenSim.Region.CoreModules.World.Estate

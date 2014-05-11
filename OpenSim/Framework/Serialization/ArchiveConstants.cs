@@ -25,10 +25,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using OpenMetaverse;
 using System;
 using System.Collections.Generic;
-using System.Text;
-using OpenMetaverse;
 using OpenSimAssetType = OpenSim.Framework.SLUtil.OpenSimAssetType;
 
 namespace OpenSim.Framework.Serialization

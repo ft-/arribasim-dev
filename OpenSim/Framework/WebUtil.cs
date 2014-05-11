@@ -25,6 +25,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using Nwc.XmlRpc;
+using OpenMetaverse.StructuredData;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -33,16 +36,12 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
-using System.Net.Security;
 using System.Reflection;
 using System.Text;
 using System.Web;
 using System.Xml;
-using System.Xml.Serialization;
 using System.Xml.Linq;
-using log4net;
-using Nwc.XmlRpc;
-using OpenMetaverse.StructuredData;
+using System.Xml.Serialization;
 using XMLResponseHelper = OpenSim.Framework.SynchronousRestObjectRequester.XMLResponseHelper;
 
 namespace OpenSim.Framework

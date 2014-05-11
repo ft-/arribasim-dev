@@ -26,16 +26,10 @@
  */
 
 using System;
-using System.Xml;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Reflection;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
-using log4net;
-using OpenSim.Framework;
+using System.Xml;
 
 namespace OpenSim.Framework.Console
 {

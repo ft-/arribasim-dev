@@ -1,4 +1,12 @@
-﻿/*
+﻿using log4net;
+using Mono.Addins;
+using Nini.Config;
+using OpenMetaverse;
+using OpenSim.Region.Framework.Interfaces;
+using OpenSim.Region.Framework.Scenes;
+using OpenSim.Services.Connectors;
+using OpenSim.Services.Interfaces;
+/*
  * Copyright (c) Contributors, http://opensimulator.org/
  * See CONTRIBUTORS.TXT for a full list of copyright holders.
  *
@@ -25,19 +33,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 using System;
-using System.Collections.Generic;
 using System.Reflection;
-
-using OpenSim.Region.Framework.Interfaces;
-using OpenSim.Region.Framework.Scenes;
-using OpenSim.Server.Base;
-using OpenSim.Services.Interfaces;
-using OpenSim.Services.Connectors;
-
-using OpenMetaverse;
-using log4net;
-using Mono.Addins;
-using Nini.Config;
 
 namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.GridUser
 {

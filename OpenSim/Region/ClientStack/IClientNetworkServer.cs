@@ -25,10 +25,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System.Net;
-using System.Net.Sockets;
 using Nini.Config;
 using OpenSim.Framework;
+using System.Net;
 
 namespace OpenSim.Region.ClientStack
 {

@@ -25,6 +25,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using NDesk.Options;
+using Nini.Config;
+using OpenMetaverse;
+using OpenMetaverse.Packets;
+using OpenSim.Framework;
+using OpenSim.Framework.Monitoring;
+using OpenSim.Region.Framework.Scenes;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -33,17 +41,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Threading;
-using log4net;
-using NDesk.Options;
-using Nini.Config;
-using OpenMetaverse.Packets;
-using OpenSim.Framework;
-using OpenSim.Framework.Console;
-using OpenSim.Framework.Monitoring;
-using OpenSim.Region.Framework.Scenes;
-using OpenMetaverse;
 
-using TokenBucket = OpenSim.Region.ClientStack.LindenUDP.TokenBucket;
 
 namespace OpenSim.Region.ClientStack.LindenUDP
 {

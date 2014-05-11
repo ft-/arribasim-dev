@@ -25,22 +25,20 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using Mono.Addins;
+using Nini.Config;
+using OpenMetaverse;
+using OpenMetaverse.Imaging;
+using OpenSim.Region.Framework.Interfaces;
+using OpenSim.Region.Framework.Scenes;
 using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Net;
-using Nini.Config;
-using OpenMetaverse;
-using OpenMetaverse.Imaging;
-using OpenSim.Region.CoreModules.Scripting.DynamicTexture;
-using OpenSim.Region.Framework.Interfaces;
-using OpenSim.Region.Framework.Scenes;
-using log4net;
 using System.Reflection;
-using Mono.Addins;
 
 //using Cairo;
 

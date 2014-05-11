@@ -25,9 +25,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
 using System;
 using System.Reflection;
-using log4net;
 
 public class GcNotify
 {

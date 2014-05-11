@@ -25,33 +25,27 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using Nini.Config;
+using Nwc.XmlRpc;
+using OpenMetaverse;
+using OpenSim.Framework;
+using OpenSim.Framework.Servers;
+using OpenSim.Framework.Servers.HttpServer;
+using OpenSim.Region.Framework.Interfaces;
+using OpenSim.Region.Framework.Scenes;
+using OpenSim.Services.Interfaces;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Xml;
 using System.Net;
 using System.Reflection;
-using System.Timers;
 using System.Threading;
-using log4net;
-using Nini.Config;
-using Nwc.XmlRpc;
-using OpenMetaverse;
-using OpenSim;
-using OpenSim.Framework;
-using OpenSim.Framework.Communications;
-using OpenSim.Framework.Console;
-using OpenSim.Framework.Servers;
-using OpenSim.Framework.Servers.HttpServer;
-using OpenSim.Region.CoreModules.World.Terrain;
-using OpenSim.Region.Framework.Interfaces;
-using OpenSim.Region.Framework.Scenes;
-using OpenSim.Services.Interfaces;
-using PresenceInfo = OpenSim.Services.Interfaces.PresenceInfo;
+using System.Timers;
+using System.Xml;
 using GridRegion = OpenSim.Services.Interfaces.GridRegion;
-using PermissionMask = OpenSim.Framework.PermissionMask;
 using RegionInfo = OpenSim.Framework.RegionInfo;
 
 namespace OpenSim.ApplicationPlugins.RemoteController

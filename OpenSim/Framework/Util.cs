@@ -25,9 +25,18 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using Amib.Threading;
+using log4net;
+using log4net.Appender;
+using Nini.Config;
+using Nwc.XmlRpc;
+using OpenMetaverse;
+using OpenMetaverse.StructuredData;
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Data;
 using System.Diagnostics;
 using System.Globalization;
@@ -42,18 +51,9 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Xml;
 using System.Threading;
-using log4net;
-using log4net.Appender;
-using Nini.Config;
-using Nwc.XmlRpc;
-using OpenMetaverse;
-using OpenMetaverse.StructuredData;
-using Amib.Threading;
-using System.Collections.Concurrent;
-using System.Collections.Specialized;
 using System.Web;
+using System.Xml;
 
 namespace OpenSim.Framework
 {

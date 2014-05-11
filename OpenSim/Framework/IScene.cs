@@ -25,9 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using OpenMetaverse;
-//using OpenSim.Framework.Console;
 using Nini.Config;
+using OpenMetaverse;
 
 namespace OpenSim.Framework
 {

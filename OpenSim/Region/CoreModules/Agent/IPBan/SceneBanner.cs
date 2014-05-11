@@ -25,10 +25,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System.Collections.Generic;
-using System.Net;
 using OpenSim.Framework.Client;
 using OpenSim.Region.Framework.Scenes;
+using System.Collections.Generic;
+using System.Net;
 
 namespace OpenSim.Region.CoreModules.Agent.IPBan
 {

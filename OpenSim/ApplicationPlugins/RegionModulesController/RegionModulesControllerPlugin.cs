@@ -25,15 +25,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Reflection;
 using log4net;
 using Mono.Addins;
 using Nini.Config;
-using OpenSim;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
+using System;
+using System.Collections.Generic;
+using System.Reflection;
 
 namespace OpenSim.ApplicationPlugins.RegionModulesController
 {

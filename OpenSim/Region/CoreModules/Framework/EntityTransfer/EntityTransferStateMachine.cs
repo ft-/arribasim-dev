@@ -25,22 +25,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using OpenMetaverse;
 using System;
 using System.Collections.Generic;
-using System.Net;
 using System.Reflection;
 using System.Threading;
-using OpenMetaverse;
-using log4net;
-using Nini.Config;
-using OpenSim.Framework;
-using OpenSim.Framework.Capabilities;
-using OpenSim.Framework.Client;
-using OpenSim.Region.Framework.Interfaces;
-using OpenSim.Region.Framework.Scenes;
-using OpenSim.Region.Physics.Manager;
-using OpenSim.Services.Interfaces;
-using GridRegion = OpenSim.Services.Interfaces.GridRegion;
 
 namespace OpenSim.Region.CoreModules.Framework.EntityTransfer
 {

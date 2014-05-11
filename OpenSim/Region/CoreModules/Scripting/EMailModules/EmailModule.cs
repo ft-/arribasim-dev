@@ -25,20 +25,19 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using DotNetOpenMail;
+using DotNetOpenMail.SmtpAuth;
+using log4net;
+using Mono.Addins;
+using Nini.Config;
+using OpenMetaverse;
+using OpenSim.Region.Framework.Interfaces;
+using OpenSim.Region.Framework.Scenes;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
-using DotNetOpenMail;
-using DotNetOpenMail.SmtpAuth;
-using log4net;
-using Nini.Config;
-using OpenMetaverse;
-using OpenSim.Framework;
-using OpenSim.Region.Framework.Interfaces;
-using OpenSim.Region.Framework.Scenes;
-using Mono.Addins;
 
 namespace OpenSim.Region.CoreModules.Scripting.EmailModules
 {

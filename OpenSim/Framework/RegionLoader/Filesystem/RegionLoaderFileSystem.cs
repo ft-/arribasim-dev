@@ -26,11 +26,11 @@
  */
 
 using log4net;
+using Nini.Config;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
-using Nini.Config;
 
 namespace OpenSim.Framework.RegionLoader.Filesystem
 {

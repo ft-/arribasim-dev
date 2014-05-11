@@ -25,16 +25,15 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using OpenMetaverse;
+using OpenSim.Framework.Serialization;
+using OpenSim.Region.Framework.Scenes;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using OpenSim.Region.Framework.Scenes;
-using OpenMetaverse;
 using System.Drawing;
-using log4net;
+using System.Linq;
 using System.Reflection;
-using OpenSim.Framework.Serialization;
 
 namespace OpenSim.Region.CoreModules.World.Archiver
 {

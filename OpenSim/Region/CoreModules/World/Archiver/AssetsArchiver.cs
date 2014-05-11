@@ -25,14 +25,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System.Collections.Generic;
-using System.IO;
-using System.Reflection;
-using System.Xml;
 using log4net;
-using OpenMetaverse;
 using OpenSim.Framework;
 using OpenSim.Framework.Serialization;
+using System.Reflection;
 
 namespace OpenSim.Region.CoreModules.World.Archiver
 {

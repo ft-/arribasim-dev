@@ -25,20 +25,17 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using OpenMetaverse;
+using OpenSim.Framework.Servers.HttpServer;
+using OpenSim.Region.Framework.Interfaces;
+using OpenSim.Region.Framework.Scenes;
+using OpenSim.Server.Base;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Xml;
-
-using OpenSim.Framework;
-using OpenSim.Server.Base;
-using OpenSim.Framework.Servers.HttpServer;
-using OpenSim.Region.Framework.Scenes;
-using OpenSim.Region.Framework.Interfaces;
-
-using OpenMetaverse;
-using log4net;
 
 namespace OpenSim.Region.CoreModules.World.Estate
 {

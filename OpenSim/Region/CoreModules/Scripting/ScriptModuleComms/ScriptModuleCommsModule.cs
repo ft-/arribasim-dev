@@ -25,19 +25,18 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Reflection;
-using System.Collections.Generic;
-using System.Threading;
-using Nini.Config;
 using log4net;
-using OpenSim.Framework;
+using Mono.Addins;
+using Nini.Config;
+using OpenMetaverse;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
-using Mono.Addins;
-using OpenMetaverse;
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
+using System.Threading;
 
 namespace OpenSim.Region.CoreModules.Scripting.ScriptModuleComms
 {

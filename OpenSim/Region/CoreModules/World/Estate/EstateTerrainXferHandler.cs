@@ -25,9 +25,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
 using OpenMetaverse;
 using OpenSim.Framework;
+using System;
 
 namespace OpenSim.Region.CoreModules.World.Estate
 {

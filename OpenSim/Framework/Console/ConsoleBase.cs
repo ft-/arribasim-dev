@@ -27,18 +27,11 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Reflection;
-using System.Text;
-using System.Threading;
-using log4net;
 
 namespace OpenSim.Framework.Console
 {
     public class ConsoleBase
     {
-//        private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
-
         protected string prompt = "# ";
 
         public object ConsoleScene { get; set; }

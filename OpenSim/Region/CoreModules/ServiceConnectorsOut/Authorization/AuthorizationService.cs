@@ -25,19 +25,15 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using Nini.Config;
 using log4net;
-using OpenSim.Framework;
-using OpenSim.Services.Interfaces;
+using Nini.Config;
+using OpenMetaverse;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
-using OpenMetaverse;
+using OpenSim.Services.Interfaces;
+using System;
+using System.Reflection;
 
-using GridRegion = OpenSim.Services.Interfaces.GridRegion;
 
 namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Authorization
 {

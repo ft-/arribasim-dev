@@ -28,11 +28,10 @@
 //
 
 using System;
-using System.Runtime.Serialization;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Security.Permissions;
 using System.Threading;
-using System.Diagnostics;
 
 namespace OpenSim.Framework
 {

@@ -1,3 +1,11 @@
+using log4net;
+using Mono.Addins;
+using Nini.Config;
+using OpenMetaverse;
+using OpenSim.Framework;
+using OpenSim.Region.Framework.Interfaces;
+using OpenSim.Region.Framework.Scenes;
+using OpenSim.Services.Interfaces;
 /*
  * Copyright (c) Contributors, http://opensimulator.org/
  * See CONTRIBUTORS.TXT for a full list of copyright holders.
@@ -26,26 +34,7 @@
  */
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Reflection;
-using System.Threading;
-
-using OpenSim.Framework;
-using OpenSim.Framework.Console;
-using OpenSim.Framework.Monitoring;
-using OpenSim.Region.ClientStack.LindenUDP;
-using OpenSim.Region.Framework;
-using OpenSim.Region.Framework.Interfaces;
-using OpenSim.Region.Framework.Scenes;
-using OpenSim.Services.Interfaces;
-using OpenSim.Services.Connectors.Hypergrid;
-
-using OpenMetaverse;
-using OpenMetaverse.Packets;
-using log4net;
-using Nini.Config;
-using Mono.Addins;
-
 using DirFindFlags = OpenMetaverse.DirectoryManager.DirFindFlags;
 
 namespace OpenSim.Region.CoreModules.Framework.Search

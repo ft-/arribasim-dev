@@ -25,12 +25,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Net;
 using OpenMetaverse;
+using OpenMetaverse.Messages.Linden;
 using OpenMetaverse.Packets;
 using OpenMetaverse.StructuredData;
-using OpenMetaverse.Messages.Linden;
+using System;
+using System.Net;
 
 namespace OpenSim.Region.ClientStack.Linden
 {

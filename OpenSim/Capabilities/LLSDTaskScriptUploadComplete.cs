@@ -26,8 +26,6 @@
  */
 
 using OpenMetaverse;
-using System;
-using System.Collections;
 
 namespace OpenSim.Framework.Capabilities
 {

@@ -25,22 +25,16 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Reflection;
-using System.Runtime.Serialization;
-using System.Text;
-using System.Timers;
-using System.Xml;
-using System.Xml.Serialization;
-using log4net;
 using Nini.Config;
-
 using OpenMetaverse;
 using OpenSim.Data;
 using OpenSim.Framework;
 using OpenSim.Services.Interfaces;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using System.Xml;
+using System.Xml.Serialization;
 
 namespace OpenSim.OfflineIM
 {

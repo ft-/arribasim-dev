@@ -25,6 +25,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
 using System;
 using System.IO;
 using System.Net;
@@ -32,7 +33,6 @@ using System.Reflection;
 using System.Text;
 using System.Xml;
 using System.Xml.Serialization;
-using log4net;
 
 namespace OpenSim.Framework.Servers.HttpServer
 {

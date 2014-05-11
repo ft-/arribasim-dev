@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
 using OpenSim.Region.Framework.Scenes;
+using System;
 
 namespace OpenSim.Region.CoreModules.Framework.Monitoring.Monitors
 {

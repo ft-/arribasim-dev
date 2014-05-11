@@ -25,19 +25,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using Nini.Config;
+using OpenMetaverse;
+using OpenSim.Framework.Servers.HttpServer;
 using System;
-using System.Xml;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Reflection;
-using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
-using OpenMetaverse;
-using Nini.Config;
-using OpenSim.Framework.Servers.HttpServer;
-using log4net;
+using System.Xml;
 
 namespace OpenSim.Framework.Console
 {

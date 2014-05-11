@@ -25,20 +25,16 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Reflection;
-using System.Collections.Generic;
 using log4net;
 using Mono.Addins;
 using Nini.Config;
-using OpenSim.Framework;
 using OpenSim.Framework.Servers;
-using OpenSim.Region.Framework.Scenes;
 using OpenSim.Region.Framework.Interfaces;
-using OpenSim.Server.Base;
-using OpenSim.Server.Handlers.Base;
+using OpenSim.Region.Framework.Scenes;
 using OpenSim.Server.Handlers.Login;
-using OpenSim.Services.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.Reflection;
 
 
 namespace OpenSim.Region.CoreModules.ServiceConnectorsIn.Login

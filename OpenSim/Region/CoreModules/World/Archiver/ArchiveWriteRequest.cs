@@ -25,25 +25,21 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.IO.Compression;
-using System.Reflection;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Xml;
+using Ionic.Zlib;
 using log4net;
 using OpenMetaverse;
 using OpenSim.Framework;
 using OpenSim.Framework.Serialization;
-using OpenSim.Region.CoreModules.World.Terrain;
+using OpenSim.Framework.Serialization.External;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
-using Ionic.Zlib;
-using GZipStream = Ionic.Zlib.GZipStream;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
+using System.Xml;
 using CompressionMode = Ionic.Zlib.CompressionMode;
-using OpenSim.Framework.Serialization.External;
+using GZipStream = Ionic.Zlib.GZipStream;
 using PermissionMask = OpenSim.Framework.PermissionMask;
 
 namespace OpenSim.Region.CoreModules.World.Archiver

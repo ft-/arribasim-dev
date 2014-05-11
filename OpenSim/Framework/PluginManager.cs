@@ -27,16 +27,13 @@
  */
 
 
+using Mono.Addins;
+using Mono.Addins.Description;
+using Mono.Addins.Setup;
 using System;
-using System.Text;
-using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using Mono.Addins;
-using Mono.Addins.Setup;
-using Mono.Addins.Description;
-using OpenSim.Framework;
+using System.Linq;
 
 
 namespace OpenSim.Framework

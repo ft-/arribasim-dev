@@ -25,15 +25,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Net;
-using System.Net.Sockets;
-using System.Reflection;
-using System.Text;
-using System.IO;
-using OpenMetaverse.StructuredData;
-using OpenMetaverse;
 using log4net;
+using OpenMetaverse;
+using OpenMetaverse.StructuredData;
+using System;
+using System.Reflection;
 
 namespace OpenSim.Framework.Servers.HttpServer
 {

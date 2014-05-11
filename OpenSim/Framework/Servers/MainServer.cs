@@ -25,16 +25,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using OpenSim.Framework.Servers.HttpServer;
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Net;
 using System.Text;
 using System.Threading;
-using log4net;
-using OpenSim.Framework;
-using OpenSim.Framework.Console;
-using OpenSim.Framework.Servers.HttpServer;
 
 namespace OpenSim.Framework.Servers
 {

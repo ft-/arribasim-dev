@@ -25,20 +25,19 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using Nini.Config;
+using OpenMetaverse;
+using OpenSim.Framework;
+using OpenSim.Framework.Servers.HttpServer;
+using OpenSim.Server.Base;
+using OpenSim.Server.Handlers.Base;
+using OpenSim.Services.Interfaces;
 using System;
-using System.Reflection;
-using System.Text;
-using System.Xml;
 using System.Collections.Generic;
 using System.IO;
-using Nini.Config;
-using OpenSim.Framework;
-using OpenSim.Server.Base;
-using OpenSim.Services.Interfaces;
-using OpenSim.Framework.Servers.HttpServer;
-using OpenSim.Server.Handlers.Base;
-using log4net;
-using OpenMetaverse;
+using System.Reflection;
+using System.Xml;
 
 namespace OpenSim.OfflineIM
 {

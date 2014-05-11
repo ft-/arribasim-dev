@@ -25,13 +25,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using OpenSim.Framework;
+using OpenSim.Region.Framework.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
-using log4net;
-using OpenSim.Framework;
-using OpenSim.Region.Framework.Interfaces;
 
 namespace OpenSim.Region.CoreModules.Framework.InterfaceCommander
 {

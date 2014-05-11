@@ -1,3 +1,8 @@
+using log4net;
+using OpenMetaverse;
+using OpenSim.Framework;
+using OpenSim.Region.Framework.Scenes;
+using OpenSim.Services.Interfaces;
 /*
  * Copyright (c) Contributors, http://opensimulator.org/
  * See CONTRIBUTORS.TXT for a full list of copyright holders.
@@ -24,16 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-using System;
-using System.Collections.Generic;
 using System.Reflection;
-
-using OpenSim.Framework;
-using OpenSim.Region.Framework.Scenes;
-using OpenSim.Services.Interfaces;
-
-using OpenMetaverse;
-using log4net;
 
 namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.GridUser
 {

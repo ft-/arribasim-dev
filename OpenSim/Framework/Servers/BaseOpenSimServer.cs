@@ -25,26 +25,16 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using OpenMetaverse;
+using OpenSim.Framework.Monitoring;
+using OpenSim.Framework.Servers.HttpServer;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Reflection;
 using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading;
 using System.Timers;
-using log4net;
-using log4net.Appender;
-using log4net.Core;
-using log4net.Repository;
-using OpenMetaverse;
-using OpenMetaverse.StructuredData;
-using OpenSim.Framework;
-using OpenSim.Framework.Console;
-using OpenSim.Framework.Monitoring;
-using OpenSim.Framework.Servers;
-using OpenSim.Framework.Servers.HttpServer;
-using Timer=System.Timers.Timer;
+using Timer = System.Timers.Timer;
 
 namespace OpenSim.Framework.Servers
 {

@@ -25,6 +25,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using log4net.Appender;
+using log4net.Core;
+using log4net.Repository;
+using Nini.Config;
+using OpenSim.Framework.Console;
+using OpenSim.Framework.Monitoring;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -33,13 +40,6 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
-using log4net;
-using log4net.Appender;
-using log4net.Core;
-using log4net.Repository;
-using Nini.Config;
-using OpenSim.Framework.Console;
-using OpenSim.Framework.Monitoring;
 
 namespace OpenSim.Framework.Servers
 {

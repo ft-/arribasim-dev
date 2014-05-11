@@ -25,14 +25,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Data;
-using System.Reflection;
-using OpenMetaverse;
-using OpenSim.Framework;
 using Npgsql;
+using OpenSim.Framework;
+using System;
+using System.Reflection;
 
 namespace OpenSim.Data.PGSQL
 {

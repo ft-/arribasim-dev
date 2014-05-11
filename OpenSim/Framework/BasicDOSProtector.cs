@@ -1,4 +1,5 @@
-﻿/*
+﻿using log4net;
+/*
  * Copyright (c) Contributors, http://opensimulator.org/
  * See CONTRIBUTORS.TXT for a full list of copyright holders.
  *
@@ -27,7 +28,6 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using log4net;
 
 namespace OpenSim.Framework
 {

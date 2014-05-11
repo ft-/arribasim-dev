@@ -26,16 +26,13 @@
  */
 
 using Nini.Config;
-using log4net;
-using System.Reflection;
+using OpenMetaverse;
+using OpenSim.Framework;
+using OpenSim.Server.Base;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Xml;
-using System.Collections.Generic;
-using OpenSim.Server.Base;
-using OpenSim.Framework;
-using OpenSim.Framework.Console;
-using OpenMetaverse;
 
 namespace OpenSim.ConsoleClient
 {

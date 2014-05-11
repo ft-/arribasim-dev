@@ -26,15 +26,12 @@
  */
 
 using System;
-using System.Data;
-using System.Reflection;
 using System.Collections.Generic;
 #if CSharpSqlite
     using Community.CsharpSqlite.Sqlite;
 #else
     using Mono.Data.Sqlite;
 #endif
-using log4net;
 using OpenMetaverse;
 using OpenSim.Framework;
 

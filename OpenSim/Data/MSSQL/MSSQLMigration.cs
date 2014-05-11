@@ -28,8 +28,8 @@
 using System;
 using System.Data;
 using System.Data.Common;
-using System.Reflection;
 using System.Data.SqlClient;
+using System.Reflection;
 
 namespace OpenSim.Data.MSSQL
 {

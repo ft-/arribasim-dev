@@ -25,17 +25,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Net;
-using System.Threading;
 using log4net;
-using OpenSim.Framework;
-using OpenSim.Framework.Monitoring;
 using OpenMetaverse;
-using OpenMetaverse.Packets;
+using OpenSim.Framework;
+using System;
+using System.Net;
 
-using TokenBucket = OpenSim.Region.ClientStack.LindenUDP.TokenBucket;
 
 namespace OpenSim.Region.ClientStack.LindenUDP
 {

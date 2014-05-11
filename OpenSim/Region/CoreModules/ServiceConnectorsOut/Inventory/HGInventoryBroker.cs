@@ -28,19 +28,18 @@
 using log4net;
 using Mono.Addins;
 using Nini.Config;
+using OpenMetaverse;
+using OpenSim.Framework;
+using OpenSim.Region.Framework.Interfaces;
+using OpenSim.Region.Framework.Scenes;
+using OpenSim.Server.Base;
+using OpenSim.Services.Connectors;
+using OpenSim.Services.Connectors.SimianGrid;
+using OpenSim.Services.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
-using OpenSim.Framework;
-
-using OpenSim.Server.Base;
-using OpenSim.Region.Framework.Interfaces;
-using OpenSim.Region.Framework.Scenes;
-using OpenSim.Services.Interfaces;
-using OpenSim.Services.Connectors;
-using OpenSim.Services.Connectors.SimianGrid;
-using OpenMetaverse;
 
 namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Inventory
 {

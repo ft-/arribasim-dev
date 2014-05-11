@@ -25,13 +25,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using Nini.Config;
+using OpenSim.Framework;
 using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Reflection;
-using log4net;
-using Nini.Config;
-using OpenSim.Framework;
 
 namespace OpenSim.Region.ClientStack
 {

@@ -25,8 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System.Net;
 using OpenMetaverse.StructuredData;
+using System.Net;
 
 namespace OpenSim.Framework.Servers.HttpServer
 {

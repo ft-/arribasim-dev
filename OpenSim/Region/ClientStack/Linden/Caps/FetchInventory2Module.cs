@@ -25,20 +25,16 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections;
-using System.Reflection;
-using log4net;
-using Nini.Config;
 using Mono.Addins;
+using Nini.Config;
 using OpenMetaverse;
-using OpenSim.Framework;
+using OpenSim.Capabilities.Handlers;
 using OpenSim.Framework.Servers.HttpServer;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
 using OpenSim.Services.Interfaces;
+using System;
 using Caps = OpenSim.Framework.Capabilities.Caps;
-using OpenSim.Capabilities.Handlers;
 
 namespace OpenSim.Region.ClientStack.Linden
 {

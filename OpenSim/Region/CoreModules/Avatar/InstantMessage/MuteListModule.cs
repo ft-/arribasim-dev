@@ -1,3 +1,9 @@
+using log4net;
+using Mono.Addins;
+using Nini.Config;
+using OpenSim.Framework;
+using OpenSim.Region.Framework.Interfaces;
+using OpenSim.Region.Framework.Scenes;
 /*
  * Copyright (c) Contributors, http://opensimulator.org/
  * See CONTRIBUTORS.TXT for a full list of copyright holders.
@@ -27,16 +33,6 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using log4net;
-using Nini.Config;
-using Mono.Addins;
-using OpenMetaverse;
-using OpenSim.Framework;
-using OpenSim.Framework.Communications;
-using OpenSim.Framework.Servers;
-using OpenSim.Framework.Client;
-using OpenSim.Region.Framework.Interfaces;
-using OpenSim.Region.Framework.Scenes;
 
 namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
 {

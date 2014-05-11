@@ -25,14 +25,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
-
-using OpenMetaverse;
-
-using log4net;
 
 namespace OpenSim.Framework
 {

@@ -25,34 +25,25 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Net;
-using System.Reflection;
-using System.Text;
-using System.Threading;
-using System.Timers;
-using System.Xml;
-
 using log4net;
 using OpenMetaverse;
-using OpenMetaverse.Packets;
 using OpenMetaverse.Messages.Linden;
+using OpenMetaverse.Packets;
 using OpenMetaverse.StructuredData;
-
 using OpenSim.Framework;
 using OpenSim.Framework.Client;
 using OpenSim.Framework.Monitoring;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
 using OpenSim.Services.Interfaces;
-using Timer = System.Timers.Timer;
+using System;
+using System.Collections.Generic;
+using System.Net;
+using System.Reflection;
+using System.Threading;
 using AssetLandmark = OpenSim.Framework.AssetLandmark;
-using RegionFlags = OpenMetaverse.RegionFlags;
-
-using System.IO;
 using PermissionMask = OpenSim.Framework.PermissionMask;
+using RegionFlags = OpenMetaverse.RegionFlags;
 
 namespace OpenSim.Region.ClientStack.LindenUDP
 {

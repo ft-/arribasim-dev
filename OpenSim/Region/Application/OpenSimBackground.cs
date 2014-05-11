@@ -25,10 +25,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System.Reflection;
-using System.Threading;
 using log4net;
 using Nini.Config;
+using System.Reflection;
+using System.Threading;
 
 namespace OpenSim
 {
