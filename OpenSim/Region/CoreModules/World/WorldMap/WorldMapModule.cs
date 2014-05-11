@@ -104,7 +104,7 @@ namespace OpenSim.Region.CoreModules.World.WorldMap
             if (!m_Enabled)
                 return;
 
-            lock (m_scene)
+            lock (scene)
             {
                 m_scene = scene;
 
