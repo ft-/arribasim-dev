@@ -38,8 +38,6 @@ namespace OpenSim.Region.Framework.Scenes.Animation
     [Serializable]
     public class AnimationSet
     {
-//        private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
-
         private OpenSim.Framework.Animation m_implicitDefaultAnimation = new OpenSim.Framework.Animation();
         private OpenSim.Framework.Animation m_defaultAnimation = new OpenSim.Framework.Animation();
         private List<OpenSim.Framework.Animation> m_animations = new List<OpenSim.Framework.Animation>();
@@ -71,10 +69,18 @@ namespace OpenSim.Region.Framework.Scenes.Animation
             if (m_defaultAnimation.AnimID == animID)
                 return true;
 
-            for (int i = 0; i < m_animations.Count; ++i)
+            m_AnimationsLock.AcquireReaderLock(-1);
+            try
             {
-                if (m_animations[i].AnimID == animID)
-                    return true;
+                for (int i = 0; i < m_animations.Count; ++i)
+                {
+                    if (m_animations[i].AnimID == animID)
+                        return true;
+                }
+            }
+            finally
+            {
+                m_AnimationsLock.ReleaseReaderLock();
             }
 
             return false;
@@ -140,7 +146,15 @@ namespace OpenSim.Region.Framework.Scenes.Animation
         public void Clear()
         {
             ResetDefaultAnimation();
-            m_animations.Clear();
+            m_AnimationsLock.AcquireWriterLock(-1);
+            try
+            {
+                m_animations.Clear();
+            }
+            finally
+            {
+                m_AnimationsLock.ReleaseWriterLock();
+            }
         }
 
         /// <summary>
@@ -220,24 +234,40 @@ namespace OpenSim.Region.Framework.Scenes.Animation
 
         public OpenSim.Framework.Animation[] ToArray()
         {
-            OpenSim.Framework.Animation[] theArray = new OpenSim.Framework.Animation[m_animations.Count];
-            uint i = 0;
+            m_AnimationsLock.AcquireReaderLock(-1);
             try
             {
-                foreach (OpenSim.Framework.Animation anim in m_animations)
-                    theArray[i++] = anim;
+                OpenSim.Framework.Animation[] theArray = new OpenSim.Framework.Animation[m_animations.Count];
+                uint i = 0;
+                try
+                {
+                    foreach (OpenSim.Framework.Animation anim in m_animations)
+                        theArray[i++] = anim;
+                }
+                catch
+                {
+                    /* S%^t happens. Ignore. */
+                }
+                return theArray;
             }
-            catch 
+            finally
             {
-                /* S%^t happens. Ignore. */ 
+                m_AnimationsLock.ReleaseReaderLock();
             }
-            return theArray;
         }
 
         public void FromArray(OpenSim.Framework.Animation[] theArray)
         {
-            foreach (OpenSim.Framework.Animation anim in theArray)
-                m_animations.Add(anim);
+            m_AnimationsLock.AcquireWriterLock(-1);
+            try
+            {
+                foreach (OpenSim.Framework.Animation anim in theArray)
+                    m_animations.Add(anim);
+            }
+            finally
+            {
+                m_AnimationsLock.ReleaseWriterLock();
+            }
         }
 
         // Create representation of this AnimationSet as an OSDArray.
@@ -249,8 +279,16 @@ namespace OpenSim.Region.Framework.Scenes.Animation
             ret.Add(DefaultAnimation.PackUpdateMessage());
             ret.Add(ImplicitDefaultAnimation.PackUpdateMessage());
 
-            foreach (OpenSim.Framework.Animation anim in m_animations)
-                ret.Add(anim.PackUpdateMessage());
+            m_AnimationsLock.AcquireReaderLock(-1);
+            try
+            {
+                foreach (OpenSim.Framework.Animation anim in m_animations)
+                    ret.Add(anim.PackUpdateMessage());
+            }
+            finally
+            {
+                m_AnimationsLock.ReleaseReaderLock();
+            }
 
             return ret;
         }
@@ -267,9 +305,17 @@ namespace OpenSim.Region.Framework.Scenes.Animation
             {
                 m_implicitDefaultAnimation = new OpenSim.Framework.Animation((OSDMap)pArray[1]);
             }
-            for (int ii = 2; ii < pArray.Count; ii++)
+            m_AnimationsLock.AcquireWriterLock(-1);
+            try
             {
-                m_animations.Add(new OpenSim.Framework.Animation((OSDMap)pArray[ii]));
+                for (int ii = 2; ii < pArray.Count; ii++)
+                {
+                    m_animations.Add(new OpenSim.Framework.Animation((OSDMap)pArray[ii]));
+                }
+            }
+            finally
+            {
+                m_AnimationsLock.ReleaseWriterLock();
             }
         }
 
@@ -337,14 +383,22 @@ namespace OpenSim.Region.Framework.Scenes.Animation
             {
                 buff.Append(",anims=");
                 bool firstTime = true;
-                foreach (OpenSim.Framework.Animation anim in m_animations)
+                m_AnimationsLock.AcquireReaderLock(-1);
+                try
                 {
-                    if (!firstTime)
-                        buff.Append(",");
-                    buff.Append("<");
-                    buff.Append(anim.ToString());
-                    buff.Append(">");
-                    firstTime = false;
+                    foreach (OpenSim.Framework.Animation anim in m_animations)
+                    {
+                        if (!firstTime)
+                            buff.Append(",");
+                        buff.Append("<");
+                        buff.Append(anim.ToString());
+                        buff.Append(">");
+                        firstTime = false;
+                    }
+                }
+                finally
+                {
+                    m_AnimationsLock.ReleaseReaderLock();
                 }
             }
             return buff.ToString();

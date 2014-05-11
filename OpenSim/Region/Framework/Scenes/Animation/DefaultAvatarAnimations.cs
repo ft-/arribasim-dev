@@ -27,23 +27,71 @@
 
 using OpenMetaverse;
 using System.Collections.Generic;
+using System.Threading;
 using System.Xml;
 
 namespace OpenSim.Region.Framework.Scenes.Animation
 {
     public class DefaultAvatarAnimations
     {
-//        private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
-
         public static readonly string DefaultAnimationsPath = "data/avataranimations.xml";
 
-        public static Dictionary<string, UUID> AnimsUUID = new Dictionary<string, UUID>();
-        public static Dictionary<UUID, string> AnimsNames = new Dictionary<UUID, string>();
-        public static Dictionary<UUID, string> AnimStateNames = new Dictionary<UUID, string>();
+        private static Dictionary<string, UUID> m_AnimsUUID = new Dictionary<string, UUID>();
+        private static Dictionary<UUID, string> m_AnimsNames = new Dictionary<UUID, string>();
+        private static Dictionary<UUID, string> m_AnimStateNames = new Dictionary<UUID, string>();
+        private static ReaderWriterLock m_AnimsRwLock = new ReaderWriterLock();
 
         static DefaultAvatarAnimations()
         {
             LoadAnimations(DefaultAnimationsPath);
+        }
+
+        public static Dictionary<string, UUID> AnimsUUID 
+        {
+            get
+            {
+                m_AnimsRwLock.AcquireReaderLock(-1);
+                try
+                {
+                    return new Dictionary<string, UUID>(m_AnimsUUID);
+                }
+                finally
+                {
+                    m_AnimsRwLock.ReleaseReaderLock();
+                }
+            }
+        }
+
+        public static Dictionary<UUID, string> AnimsNames
+        {
+            get
+            {
+                m_AnimsRwLock.AcquireReaderLock(-1);
+                try
+                {
+                    return new Dictionary<UUID, string>(m_AnimsNames);
+                }
+                finally
+                {
+                    m_AnimsRwLock.ReleaseReaderLock();
+                }
+            }
+        }
+
+        public static Dictionary<UUID, string> AnimStateNames
+        {
+            get
+            {
+                m_AnimsRwLock.AcquireReaderLock(-1);
+                try
+                {
+                    return new Dictionary<UUID, string>(m_AnimStateNames);
+                }
+                finally
+                {
+                    m_AnimsRwLock.ReleaseReaderLock();
+                }
+            }
         }
 
         /// <summary>
@@ -52,14 +100,15 @@ namespace OpenSim.Region.Framework.Scenes.Animation
         /// <returns></returns>
         private static void LoadAnimations(string path)
         {
-//            Dictionary<string, UUID> animations = new Dictionary<string, UUID>();
-            
-            using (XmlTextReader reader = new XmlTextReader(path))
+            m_AnimsRwLock.AcquireWriterLock(-1);
+            try
             {
-                XmlDocument doc = new XmlDocument();
-                doc.Load(reader);
-//                if (doc.DocumentElement != null)
-//                {
+                using (XmlTextReader reader = new XmlTextReader(path))
+                {
+                    XmlDocument doc = new XmlDocument();
+                    doc.Load(reader);
+                    //                if (doc.DocumentElement != null)
+                    //                {
                     foreach (XmlNode nod in doc.DocumentElement.ChildNodes)
                     {
                         if (nod.Attributes["name"] != null)
@@ -68,18 +117,19 @@ namespace OpenSim.Region.Framework.Scenes.Animation
                             UUID id = (UUID)nod.InnerText;
                             string animState = (string)nod.Attributes["state"].Value;
 
-                            AnimsUUID.Add(name, id);
-                            AnimsNames.Add(id, name);
+                            m_AnimsUUID.Add(name, id);
+                            m_AnimsNames.Add(id, name);
                             if (animState != "")
-                                AnimStateNames.Add(id, animState);
+                                m_AnimStateNames.Add(id, animState);
 
-//                            m_log.DebugFormat("[AVATAR ANIMATIONS]: Loaded {0} {1} {2}", id, name, animState);
                         }
                     }
-//                }
+                }
             }
-
-//            return animations;
+            finally
+            {
+                m_AnimsRwLock.ReleaseWriterLock();
+            }
         }
 
         /// <summary>
@@ -89,15 +139,18 @@ namespace OpenSim.Region.Framework.Scenes.Animation
         /// <returns></returns>
         public static UUID GetDefaultAnimation(string name)
         {
-//            m_log.DebugFormat(
-//                "[AVATAR ANIMATIONS]: Looking for default avatar animation with name {0}", name);
-
-            if (AnimsUUID.ContainsKey(name))
+            m_AnimsRwLock.AcquireReaderLock(-1);
+            try
             {
-//                m_log.DebugFormat(
-//                    "[AVATAR ANIMATIONS]: Found {0} {1} in GetDefaultAvatarAnimation()", AnimsUUID[name], name);
+                if (m_AnimsUUID.ContainsKey(name))
+                {
 
-                return AnimsUUID[name];
+                    return m_AnimsUUID[name];
+                }
+            }
+            finally
+            {
+                m_AnimsRwLock.ReleaseReaderLock();
             }
 
             return UUID.Zero;
@@ -110,22 +163,29 @@ namespace OpenSim.Region.Framework.Scenes.Animation
         public static string GetDefaultAnimationName(UUID uuid)
         {
             string ret = "unknown";
-            if (AnimsUUID.ContainsValue(uuid))
+            m_AnimsRwLock.AcquireReaderLock(-1);
+            try
             {
-                foreach (KeyValuePair<string, UUID> kvp in AnimsUUID)
+                if (m_AnimsUUID.ContainsValue(uuid))
                 {
-                    if (kvp.Value == uuid)
+                    foreach (KeyValuePair<string, UUID> kvp in m_AnimsUUID)
                     {
-                        ret = kvp.Key;
-                        break;
+                        if (kvp.Value == uuid)
+                        {
+                            ret = kvp.Key;
+                            break;
+                        }
                     }
                 }
+                else
+                {
+                    ret = uuid.ToString();
+                }
             }
-            else
+            finally
             {
-                ret = uuid.ToString();
+                m_AnimsRwLock.ReleaseReaderLock();
             }
-
             return ret;
         }
     }
