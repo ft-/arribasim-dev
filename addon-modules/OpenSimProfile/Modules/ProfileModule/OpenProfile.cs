@@ -15,6 +15,7 @@ using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
+using System.Threading;
 using System.Xml;
 
 [assembly: Addin("OpenSimProfile", "0.3")]
@@ -34,6 +35,7 @@ namespace OpenSimProfile.Modules.OpenProfile
         // Module vars
         //
         private List<Scene> m_Scenes = new List<Scene>();
+        private ReaderWriterLock m_ScenesRwLock = new ReaderWriterLock();
         private string m_ProfileServer = "";
         private bool m_Enabled = true;
 
@@ -84,9 +86,14 @@ namespace OpenSimProfile.Modules.OpenProfile
             scene.RegisterModuleInterface<IProfileModule>(this);
 
             // Add our scene to our list...
-            lock(m_Scenes)
+            m_ScenesRwLock.AcquireWriterLock(-1);
+            try
             {
                 m_Scenes.Add(scene);
+            }
+            finally
+            {
+                m_ScenesRwLock.ReleaseWriterLock();
             }
         }
 
@@ -97,9 +104,14 @@ namespace OpenSimProfile.Modules.OpenProfile
 
             scene.UnregisterModuleInterface<IProfileModule>(this);
 
-            lock(m_Scenes)
+            m_ScenesRwLock.AcquireWriterLock(-1);
+            try
             {
                 m_Scenes.Remove(scene);
+            }
+            finally
+            {
+                m_ScenesRwLock.ReleaseWriterLock();
             }
         }
 
@@ -132,13 +144,21 @@ namespace OpenSimProfile.Modules.OpenProfile
         {
             ScenePresence p;
 
-            foreach (Scene s in m_Scenes)
+            m_ScenesRwLock.AcquireReaderLock(-1);
+            try
             {
-                p = s.GetScenePresence(clientID);
-                if (p != null && !p.IsChildAgent)
-                    return p;
+                foreach (Scene s in m_Scenes)
+                {
+                    p = s.GetScenePresence(clientID);
+                    if (p != null && !p.IsChildAgent)
+                        return p;
+                }
+                return null;
             }
-            return null;
+            finally
+            {
+                m_ScenesRwLock.ReleaseReaderLock();
+            }
         }
 
         /// New Client Event Handler
@@ -993,7 +1013,16 @@ namespace OpenSimProfile.Modules.OpenProfile
             else
             {
                 // Is local
-                Scene scene = m_Scenes[0];
+                Scene scene;
+                m_ScenesRwLock.AcquireReaderLock(-1);
+                try
+                {
+                    scene = m_Scenes[0];
+                }
+                finally
+                {
+                    m_ScenesRwLock.ReleaseReaderLock();
+                }
                 IUserAccountService uas = scene.UserAccountService;
                 UserAccount account = uas.GetUserAccount(scene.RegionInfo.ScopeID, userID);
 

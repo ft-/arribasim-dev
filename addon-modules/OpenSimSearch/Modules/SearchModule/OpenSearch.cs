@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
+using System.Threading;
 using System.Xml;
 using DirFindFlags = OpenMetaverse.DirectoryManager.DirFindFlags;
 
@@ -32,6 +33,7 @@ namespace OpenSimSearch.Modules.OpenSearch
         // Module vars
         //
         private List<Scene> m_Scenes = new List<Scene>();
+        private ReaderWriterLock m_ScenesRwLock = new ReaderWriterLock();
         private string m_SearchServer = "";
         private bool m_Enabled = true;
 
@@ -75,9 +77,14 @@ namespace OpenSimSearch.Modules.OpenSearch
             scene.RegisterModuleInterface<ISearchModule>(this);
 
             // Add our scene to our list...
-            lock(m_Scenes)
+            m_ScenesRwLock.AcquireWriterLock(-1);
+            try
             {
                 m_Scenes.Add(scene);
+            }
+            finally
+            {
+                m_ScenesRwLock.ReleaseWriterLock();
             }
         }
 
@@ -87,7 +94,15 @@ namespace OpenSimSearch.Modules.OpenSearch
                 return;
 
             scene.UnregisterModuleInterface<ISearchModule>(this);
-            m_Scenes.Remove(scene);
+            m_ScenesRwLock.AcquireWriterLock(-1);
+            try
+            {
+                m_Scenes.Remove(scene);
+            }
+            finally
+            {
+                m_ScenesRwLock.ReleaseWriterLock();
+            }
         }
 
         public void RegionLoaded(Scene scene)
@@ -605,18 +620,26 @@ namespace OpenSimSearch.Modules.OpenSearch
 
                     ParcelRegionUUID = d["region_UUID"].ToString();
 
-                    foreach (Scene scene in m_Scenes)
+                    m_ScenesRwLock.AcquireReaderLock(-1);
+                    try
                     {
-                        if (scene.RegionInfo.RegionID.ToString() == ParcelRegionUUID)
+                        foreach (Scene scene in m_Scenes)
                         {
-                            landingpoint = d["landing_point"].ToString().Split('/');
+                            if (scene.RegionInfo.RegionID.ToString() == ParcelRegionUUID)
+                            {
+                                landingpoint = d["landing_point"].ToString().Split('/');
 
-                            mapitem.x = (uint)((scene.RegionInfo.RegionLocX * 256) +
-                                                Convert.ToDecimal(landingpoint[0]));
-                            mapitem.y = (uint)((scene.RegionInfo.RegionLocY * 256) +
-                                                Convert.ToDecimal(landingpoint[1]));
-                            break;
+                                mapitem.x = (uint)((scene.RegionInfo.RegionLocX * 256) +
+                                                    Convert.ToDecimal(landingpoint[0]));
+                                mapitem.y = (uint)((scene.RegionInfo.RegionLocY * 256) +
+                                                    Convert.ToDecimal(landingpoint[1]));
+                                break;
+                            }
                         }
+                    }
+                    finally
+                    {
+                        m_ScenesRwLock.ReleaseReaderLock();
                     }
 
                     mapitem.id = new UUID(d["parcel_id"].ToString());
