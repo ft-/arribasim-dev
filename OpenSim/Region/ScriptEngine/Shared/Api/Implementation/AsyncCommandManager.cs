@@ -199,34 +199,52 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             // then more than one thread could arrive at this block of code simultaneously.  However, it cannot be
             // executed concurrently both because concurrent list operations are not thread-safe and because of other
             // race conditions such as the later check of cmdHandlerThread == null.
-            staticLock.AcquireWriterLock(-1);
+            staticLock.AcquireReaderLock(-1);
             try
             {
-                if (m_ScriptEngines.Count == 0)
-                    ReadConfig();
+                if (m_ScriptEngines.Contains(m_ScriptEngine))
+                {
+                    return;
+                }
 
-                if (!m_ScriptEngines.Contains(m_ScriptEngine))
-                    m_ScriptEngines.Add(m_ScriptEngine);
+                LockCookie lc = staticLock.UpgradeToWriterLock(-1);
+                try
+                {
+                    if (m_ScriptEngines.Contains(m_ScriptEngine))
+                    {
+                        return;
+                    }
 
-                // Create instances of all plugins
-                if (!m_Dataserver.ContainsKey(m_ScriptEngine))
-                    m_Dataserver[m_ScriptEngine] = new Dataserver(this);
-                if (!m_Timer.ContainsKey(m_ScriptEngine))
-                    m_Timer[m_ScriptEngine] = new Timer(this);
-                if (!m_HttpRequest.ContainsKey(m_ScriptEngine))
-                    m_HttpRequest[m_ScriptEngine] = new HttpRequest(this);
-                if (!m_Listener.ContainsKey(m_ScriptEngine))
-                    m_Listener[m_ScriptEngine] = new Listener(this);
-                if (!m_SensorRepeat.ContainsKey(m_ScriptEngine))
-                    m_SensorRepeat[m_ScriptEngine] = new SensorRepeat(this);
-                if (!m_XmlRequest.ContainsKey(m_ScriptEngine))
-                    m_XmlRequest[m_ScriptEngine] = new XmlRequest(this);
+                    if (m_ScriptEngines.Count == 0)
+                        ReadConfig();
 
-                StartThread();
+                    if (!m_ScriptEngines.Contains(m_ScriptEngine))
+                        m_ScriptEngines.Add(m_ScriptEngine);
+
+                    // Create instances of all plugins
+                    if (!m_Dataserver.ContainsKey(m_ScriptEngine))
+                        m_Dataserver[m_ScriptEngine] = new Dataserver(this);
+                    if (!m_Timer.ContainsKey(m_ScriptEngine))
+                        m_Timer[m_ScriptEngine] = new Timer(this);
+                    if (!m_HttpRequest.ContainsKey(m_ScriptEngine))
+                        m_HttpRequest[m_ScriptEngine] = new HttpRequest(this);
+                    if (!m_Listener.ContainsKey(m_ScriptEngine))
+                        m_Listener[m_ScriptEngine] = new Listener(this);
+                    if (!m_SensorRepeat.ContainsKey(m_ScriptEngine))
+                        m_SensorRepeat[m_ScriptEngine] = new SensorRepeat(this);
+                    if (!m_XmlRequest.ContainsKey(m_ScriptEngine))
+                        m_XmlRequest[m_ScriptEngine] = new XmlRequest(this);
+
+                    StartThread();
+                }
+                finally
+                {
+                    staticLock.DowngradeFromWriterLock(ref lc);
+                }
             }
             finally
             {
-                staticLock.ReleaseWriterLock();
+                staticLock.ReleaseReaderLock();
             }
         }
 
