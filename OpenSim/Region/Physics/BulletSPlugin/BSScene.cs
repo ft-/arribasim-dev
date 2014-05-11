@@ -380,23 +380,13 @@ public sealed class BSScene : PhysicsScene, IPhysicsParameters
                 ret = new BSAPIUnman(engineName, this);
                 break;
             case "bulletxna":
-                ret = new BSAPIXNA(engineName, this);
-                // Disable some features that are not implemented in BulletXNA
-                m_log.InfoFormat("{0} Disabling some physics features not implemented by BulletXNA", LogHeader);
-                m_log.InfoFormat("{0}    Disabling ShouldUseBulletHACD", LogHeader);
-                BSParam.ShouldUseBulletHACD = false;
-                m_log.InfoFormat("{0}    Disabling ShouldUseSingleConvexHullForPrims", LogHeader);
-                BSParam.ShouldUseSingleConvexHullForPrims = false;
-                m_log.InfoFormat("{0}    Disabling ShouldUseGImpactShapeForPrims", LogHeader);
-                BSParam.ShouldUseGImpactShapeForPrims = false;
-                m_log.InfoFormat("{0}    Setting terrain implimentation to Heightmap", LogHeader);
-                BSParam.TerrainImplementation = (float)BSTerrainPhys.TerrainImplementation.Heightmap;
+                m_log.ErrorFormat("bulletxna removed to concentrate on a single BulletSim variant");
                 break;
         }
 
         if (ret == null)
         {
-            m_log.ErrorFormat("{0) COULD NOT SELECT BULLET ENGINE: '[BulletSim]PhysicsEngine' must be either 'BulletUnmanaged-*' or 'BulletXNA-*'", LogHeader);
+            m_log.ErrorFormat("{0) COULD NOT SELECT BULLET ENGINE: '[BulletSim]PhysicsEngine' must be either 'BulletUnmanaged-*'", LogHeader);
         }
         else
         {
