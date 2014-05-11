@@ -26,7 +26,6 @@
  */
 
 
-using System.IO;
 using OpenMetaverse;
 
 namespace OpenSim.Region.Framework.Interfaces

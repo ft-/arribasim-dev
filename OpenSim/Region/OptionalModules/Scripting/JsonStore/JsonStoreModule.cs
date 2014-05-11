@@ -1,3 +1,4 @@
+using log4net;
 /*
  * Copyright (c) Contributors 
  * See CONTRIBUTORS.TXT for a full list of copyright holders.
@@ -25,22 +26,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 using Mono.Addins;
-
-using System;
-using System.Reflection;
-using System.Threading;
-using System.Text;
-using System.Net;
-using System.Net.Sockets;
-using log4net;
 using Nini.Config;
 using OpenMetaverse;
-using OpenMetaverse.StructuredData;
-using OpenSim.Framework;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
+using System;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
+using System.Reflection;
+using System.Threading;
 
 namespace OpenSim.Region.OptionalModules.Scripting.JsonStore
 {

@@ -25,13 +25,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using Mono.Addins;
+using OpenMetaverse;
+using OpenSim.Region.Framework.Interfaces;
 using System;
 using System.Collections.Generic;
-
-using OpenMetaverse;
-using Mono.Addins;
-
-using OpenSim.Region.Framework.Interfaces;
 
 namespace OpenSim.Region.CoreModules.World.Wind.Plugins
 {

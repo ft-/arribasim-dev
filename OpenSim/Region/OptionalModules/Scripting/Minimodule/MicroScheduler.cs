@@ -25,13 +25,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
+using OpenSim.Region.OptionalModules.Scripting.Minimodule.Interfaces;
 using System.Collections;
 using System.Collections.Generic;
-using System.Reflection;
-using System.Text;
-using log4net;
-using OpenSim.Region.OptionalModules.Scripting.Minimodule.Interfaces;
 
 namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
 {

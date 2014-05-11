@@ -25,9 +25,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
 using OpenMetaverse;
-using OpenMetaverse.Assets;
 
 namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
 {    

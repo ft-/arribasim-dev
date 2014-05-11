@@ -25,13 +25,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections.Generic;
 using log4net;
-using Nini.Config;
-using OpenSim.Framework;
 using OpenMetaverse;
+using OpenSim.Framework;
 using OpenSim.Region.Physics.Manager;
+using System;
 
 /*
  * Steps to add a new prioritization policy:

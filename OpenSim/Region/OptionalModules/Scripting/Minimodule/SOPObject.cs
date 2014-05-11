@@ -25,18 +25,16 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Security;
 using OpenMetaverse;
 using OpenMetaverse.Packets;
 using OpenSim.Framework;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
 using OpenSim.Region.OptionalModules.Scripting.Minimodule.Object;
-using OpenSim.Region.Physics.Manager;
-using PrimType=OpenSim.Region.OptionalModules.Scripting.Minimodule.Object.PrimType;
-using SculptType=OpenSim.Region.OptionalModules.Scripting.Minimodule.Object.SculptType;
+using System;
+using System.Security;
+using PrimType = OpenSim.Region.OptionalModules.Scripting.Minimodule.Object.PrimType;
+using SculptType = OpenSim.Region.OptionalModules.Scripting.Minimodule.Object.SculptType;
 
 namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
 {

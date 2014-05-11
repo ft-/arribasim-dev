@@ -29,17 +29,12 @@
  * Copyright (c) Contributors, http://aurora-sim.org/, http://opensimulator.org/
  */
 
-using System;
-using System.Reflection;
-
 using log4net;
-
-using OpenSim.Framework;
-using OpenSim.Region.Framework;
-using OpenSim.Region.Framework.Scenes;
-
 using OpenMetaverse;
 using OpenMetaverse.Packets;
+using OpenSim.Framework;
+using System;
+using System.Reflection;
 
 namespace OpenSim.Region.ClientStack.LindenUDP
 {

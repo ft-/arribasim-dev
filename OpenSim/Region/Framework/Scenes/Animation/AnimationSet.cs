@@ -25,17 +25,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Text;
-using log4net;
 using OpenMetaverse;
 using OpenMetaverse.StructuredData;
+using System;
+using System.Collections.Generic;
+using System.Text;
 using System.Threading;
-using OpenSim.Framework;
 
-using Animation = OpenSim.Framework.Animation;
 
 namespace OpenSim.Region.Framework.Scenes.Animation
 {

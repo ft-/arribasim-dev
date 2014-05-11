@@ -25,25 +25,19 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using Mono.Addins;
+using Nini.Config;
+using Nwc.XmlRpc;
+using OpenMetaverse;
+using OpenSim.Framework;
+using OpenSim.Region.Framework.Interfaces;
+using OpenSim.Services.Interfaces;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
-
-using Nwc.XmlRpc;
-
-using log4net;
-using Mono.Addins;
-using Nini.Config;
-
-using OpenMetaverse;
-using OpenMetaverse.StructuredData;
-
-using OpenSim.Framework;
-using OpenSim.Framework.Communications;
-using OpenSim.Region.Framework.Interfaces;
-using OpenSim.Services.Interfaces;
 
 namespace OpenSim.Region.OptionalModules.Avatar.XmlRpcGroups
 {
@@ -1097,10 +1091,9 @@ namespace Nwc.XmlRpc
     using System;
     using System.Collections;
     using System.IO;
-    using System.Xml;
     using System.Net;
     using System.Text;
-    using System.Reflection;
+    using System.Xml;
 
     /// <summary>Class supporting the request side of an XML-RPC transaction.</summary>
     public class ConfigurableKeepAliveXmlRpcRequest : XmlRpcRequest

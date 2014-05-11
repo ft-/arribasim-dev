@@ -25,11 +25,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System.Collections.Generic;
-using System.Reflection;
-using System.Xml;
-using log4net;
 using OpenMetaverse;
+using System.Collections.Generic;
+using System.Xml;
 
 namespace OpenSim.Region.Framework.Scenes.Animation
 {

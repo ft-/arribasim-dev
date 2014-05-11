@@ -25,13 +25,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using OpenMetaverse;
+using OpenSim.Framework;
+using OpenSim.Region.Framework.Scenes;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-
-using OpenSim.Framework;
-using OpenSim.Region.Framework.Scenes;
-using OpenMetaverse;
 
 namespace OpenSim.Region.OptionalModules.Scripting.Minimodule.Object
 {

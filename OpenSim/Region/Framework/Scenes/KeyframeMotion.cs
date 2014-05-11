@@ -25,23 +25,15 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using OpenMetaverse;
+using OpenSim.Region.Framework.Interfaces;
 using System;
-using System.Timers;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using System.Diagnostics;
-using System.Reflection;
-using System.Threading;
-using OpenMetaverse;
-using OpenSim.Framework;
-using OpenSim.Region.Framework.Interfaces;
-using OpenSim.Region.Physics.Manager;
-using OpenSim.Region.Framework.Scenes.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
-using System.Runtime.Serialization;
+using System.Threading;
+using System.Timers;
 using Timer = System.Timers.Timer;
-using log4net;
 
 namespace OpenSim.Region.Framework.Scenes
 {

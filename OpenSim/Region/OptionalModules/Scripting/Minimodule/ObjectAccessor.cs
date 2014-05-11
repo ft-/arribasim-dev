@@ -25,13 +25,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using OpenMetaverse;
 using OpenSim.Framework;
 using OpenSim.Region.Framework.Scenes;
-using IEnumerable=System.Collections.IEnumerable;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using IEnumerable = System.Collections.IEnumerable;
 
 namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
 {

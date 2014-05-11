@@ -25,20 +25,15 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using OpenMetaverse;
+using OpenSim.Framework;
+using OpenSim.Region.Framework.Interfaces;
 using System;
 using System.IO;
-using System.Text;
 using System.Reflection;
 using System.Xml;
 using System.Xml.Serialization;
-
-using OpenSim.Data;
-using OpenSim.Framework;
-using OpenSim.Region.Framework.Interfaces;
-
-using OpenMetaverse;
-
-using log4net;
 
 namespace OpenSim.Region.Framework.Scenes
 {

@@ -26,9 +26,9 @@
 *
 */
 
+using OpenSim.Region.Framework.Scenes;
 using System;
 using System.Xml;
-using OpenSim.Region.Framework.Scenes;
 
 namespace OpenSim.Region.DataSnapshot.Interfaces
 {
