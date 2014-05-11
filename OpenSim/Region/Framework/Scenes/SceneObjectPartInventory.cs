@@ -65,7 +65,6 @@ namespace OpenSim.Region.Framework.Scenes
         /// Holds in memory prim inventory
         /// </summary>
         protected TaskInventoryDictionary m_items = new TaskInventoryDictionary();
-        private ReaderWriterLock m_itemsRwLock = new ReaderWriterLock();
 
         /// <summary>
         /// Tracks whether inventory has changed since the last persistent backup
@@ -86,30 +85,11 @@ namespace OpenSim.Region.Framework.Scenes
         /// </value>
         protected internal TaskInventoryDictionary Items
         {
-            get
-            {
-                m_itemsRwLock.AcquireReaderLock(-1);
-                try
-                {
-                    return m_items;
-                }
-                finally
-                {
-                    m_itemsRwLock.ReleaseReaderLock();
-                }
-            }
+            get { return m_items; }
             set
             {
-                m_itemsRwLock.AcquireWriterLock(-1);
-                try
-                {
-                    m_items = value;
-                    m_inventorySerial++;
-                }
-                finally
-                {
-                    m_itemsRwLock.ReleaseWriterLock();
-                }
+                m_items = value;
+                m_inventorySerial++;
                 QueryScriptStates();
             }
         }
@@ -118,15 +98,8 @@ namespace OpenSim.Region.Framework.Scenes
         {
             get
             {
-                m_itemsRwLock.AcquireReaderLock(-1);
-                try
-                {
+                lock (m_items)
                     return m_items.Count;
-                }
-                finally
-                {
-                    m_itemsRwLock.ReleaseReaderLock();
-                }
             }
         }
         
@@ -162,9 +135,8 @@ namespace OpenSim.Region.Framework.Scenes
         {
             if (null == m_part)
                 return;
-
-            m_itemsRwLock.AcquireWriterLock(-1);
-            try
+            
+            lock (m_items)
             {
                 if (0 == m_items.Count)
                     return;
@@ -178,30 +150,21 @@ namespace OpenSim.Region.Framework.Scenes
                     m_items.Add(item.ItemID, item);
                 }
             }
-            finally
-            {
-                m_itemsRwLock.ReleaseWriterLock();
-            }
         }
 
         public void ResetObjectID()
         {
-            m_itemsRwLock.AcquireWriterLock(-1);
-            try
+            lock (Items)
             {
-                IList<TaskInventoryItem> items = new List<TaskInventoryItem>(m_items.Values);
-                m_items.Clear();
+                IList<TaskInventoryItem> items = new List<TaskInventoryItem>(Items.Values);
+                Items.Clear();
     
                 foreach (TaskInventoryItem item in items)
                 {
                     item.ParentPartID = m_part.UUID;
                     item.ParentID = m_part.UUID;
-                    m_items.Add(item.ItemID, item);
+                    Items.Add(item.ItemID, item);
                 }
-            }
-            finally
-            {
-                m_itemsRwLock.ReleaseWriterLock();
             }
         }
 
@@ -211,17 +174,12 @@ namespace OpenSim.Region.Framework.Scenes
         /// <param name="ownerId"></param>
         public void ChangeInventoryOwner(UUID ownerId)
         {
-            m_itemsRwLock.AcquireReaderLock(-1);
-            try
+            lock (Items)
             {
-                if (0 == m_items.Count)
+                if (0 == Items.Count)
                 {
                     return;
                 }
-            }
-            finally
-            {
-                m_itemsRwLock.ReleaseReaderLock();
             }
 
             HasInventoryChanged = true;
@@ -245,17 +203,12 @@ namespace OpenSim.Region.Framework.Scenes
         /// <param name="groupID"></param>
         public void ChangeInventoryGroup(UUID groupID)
         {
-            m_itemsRwLock.AcquireReaderLock(-1);
-            try
+            lock (Items)
             {
-                if (0 == m_items.Count)
+                if (0 == Items.Count)
                 {
                     return;
                 }
-            }
-            finally
-            {
-                m_itemsRwLock.ReleaseReaderLock();
             }
 
             // Don't let this set the HasGroupChanged flag for attachments
@@ -280,19 +233,14 @@ namespace OpenSim.Region.Framework.Scenes
             if (m_part == null || m_part.ParentGroup == null || m_part.ParentGroup.Scene == null)
                 return;
 
-            m_itemsRwLock.AcquireReaderLock(-1);
-            try
+            lock (Items)
             {
-                foreach (TaskInventoryItem item in m_items.Values)
+                foreach (TaskInventoryItem item in Items.Values)
                 {
                     bool running;
                     if (TryGetScriptInstanceRunning(m_part.ParentGroup.Scene, item, out running))
                         item.ScriptRunning = running;
                 }
-            }
-            finally
-            {
-                m_itemsRwLock.ReleaseReaderLock();
             }
         }
 
@@ -402,15 +350,10 @@ namespace OpenSim.Region.Framework.Scenes
             if (stateSource == 2 && // Prim crossing
                     m_part.ParentGroup.Scene.m_trustBinaries)
             {
-                m_itemsRwLock.AcquireWriterLock(-1);
-                try
+                lock (m_items)
                 {
                     m_items[item.ItemID].PermsMask = 0;
                     m_items[item.ItemID].PermsGranter = UUID.Zero;
-                }
-                finally
-                {
-                    m_itemsRwLock.ReleaseWriterLock();
                 }
                 
                 m_part.ParentGroup.Scene.EventManager.TriggerRezScript(
@@ -435,16 +378,11 @@ namespace OpenSim.Region.Framework.Scenes
                 if (m_part.ParentGroup.m_savedScriptState != null)
                     item.OldItemID = RestoreSavedScriptState(item.LoadedItemID, item.OldItemID, item.ItemID);
 
-                m_itemsRwLock.AcquireWriterLock(-1);
-                try
+                lock (m_items)
                 {
                     m_items[item.ItemID].OldItemID = item.OldItemID;
                     m_items[item.ItemID].PermsMask = 0;
                     m_items[item.ItemID].PermsGranter = UUID.Zero;
-                }
-                finally
-                {
-                    m_itemsRwLock.ReleaseWriterLock();
                 }
 
                 string script = Utils.BytesToString(asset.Data);
@@ -552,15 +490,10 @@ namespace OpenSim.Region.Framework.Scenes
         {
             bool scriptPresent = false;
 
-            m_itemsRwLock.AcquireReaderLock(-1);
-            try
+            lock (m_items)
             {
                 if (m_items.ContainsKey(itemId))
                     scriptPresent = true;
-            }
-            finally
-            {
-                m_itemsRwLock.ReleaseReaderLock();
             }
             
             if (scriptPresent)
@@ -593,15 +526,8 @@ namespace OpenSim.Region.Framework.Scenes
         {
             TaskInventoryItem scriptItem;
 
-            m_itemsRwLock.AcquireReaderLock(-1);
-            try
-            {
+            lock (m_items)
                 m_items.TryGetValue(itemId, out scriptItem);
-            }
-            finally
-            {
-                m_itemsRwLock.ReleaseReaderLock();
-            }
 
             if (scriptItem != null)
             {
@@ -641,18 +567,13 @@ namespace OpenSim.Region.Framework.Scenes
         /// <returns></returns>
         private bool InventoryContainsName(string name)
         {
-            m_itemsRwLock.AcquireReaderLock(-1);
-            try
+            lock (m_items)
             {
                 foreach (TaskInventoryItem item in m_items.Values)
                 {
                     if (item.Name == name)
                         return true;
                 }
-            }
-            finally
-            {
-                m_itemsRwLock.ReleaseReaderLock();
             }
             return false;
         }
@@ -734,15 +655,8 @@ namespace OpenSim.Region.Framework.Scenes
             item.Name = name;
             item.GroupID = m_part.GroupID;
 
-            m_itemsRwLock.AcquireWriterLock(-1);
-            try
-            {
+            lock (m_items)
                 m_items.Add(item.ItemID, item);
-            }
-            finally
-            {
-                m_itemsRwLock.ReleaseWriterLock();
-            }
 
             if (allowedDrop) 
                 m_part.TriggerScriptChangedEvent(Changed.ALLOWED_DROP);
@@ -764,8 +678,7 @@ namespace OpenSim.Region.Framework.Scenes
         /// <param name="items"></param>
         public void RestoreInventoryItems(ICollection<TaskInventoryItem> items)
         {
-            m_itemsRwLock.AcquireWriterLock(-1);
-            try
+            lock (m_items)
             {
                 foreach (TaskInventoryItem item in items)
                 {
@@ -773,10 +686,6 @@ namespace OpenSim.Region.Framework.Scenes
 //                    m_part.TriggerScriptChangedEvent(Changed.INVENTORY);
                 }
                 m_inventorySerial++;
-            }
-            finally
-            {
-                m_itemsRwLock.ReleaseWriterLock();
             }
         }
 
@@ -789,33 +698,21 @@ namespace OpenSim.Region.Framework.Scenes
         {
             TaskInventoryItem item;
 
-            m_itemsRwLock.AcquireReaderLock(-1);
-            try
-            {
+            lock (m_items)
                 m_items.TryGetValue(itemId, out item);
-            }
-            finally
-            {
-                m_itemsRwLock.ReleaseReaderLock();
-            }
 
             return item;
         }
 
         public TaskInventoryItem GetInventoryItem(string name)
         {
-            m_itemsRwLock.AcquireReaderLock(-1);
-            try
+            lock (m_items)
             {
                 foreach (TaskInventoryItem item in m_items.Values)
                 {
                     if (item.Name == name)
                         return item;
                 }
-            }
-            finally
-            {
-                m_itemsRwLock.ReleaseReaderLock();
             }
 
             return null;
@@ -825,18 +722,13 @@ namespace OpenSim.Region.Framework.Scenes
         {
             List<TaskInventoryItem> items = new List<TaskInventoryItem>();
 
-            m_itemsRwLock.AcquireReaderLock(-1);
-            try
+            lock (m_items)
             {
                 foreach (TaskInventoryItem item in m_items.Values)
                 {
                     if (item.Name == name)
                         items.Add(item);
                 }
-            }
-            finally
-            {
-                m_itemsRwLock.ReleaseReaderLock();
             }
 
             return items;
@@ -935,15 +827,10 @@ namespace OpenSim.Region.Framework.Scenes
                 if (item.AssetID == UUID.Zero)
                     item.AssetID = it.AssetID;
 
-                m_itemsRwLock.AcquireWriterLock(-1);
-                try
+                lock (m_items)
                 {
                     m_items[item.ItemID] = item;
                     m_inventorySerial++;
-                }
-                finally
-                {
-                    m_itemsRwLock.ReleaseWriterLock();
                 }
                 
                 if (fireScriptEvents)
@@ -1028,8 +915,7 @@ namespace OpenSim.Region.Framework.Scenes
 
                 InventoryStringBuilder invString = new InventoryStringBuilder(m_part.UUID, UUID.Zero);
 
-                m_itemsRwLock.AcquireReaderLock(-1);
-                try
+                lock (m_items)
                 {
                     foreach (TaskInventoryItem item in m_items.Values)
                     {
@@ -1080,10 +966,6 @@ namespace OpenSim.Region.Framework.Scenes
                         invString.AddSectionEnd();
                     }
                 }
-                finally
-                {
-                    m_itemsRwLock.ReleaseReaderLock();
-                }
 
                 m_inventoryFileData = Utils.StringToBytes(invString.BuildString);
 
@@ -1100,8 +982,7 @@ namespace OpenSim.Region.Framework.Scenes
         /// <param name="xferManager"></param>
         public void RequestInventoryFile(IClientAPI client, IXfer xferManager)
         {
-            m_itemsRwLock.AcquireReaderLock(-1);
-            try
+            lock (m_items)
             {
                 // Don't send a inventory xfer name if there are no items.  Doing so causes viewer 3 to crash when rezzing
                 // a new script if any previous deletion has left the prim inventory empty.
@@ -1137,10 +1018,6 @@ namespace OpenSim.Region.Framework.Scenes
                 // Tell the client we're ready to Xfer the file
                 client.SendTaskInventory(m_part.UUID, (short)m_inventorySerial,
                         Util.StringToBytes256(m_inventoryFileName));
-            }
-            finally
-            {
-                m_itemsRwLock.ReleaseReaderLock();
             }
         }
 
@@ -1247,8 +1124,7 @@ namespace OpenSim.Region.Framework.Scenes
 
         public void ApplyNextOwnerPermissions()
         {
-            m_itemsRwLock.AcquireWriterLock(-1);
-            try
+            lock (m_items)
             {
                 foreach (TaskInventoryItem item in m_items.Values)
                 {
@@ -1271,26 +1147,17 @@ namespace OpenSim.Region.Framework.Scenes
                     item.PermsGranter = UUID.Zero;
                 }
             }
-            finally
-            {
-                m_itemsRwLock.ReleaseWriterLock();
-            }
         }
 
         public void ApplyGodPermissions(uint perms)
         {
-            m_itemsRwLock.AcquireWriterLock(-1);
-            try
+            lock (m_items)
             {
                 foreach (TaskInventoryItem item in m_items.Values)
                 {
                     item.CurrentPermissions = perms;
                     item.BasePermissions = perms;
                 }
-            }
-            finally
-            {
-                m_itemsRwLock.ReleaseWriterLock();
             }
             
             m_inventorySerial++;
@@ -1303,8 +1170,7 @@ namespace OpenSim.Region.Framework.Scenes
         /// <returns></returns>
         public bool ContainsScripts()
         {
-            m_itemsRwLock.AcquireReaderLock(-1);
-            try
+            lock (m_items)
             {
                 foreach (TaskInventoryItem item in m_items.Values)
                 {
@@ -1313,10 +1179,6 @@ namespace OpenSim.Region.Framework.Scenes
                         return true;
                     }
                 }
-            }
-            finally
-            {
-                m_itemsRwLock.ReleaseReaderLock();
             }
 
             return false;
@@ -1329,8 +1191,7 @@ namespace OpenSim.Region.Framework.Scenes
         public int ScriptCount()
         {
             int count = 0;
-            m_itemsRwLock.AcquireReaderLock(-1);
-            try
+            lock (m_items)
             {
                 foreach (TaskInventoryItem item in m_items.Values)
                 {
@@ -1339,10 +1200,6 @@ namespace OpenSim.Region.Framework.Scenes
                         count++;
                     }
                 }
-            }
-            finally
-            {
-                m_itemsRwLock.ReleaseReaderLock();
             }
 
             return count;
@@ -1380,15 +1237,10 @@ namespace OpenSim.Region.Framework.Scenes
         {
             List<UUID> ret = new List<UUID>();
 
-            m_itemsRwLock.AcquireReaderLock(-1);
-            try
+            lock (m_items)
             {
                 foreach (TaskInventoryItem item in m_items.Values)
                     ret.Add(item.ItemID);
-            }
-            finally
-            {
-                m_itemsRwLock.ReleaseReaderLock();
             }
 
             return ret;
@@ -1408,16 +1260,11 @@ namespace OpenSim.Region.Framework.Scenes
         {
             List<TaskInventoryItem> ret = new List<TaskInventoryItem>();
 
-            m_itemsRwLock.AcquireReaderLock(-1);
-            try
+            lock (m_items)
             {
                 foreach (TaskInventoryItem item in m_items.Values)
                     if (item.InvType == (int)type)
                         ret.Add(item);
-            }
-            finally
-            {
-                m_itemsRwLock.ReleaseReaderLock();
             }
 
             return ret;
