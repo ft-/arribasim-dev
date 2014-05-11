@@ -25,13 +25,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Net;
-
-using OpenMetaverse.StructuredData;
 using OpenMetaverse;
+using OpenMetaverse.StructuredData;
+using System.Collections;
+using System.Net;
 
 namespace OpenSim.Services.Interfaces
 {

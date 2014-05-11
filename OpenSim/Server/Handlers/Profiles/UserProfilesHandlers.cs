@@ -25,14 +25,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Reflection;
+using log4net;
 using OpenMetaverse;
 using OpenMetaverse.StructuredData;
-using log4net;
-using OpenSim.Services.Interfaces;
-using OpenSim.Framework.Servers.HttpServer;
 using OpenSim.Framework;
+using OpenSim.Framework.Servers.HttpServer;
+using OpenSim.Services.Interfaces;
+using System.Reflection;
 
 namespace OpenSim.Server.Handlers
 {

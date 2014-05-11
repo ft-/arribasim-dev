@@ -25,14 +25,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using Nini.Config;
+using OpenSim.Framework.Servers.HttpServer;
+using OpenSim.Server.Base;
+using OpenSim.Server.Handlers.Base;
+using OpenSim.Services.Interfaces;
 using System;
 using System.Reflection;
-using Nini.Config;
-using log4net;
-using OpenSim.Server.Base;
-using OpenSim.Services.Interfaces;
-using OpenSim.Framework.Servers.HttpServer;
-using OpenSim.Server.Handlers.Base;
 
 namespace OpenSim.Server.Handlers.Authentication
 {

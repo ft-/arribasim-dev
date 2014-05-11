@@ -25,20 +25,18 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using Mono.Addins;
+using Nini.Config;
+using OpenSim.Framework;
+using OpenSim.Framework.Servers;
+using OpenSim.Framework.Servers.HttpServer;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Xml;
 using System.Xml.Serialization;
-using System.Text;
-using System.Collections.Generic;
-using log4net;
-using Nini.Config;
-using OpenSim.Framework;
-using OpenMetaverse;
-using Mono.Addins;
-using OpenSim.Framework.Servers.HttpServer;
-using OpenSim.Framework.Servers;
 
 
 [assembly:AddinRoot("Robust", "0.1")]

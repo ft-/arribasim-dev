@@ -25,10 +25,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
 using OpenSim.Framework;
-using OpenMetaverse;
-using GridRegion = OpenSim.Services.Interfaces.GridRegion;
 
 namespace OpenSim.Services.Interfaces
 {

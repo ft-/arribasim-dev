@@ -25,19 +25,15 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Reflection;
 using log4net;
 using Nini.Config;
 using OpenMetaverse;
 using OpenSim.Framework;
-using OpenSim.Framework.Client;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
-using OpenSim.Framework.Console;
-using OpenSim.Region.Physics.Manager;
-using Mono.Addins;
+using System;
+using System.Collections.Generic;
+using System.Reflection;
 
 namespace OpenSim.Region.RegionCombinerModule
 {

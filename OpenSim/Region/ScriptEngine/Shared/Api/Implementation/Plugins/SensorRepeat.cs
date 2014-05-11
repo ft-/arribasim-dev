@@ -25,17 +25,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Reflection;
-using System.Collections.Generic;
-using System.Threading;
 using OpenMetaverse;
 using OpenSim.Framework;
-using log4net;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
-using OpenSim.Region.ScriptEngine.Shared;
-using OpenSim.Region.ScriptEngine.Shared.Api;
+using System;
+using System.Collections.Generic;
+using System.Threading;
 
 namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
 {

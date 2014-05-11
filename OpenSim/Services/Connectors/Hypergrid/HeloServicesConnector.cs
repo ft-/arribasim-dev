@@ -29,7 +29,6 @@ using log4net;
 using System;
 using System.Net;
 using System.Reflection;
-using Nini.Config;
 
 namespace OpenSim.Services.Connectors
 {

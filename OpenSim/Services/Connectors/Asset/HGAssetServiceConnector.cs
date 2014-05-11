@@ -27,17 +27,14 @@
 
 using log4net;
 using Nini.Config;
+using OpenMetaverse;
+using OpenSim.Framework;
+using OpenSim.Services.Connectors.SimianGrid;
+using OpenSim.Services.Interfaces;
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Reflection;
-using System.Web;
 using System.Threading;
-using OpenSim.Framework;
-using OpenSim.Services.Interfaces;
-using OpenSim.Services.Connectors.Hypergrid;
-using OpenSim.Services.Connectors.SimianGrid;
-using OpenMetaverse;
 
 namespace OpenSim.Services.Connectors
 {

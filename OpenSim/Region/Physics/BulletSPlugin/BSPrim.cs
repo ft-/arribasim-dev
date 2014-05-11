@@ -25,15 +25,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Reflection;
-using System.Collections.Generic;
-using System.Xml;
 using log4net;
-using OMV = OpenMetaverse;
 using OpenSim.Framework;
 using OpenSim.Region.Physics.Manager;
-using OpenSim.Region.Physics.ConvexDecompositionDotNet;
+using System;
+using System.Reflection;
+using OMV = OpenMetaverse;
 
 namespace OpenSim.Region.Physics.BulletSPlugin
 {

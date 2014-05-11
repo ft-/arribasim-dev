@@ -1,3 +1,7 @@
+using log4net;
+using Nwc.XmlRpc;
+using OpenMetaverse;
+using OpenSim.Services.Interfaces;
 /*
  * Copyright (c) Contributors, http://opensimulator.org/
  * See CONTRIBUTORS.TXT for a full list of copyright holders.
@@ -24,18 +28,10 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Net;
 using System.Reflection;
-
-using OpenSim.Services.Interfaces;
 using GridRegion = OpenSim.Services.Interfaces.GridRegion;
-
-using log4net;
-using Nwc.XmlRpc;
-using OpenMetaverse;
 
 namespace OpenSim.Server.Handlers.Hypergrid
 {

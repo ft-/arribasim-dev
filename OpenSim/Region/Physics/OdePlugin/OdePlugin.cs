@@ -25,19 +25,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Threading;
-using System.IO;
-using System.Diagnostics;
-using log4net;
-using Nini.Config;
 using Ode.NET;
 using OpenSim.Framework;
 using OpenSim.Region.Physics.Manager;
-using OpenMetaverse;
+using System;
 
 namespace OpenSim.Region.Physics.OdePlugin
 {

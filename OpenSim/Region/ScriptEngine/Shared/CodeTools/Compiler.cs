@@ -25,21 +25,20 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using Microsoft.CSharp;
+//using Microsoft.JScript;
+using Microsoft.VisualBasic;
+using OpenMetaverse;
+using OpenSim.Region.Framework.Interfaces;
+using OpenSim.Region.ScriptEngine.Interfaces;
 using System;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Reflection;
 using System.IO;
+using System.Reflection;
 using System.Text;
-using Microsoft.CSharp;
-//using Microsoft.JScript;
-using Microsoft.VisualBasic;
-using log4net;
-
-using OpenSim.Region.Framework.Interfaces;
-using OpenSim.Region.ScriptEngine.Interfaces;
-using OpenMetaverse;
 
 namespace OpenSim.Region.ScriptEngine.Shared.CodeTools
 {

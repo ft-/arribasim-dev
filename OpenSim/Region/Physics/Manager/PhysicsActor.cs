@@ -25,12 +25,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using log4net;
+using OpenMetaverse;
+using OpenSim.Framework;
 using System;
 using System.Collections.Generic;
-using System.Reflection;
-using OpenSim.Framework;
-using OpenMetaverse;
 
 namespace OpenSim.Region.Physics.Manager
 {

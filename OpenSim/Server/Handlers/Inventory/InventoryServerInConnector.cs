@@ -25,20 +25,18 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using Nini.Config;
+using OpenMetaverse;
+using OpenSim.Framework;
+using OpenSim.Framework.Servers.HttpServer;
+using OpenSim.Server.Base;
+using OpenSim.Server.Handlers.Base;
+using OpenSim.Services.Interfaces;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Net;
 using System.Reflection;
-using log4net;
-using Nini.Config;
-using Nwc.XmlRpc;
-using OpenSim.Server.Base;
-using OpenSim.Services.Interfaces;
-using OpenSim.Framework;
-using OpenSim.Framework.Servers.HttpServer;
-using OpenSim.Server.Handlers.Base;
-using OpenMetaverse;
 
 namespace OpenSim.Server.Handlers.Inventory
 {

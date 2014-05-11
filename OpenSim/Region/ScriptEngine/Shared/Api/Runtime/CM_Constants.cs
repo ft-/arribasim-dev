@@ -25,10 +25,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using vector = OpenSim.Region.ScriptEngine.Shared.LSL_Types.Vector3;
-using rotation = OpenSim.Region.ScriptEngine.Shared.LSL_Types.Quaternion;
-using LSLInteger = OpenSim.Region.ScriptEngine.Shared.LSL_Types.LSLInteger;
 
 namespace OpenSim.Region.ScriptEngine.Shared.ScriptBase
 {

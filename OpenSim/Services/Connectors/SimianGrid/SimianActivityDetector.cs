@@ -25,13 +25,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Reflection;
+using log4net;
+using OpenMetaverse;
 using OpenSim.Framework;
 using OpenSim.Region.Framework.Scenes;
 using OpenSim.Services.Interfaces;
-using OpenMetaverse;
-using log4net;
+using System.Reflection;
 
 namespace OpenSim.Services.Connectors.SimianGrid
 {

@@ -25,22 +25,20 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using Nini.Config;
+using Nwc.XmlRpc;
+using OpenMetaverse;
+using OpenMetaverse.StructuredData;
+using OpenSim.Framework;
+using OpenSim.Services.Connectors.Simulation;
+using OpenSim.Services.Interfaces;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Net;
 using System.Reflection;
-using System.Text;
-using OpenSim.Framework;
-using OpenSim.Services.Interfaces;
-using OpenSim.Services.Connectors.Simulation;
 using GridRegion = OpenSim.Services.Interfaces.GridRegion;
-using OpenMetaverse;
-using OpenMetaverse.StructuredData;
-using log4net;
-using Nwc.XmlRpc;
-using Nini.Config;
 
 namespace OpenSim.Services.Connectors.Hypergrid
 {

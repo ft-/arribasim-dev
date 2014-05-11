@@ -38,9 +38,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  */
 
-using System;
-using System.Runtime.InteropServices;
 using Ode.NET;
+using System.Runtime.InteropServices;
 
 namespace Drawstuff.NET
 {

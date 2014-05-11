@@ -25,24 +25,16 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections;
-using System.IO;
-using System.Reflection;
-using System.Net;
-using System.Text;
-
-using OpenSim.Server.Base;
-using OpenSim.Server.Handlers.Base;
-using OpenSim.Services.Interfaces;
-using GridRegion = OpenSim.Services.Interfaces.GridRegion;
-using OpenSim.Framework;
-using OpenSim.Framework.Servers.HttpServer;
-
+using log4net;
 using OpenMetaverse;
 using OpenMetaverse.StructuredData;
-using Nini.Config;
-using log4net;
+using OpenSim.Framework;
+using OpenSim.Services.Interfaces;
+using System;
+using System.Collections;
+using System.Net;
+using System.Reflection;
+using GridRegion = OpenSim.Services.Interfaces.GridRegion;
 
 
 namespace OpenSim.Server.Handlers.Simulation

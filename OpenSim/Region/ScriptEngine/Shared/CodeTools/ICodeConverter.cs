@@ -26,7 +26,6 @@
 *
 */
 
-using System;
 
 namespace OpenSim.Region.ScriptEngine.Shared.CodeTools
 {

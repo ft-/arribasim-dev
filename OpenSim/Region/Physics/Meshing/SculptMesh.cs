@@ -30,12 +30,11 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.IO;
 
 #if SYSTEM_DRAWING
 using System.Drawing;
-using System.Drawing.Imaging;
+
 #endif
 
 namespace PrimMesher

@@ -1,4 +1,5 @@
-﻿/*
+﻿using OpenMetaverse;
+/*
  * Copyright (c) Contributors, http://opensimulator.org/
  * See CONTRIBUTORS.TXT for a full list of copyright holders.
  *
@@ -25,9 +26,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 using System;
-using System.Collections.Generic;
-using System.Text;
-using OpenMetaverse;
 
 namespace OpenSim.Region.Physics.BulletSPlugin
 {

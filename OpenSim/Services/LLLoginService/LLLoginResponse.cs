@@ -25,20 +25,18 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using OpenMetaverse;
+using OpenMetaverse.StructuredData;
+using OpenSim.Framework;
+using OpenSim.Services.Interfaces;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Net;
 using System.Reflection;
-
-using OpenSim.Framework;
-using OpenSim.Services.Interfaces;
-using GridRegion = OpenSim.Services.Interfaces.GridRegion;
 using FriendInfo = OpenSim.Services.Interfaces.FriendInfo;
-
-using log4net;
-using OpenMetaverse;
-using OpenMetaverse.StructuredData;
+using GridRegion = OpenSim.Services.Interfaces.GridRegion;
 using OSDArray = OpenMetaverse.StructuredData.OSDArray;
 using OSDMap = OpenMetaverse.StructuredData.OSDMap;
 

@@ -1,4 +1,6 @@
-﻿/*
+﻿using OpenMetaverse;
+using OpenSim.Framework;
+/*
  * Copyright (c) Contributors, http://opensimulator.org/
  * See CONTRIBUTORS.TXT for a full list of copyright holders.
  *
@@ -26,9 +28,6 @@
  */
 using System;
 using System.Collections.Generic;
-
-using OpenSim.Framework;
-using OpenMetaverse;
 
 namespace OpenSim.Services.Interfaces
 {

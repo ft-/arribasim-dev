@@ -25,23 +25,17 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Reflection;
-using System.Threading;
-using System.Text;
-using System.Xml;
+using log4net;
+using log4net.Config;
+using Nini.Config;
 using OpenSim.Framework;
 using OpenSim.Framework.Console;
 using OpenSim.Framework.Monitoring;
 using OpenSim.Framework.Servers;
-using log4net;
-using log4net.Config;
-using log4net.Appender;
-using log4net.Core;
-using log4net.Repository;
-using Nini.Config;
+using System;
+using System.IO;
+using System.Reflection;
+using System.Xml;
 
 namespace OpenSim.Server.Base
 {

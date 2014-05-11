@@ -25,12 +25,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using OpenMetaverse;
-using Ode.NET;
-using OpenSim.Framework;
 using OpenSim.Region.Physics.Manager;
-using OpenSim.Region.Physics.OdePlugin;
+using System;
 
 namespace OpenSim.Region.Physics.OdePlugin
 {

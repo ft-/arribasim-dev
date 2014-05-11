@@ -25,17 +25,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Reflection;
+using log4net;
 using OpenMetaverse;
 using OpenSim.Framework;
 using OpenSim.Region.Framework.Scenes;
-using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.ScriptEngine.Shared;
-using OpenSim.Region.ScriptEngine.Interfaces;
-using log4net;
+using System;
+using System.Collections.Generic;
+using System.Reflection;
 
 namespace OpenSim.Region.ScriptEngine.XEngine
 {

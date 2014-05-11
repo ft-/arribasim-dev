@@ -25,6 +25,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using Nini.Config;
+using OpenMetaverse;
+using OpenSim.Framework;
+using OpenSim.Server.Base;
+using OpenSim.Services.Connectors.Hypergrid;
+using OpenSim.Services.Interfaces;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -32,18 +39,8 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text.RegularExpressions;
-
-using log4net;
-using Nini.Config;
-using OpenMetaverse;
-
-using OpenSim.Framework;
-using OpenSim.Framework.Console;
-using OpenSim.Server.Base;
-using OpenSim.Services.Interfaces;
-using GridRegion = OpenSim.Services.Interfaces.GridRegion;
 using FriendInfo = OpenSim.Services.Interfaces.FriendInfo;
-using OpenSim.Services.Connectors.Hypergrid;
+using GridRegion = OpenSim.Services.Interfaces.GridRegion;
 
 namespace OpenSim.Services.LLLoginService
 {

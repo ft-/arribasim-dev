@@ -25,23 +25,17 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Net;
-using System.Reflection;
-
-using OpenSim.Framework;
-using OpenSim.Services.Connectors.Friends;
-using OpenSim.Services.Connectors.Hypergrid;
-using OpenSim.Services.Interfaces;
-using OpenSim.Services.Connectors.InstantMessage;
-using GridRegion = OpenSim.Services.Interfaces.GridRegion;
-using OpenSim.Server.Base;
-using FriendInfo = OpenSim.Services.Interfaces.FriendInfo;
-
-using OpenMetaverse;
 using log4net;
 using Nini.Config;
+using OpenMetaverse;
+using OpenSim.Framework;
+using OpenSim.Server.Base;
+using OpenSim.Services.Connectors.InstantMessage;
+using OpenSim.Services.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using GridRegion = OpenSim.Services.Interfaces.GridRegion;
 
 namespace OpenSim.Services.HypergridService
 {

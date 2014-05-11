@@ -25,19 +25,17 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using Nini.Config;
+using OpenMetaverse;
+using OpenSim.Framework;
+using OpenSim.Services.Base;
+using OpenSim.Services.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Xml;
-
-using OpenSim.Framework;
-using OpenSim.Services.Base;
-using OpenSim.Services.Interfaces;
-
-using log4net;
-using Nini.Config;
-using OpenMetaverse;
 using PermissionMask = OpenSim.Framework.PermissionMask;
 
 namespace OpenSim.Services.InventoryService

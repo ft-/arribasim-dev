@@ -25,24 +25,22 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Reflection;
-using System.Net;
-using System.IO;
-using System.Timers;
-using System.Drawing;
-using System.Drawing.Imaging;
-
 using log4net;
 using Mono.Addins;
 using Nini.Config;
+using OpenMetaverse;
+using OpenMetaverse.StructuredData;
 using OpenSim.Framework;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
-using OpenMetaverse;
-using OpenMetaverse.StructuredData;
+using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
+using System.Reflection;
+using System.Timers;
 
 //namespace OpenSim.Region.OptionalModules.Simian
 namespace OpenSim.Services.Connectors.SimianGrid

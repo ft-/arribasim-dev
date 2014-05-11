@@ -25,12 +25,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.IO;
-using System.Collections;
-using System.Collections.Generic;
-using System.Text;
 using OpenSim.Framework;
+using System.Collections;
+using System.IO;
 
 namespace OpenSim.Region.UserStatistics
 {

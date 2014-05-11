@@ -25,12 +25,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.CoreModules.Scripting.XMLRPC;
+using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.ScriptEngine.Interfaces;
-using OpenSim.Region.ScriptEngine.Shared;
-using OpenSim.Region.ScriptEngine.Shared.Api;
+using System;
 
 namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
 {

@@ -25,13 +25,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using OpenMetaverse;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using OpenMetaverse;
-using OpenSim.Region.Physics.Manager;
-using OpenSim.Region.Physics.Meshing;
 
 public class Vertex : IComparable<Vertex>
 {

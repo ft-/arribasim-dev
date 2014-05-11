@@ -25,14 +25,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections;
-using System.Net;
-
-using OpenSim.Framework;
-using OpenSim.Framework.Servers.HttpServer;
-using OpenSim.Services.Interfaces;
 using OpenMetaverse;
+using OpenSim.Framework.Servers.HttpServer;
+using System;
 
 namespace OpenSim.Server.Handlers.Base
 {

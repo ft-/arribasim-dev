@@ -25,19 +25,18 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using Nini.Config;
+using Nwc.XmlRpc;
+using OpenMetaverse.StructuredData;
+using OpenSim.Framework;
+using OpenSim.Framework.Servers.HttpServer;
 using System;
 using System.Collections;
-using System.IO;
 using System.Net;
 using System.Reflection;
 using System.Security;
 using System.Text;
-using log4net;
-using Nini.Config;
-using Nwc.XmlRpc;
-using OpenSim.Framework;
-using OpenSim.Framework.Servers.HttpServer;
-using OpenMetaverse.StructuredData;
 
 namespace OpenSim.Server.Handlers.Grid
 {

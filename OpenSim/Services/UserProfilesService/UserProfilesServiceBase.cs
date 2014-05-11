@@ -25,12 +25,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using Nini.Config;
+using OpenSim.Data;
+using OpenSim.Services.Base;
 using System;
 using System.Reflection;
-using Nini.Config;
-using log4net;
-using OpenSim.Services.Base;
-using OpenSim.Data;
 
 namespace OpenSim.Services.ProfilesService
 {

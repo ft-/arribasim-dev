@@ -1,4 +1,8 @@
-﻿/*
+﻿using log4net;
+using Nwc.XmlRpc;
+using OpenMetaverse;
+using OpenSim.Framework;
+/*
  * Copyright (c) Contributors, http://opensimulator.org/
  * See CONTRIBUTORS.TXT for a full list of copyright holders.
  *
@@ -26,15 +30,8 @@
  */
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Net;
 using System.Reflection;
-
-using OpenMetaverse;
-using Nwc.XmlRpc;
-using log4net;
-
-using OpenSim.Framework;
 
 namespace OpenSim.Services.Connectors.InstantMessage
 {

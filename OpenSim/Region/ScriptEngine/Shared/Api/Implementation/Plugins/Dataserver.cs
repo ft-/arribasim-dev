@@ -25,13 +25,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using OpenMetaverse;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
-using OpenMetaverse;
-using OpenSim.Region.ScriptEngine.Shared;
-using OpenSim.Region.ScriptEngine.Shared.Api;
 
 namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
 {

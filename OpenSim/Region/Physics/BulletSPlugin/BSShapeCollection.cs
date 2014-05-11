@@ -1,3 +1,4 @@
+using OpenSim.Framework;
 /*
  * Copyright (c) Contributors, http://opensimulator.org/
  * See CONTRIBUTORS.TXT for a full list of copyright holders.
@@ -25,12 +26,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 using System;
-using System.Collections.Generic;
-using System.Text;
 using OMV = OpenMetaverse;
-using OpenSim.Framework;
-using OpenSim.Region.Physics.Manager;
-using OpenSim.Region.Physics.ConvexDecompositionDotNet;
 
 namespace OpenSim.Region.Physics.BulletSPlugin
 {

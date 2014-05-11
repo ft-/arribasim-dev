@@ -25,17 +25,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.IO;
-using System.Threading;
-using System.Collections;
-using System.Collections.Generic;
-using System.Runtime.Serialization;
 using OpenMetaverse;
 using OpenSim.Framework;
-using OpenSim.Region.CoreModules;
-using OpenSim.Region.Framework.Scenes;
 using OpenSim.Region.Framework.Interfaces;
+using OpenSim.Region.Framework.Scenes;
+using System;
+using System.Runtime.Serialization;
 
 namespace OpenSim.Region.ScriptEngine.Shared
 {

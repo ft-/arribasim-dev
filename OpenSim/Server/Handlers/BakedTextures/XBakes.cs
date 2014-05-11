@@ -25,21 +25,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Diagnostics;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
-using System.Threading;
-using System.Reflection;
+using log4net;
+using Nini.Config;
 using OpenSim.Framework;
-using OpenSim.Framework.Console;
-using OpenSim.Server.Base;
 using OpenSim.Services.Base;
 using OpenSim.Services.Interfaces;
-using Nini.Config;
-using log4net;
-using OpenMetaverse;
+using System;
+using System.IO;
+using System.Reflection;
 
 namespace OpenSim.Server.Handlers.BakedTextures
 {

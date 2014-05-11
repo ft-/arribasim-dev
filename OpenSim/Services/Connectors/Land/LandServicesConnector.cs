@@ -26,17 +26,13 @@
  */
 
 using log4net;
+using Nwc.XmlRpc;
+using OpenMetaverse;
+using OpenSim.Framework;
+using OpenSim.Services.Interfaces;
 using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.IO;
 using System.Reflection;
-using Nini.Config;
-using OpenSim.Framework;
-using OpenSim.Framework.Communications;
-using OpenSim.Services.Interfaces;
-using OpenMetaverse;
-using Nwc.XmlRpc;
 using GridRegion = OpenSim.Services.Interfaces.GridRegion;
 
 namespace OpenSim.Services.Connectors

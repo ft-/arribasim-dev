@@ -25,14 +25,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using Nini.Config;
+using OpenMetaverse;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
-using Nini.Config;
-using log4net;
-using OpenSim.Framework;
-using OpenMetaverse;
 
 namespace OpenSim.Region.Physics.Manager
 {

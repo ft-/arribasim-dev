@@ -25,21 +25,18 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using DotNetOpenId;
+using DotNetOpenId.Provider;
+using OpenMetaverse;
+using OpenSim.Framework;
+using OpenSim.Framework.Servers.HttpServer;
+using OpenSim.Services.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 using System.Web;
-using DotNetOpenId;
-using DotNetOpenId.Provider;
-using OpenSim.Framework;
-using OpenSim.Framework.Servers;
-using OpenSim.Framework.Servers.HttpServer;
-using OpenSim.Server.Handlers.Base;
-using OpenSim.Services.Interfaces;
-using Nini.Config;
-using OpenMetaverse;
 
 namespace OpenSim.Server.Handlers.Authentication
 {

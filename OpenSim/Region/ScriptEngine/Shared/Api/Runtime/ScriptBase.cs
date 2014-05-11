@@ -25,17 +25,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Runtime.Remoting;
-using System.Runtime.Remoting.Lifetime;
-using System.Security.Permissions;
-using System.Threading;
-using System.Reflection;
-using System.Collections;
-using System.Collections.Generic;
 using OpenSim.Region.ScriptEngine.Interfaces;
-using OpenSim.Region.ScriptEngine.Shared;
-using OpenSim.Region.ScriptEngine.Shared.Api.Runtime;
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Runtime.Remoting.Lifetime;
 
 namespace OpenSim.Region.ScriptEngine.Shared.ScriptBase
 {

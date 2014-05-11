@@ -25,14 +25,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Runtime.InteropServices;
 using OpenMetaverse;
 using OpenSim.Framework;
-using OpenSim.Region.Physics.Manager;
-
+using System;
 using OMV = OpenMetaverse;
 
 namespace OpenSim.Region.Physics.BulletSPlugin

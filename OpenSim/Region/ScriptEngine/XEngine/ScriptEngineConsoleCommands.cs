@@ -25,13 +25,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections.Generic;
 using OpenSim.Framework;
 using OpenSim.Framework.Console;
 using OpenSim.Region.ScriptEngine.Interfaces;
 using OpenSim.Region.ScriptEngine.Shared.Api;
 using OpenSim.Region.ScriptEngine.Shared.Api.Plugins;
+using System.Collections.Generic;
 
 namespace OpenSim.Region.ScriptEngine.XEngine
 {

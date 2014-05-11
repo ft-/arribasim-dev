@@ -41,16 +41,15 @@
 
 //#define SPAM
 
+using log4net;
+using Ode.NET;
+using OpenMetaverse;
+using OpenSim.Framework;
+using OpenSim.Region.Physics.Manager;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Threading;
-using log4net;
-using OpenMetaverse;
-using Ode.NET;
-using OpenSim.Framework;
-using OpenSim.Region.Physics.Manager;
 
 namespace OpenSim.Region.Physics.OdePlugin
 {

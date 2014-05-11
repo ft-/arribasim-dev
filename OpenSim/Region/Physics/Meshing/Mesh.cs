@@ -25,13 +25,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using OpenMetaverse;
+using OpenSim.Region.Physics.Manager;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
-using OpenSim.Region.Physics.Manager;
-using PrimMesher;
-using OpenMetaverse;
 
 namespace OpenSim.Region.Physics.Meshing
 {

@@ -25,14 +25,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using Ode.NET;
+using OpenMetaverse;
+using OpenSim.Framework;
+using OpenSim.Region.Physics.Manager;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using OpenMetaverse;
-using Ode.NET;
-using OpenSim.Framework;
-using OpenSim.Region.Physics.Manager;
-using log4net;
 
 namespace OpenSim.Region.Physics.OdePlugin
 {

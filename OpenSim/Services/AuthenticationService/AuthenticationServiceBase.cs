@@ -25,15 +25,15 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using OpenMetaverse;
 using log4net;
 using Nini.Config;
-using System.Reflection;
+using OpenMetaverse;
 using OpenSim.Data;
 using OpenSim.Framework;
 using OpenSim.Services.Base;
 using OpenSim.Services.Interfaces;
+using System;
+using System.Reflection;
 
 namespace OpenSim.Services.AuthenticationService
 {

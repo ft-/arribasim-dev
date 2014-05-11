@@ -25,38 +25,34 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using Amib.Threading;
+using log4net;
+using Nini.Config;
+using OpenMetaverse;
+using OpenSim.Framework;
+using OpenSim.Framework.Console;
+using OpenSim.Region.Framework.Interfaces;
+using OpenSim.Region.Framework.Scenes;
+using OpenSim.Region.ScriptEngine.Interfaces;
+using OpenSim.Region.ScriptEngine.Shared;
+using OpenSim.Region.ScriptEngine.Shared.Api;
+using OpenSim.Region.ScriptEngine.Shared.Api.Plugins;
+using OpenSim.Region.ScriptEngine.Shared.CodeTools;
+using OpenSim.Region.ScriptEngine.Shared.Instance;
+using OpenSim.Region.ScriptEngine.Shared.ScriptBase;
+using OpenSim.Region.ScriptEngine.XEngine.ScriptBase;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Security;
 using System.Security.Policy;
 using System.Text;
 using System.Threading;
 using System.Xml;
-using OpenMetaverse;
-using OpenMetaverse.StructuredData;
-using log4net;
-using Nini.Config;
-using Amib.Threading;
-using OpenSim.Framework;
-using OpenSim.Framework.Console;
-using OpenSim.Region.Framework.Scenes;
-using OpenSim.Region.Framework.Interfaces;
-using OpenSim.Region.ScriptEngine.Interfaces;
-using OpenSim.Region.ScriptEngine.Shared;
-using OpenSim.Region.ScriptEngine.Shared.CodeTools;
-using OpenSim.Region.ScriptEngine.Shared.Instance;
-using OpenSim.Region.ScriptEngine.Shared.Api;
-using OpenSim.Region.ScriptEngine.Shared.Api.Plugins;
-using OpenSim.Region.ScriptEngine.Shared.ScriptBase;
-using OpenSim.Region.ScriptEngine.XEngine.ScriptBase;
-using Timer = OpenSim.Region.ScriptEngine.Shared.Api.Plugins.Timer;
-
 using ScriptCompileQueue = OpenSim.Framework.LocklessQueue<object[]>;
+using Timer = OpenSim.Region.ScriptEngine.Shared.Api.Plugins.Timer;
 
 namespace OpenSim.Region.ScriptEngine.XEngine
 {

@@ -25,16 +25,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using OpenSim.Framework;
 using System;
 using System.Collections;
 using System.Globalization;
 using System.Text.RegularExpressions;
-using OpenSim.Framework;
-
-using OpenMetaverse;
+using OMV_Quaternion = OpenMetaverse.Quaternion;
 using OMV_Vector3 = OpenMetaverse.Vector3;
 using OMV_Vector3d = OpenMetaverse.Vector3d;
-using OMV_Quaternion = OpenMetaverse.Quaternion;
 
 namespace OpenSim.Region.ScriptEngine.Shared
 {

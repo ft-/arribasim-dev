@@ -25,23 +25,19 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using Nini.Config;
 using log4net;
-using System;
-using System.Reflection;
-using System.IO;
-using System.Net;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Xml;
-using System.Xml.Serialization;
-using System.Collections.Generic;
+using Nini.Config;
+using OpenMetaverse;
+using OpenSim.Framework;
+using OpenSim.Framework.Servers.HttpServer;
 using OpenSim.Server.Base;
 using OpenSim.Services.Interfaces;
 using OpenSim.Services.UserAccountService;
-using OpenSim.Framework;
-using OpenSim.Framework.Servers.HttpServer;
-using OpenMetaverse;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
+using System.Xml;
 
 namespace OpenSim.Server.Handlers.UserAccounts
 {

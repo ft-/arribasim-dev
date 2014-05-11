@@ -25,13 +25,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using Nini.Config;
+using OpenSim.Services.Base;
 using System;
 using System.Reflection;
-using Nini.Config;
-using OpenSim.Framework;
-using OpenSim.Services.Interfaces;
-using OpenSim.Services.Base;
-using log4net;
 
 namespace OpenSim.Services.FreeswitchService
 {

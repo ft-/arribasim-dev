@@ -25,8 +25,6 @@
  * THE SOFTWARE.
  */
 
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace OpenSim.Region.Physics.ConvexDecompositionDotNet

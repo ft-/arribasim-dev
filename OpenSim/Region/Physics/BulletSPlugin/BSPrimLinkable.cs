@@ -1,3 +1,5 @@
+using OpenSim.Framework;
+using OpenSim.Region.OptionalModules.Scripting;
 /*
  * Copyright (c) Contributors, http://opensimulator.org/
  * See CONTRIBUTORS.TXT for a full list of copyright holders.
@@ -26,12 +28,6 @@
  */
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-using OpenSim.Framework;
-using OpenSim.Region.OptionalModules.Scripting;
-
 using OMV = OpenMetaverse;
 
 namespace OpenSim.Region.Physics.BulletSPlugin

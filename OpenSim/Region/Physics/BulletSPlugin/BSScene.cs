@@ -1,3 +1,8 @@
+using log4net;
+using Nini.Config;
+using OpenMetaverse;
+using OpenSim.Framework;
+using OpenSim.Region.Physics.Manager;
 /*
  * Copyright (c) Contributors, http://opensimulator.org/
  * See CONTRIBUTORS.TXT for a full list of copyright holders.
@@ -27,18 +32,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
-using OpenSim.Framework;
-using OpenSim.Region.Framework;
-using OpenSim.Region.CoreModules;
 using Logging = OpenSim.Region.CoreModules.Framework.Statistics.Logging;
-using OpenSim.Region.Physics.Manager;
-using Nini.Config;
-using log4net;
-using OpenMetaverse;
 
 namespace OpenSim.Region.Physics.BulletSPlugin
 {

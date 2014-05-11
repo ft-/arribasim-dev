@@ -25,10 +25,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections.Generic;
-using Nini.Config;
-using OpenSim.Framework;
 using OpenSim.Region.Physics.Manager;
 
 namespace OpenSim.Region.Physics.POSPlugin

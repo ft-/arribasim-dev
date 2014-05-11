@@ -26,21 +26,21 @@
  */
 //#define SPAM
 
-using System;
-using System.Collections.Generic;
-using OpenSim.Framework;
-using OpenSim.Region.Physics.Manager;
-using OpenMetaverse;
-using OpenMetaverse.StructuredData;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.IO.Compression;
-using System.Threading;
-using PrimMesher;
 using log4net;
 using Nini.Config;
-using System.Reflection;
+using OpenMetaverse;
+using OpenMetaverse.StructuredData;
+using OpenSim.Framework;
+using OpenSim.Region.Physics.Manager;
+using PrimMesher;
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
+using System.IO.Compression;
+using System.Reflection;
+using System.Threading;
 
 namespace OpenSim.Region.Physics.Meshing
 {

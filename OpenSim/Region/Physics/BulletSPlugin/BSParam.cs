@@ -1,3 +1,6 @@
+using Nini.Config;
+using OpenMetaverse;
+using OpenSim.Region.Physics.Manager;
 /*
  * Copyright (c) Contributors, http://opensimulator.org/
  * See CONTRIBUTORS.TXT for a full list of copyright holders.
@@ -27,12 +30,6 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Text;
-
-using OpenSim.Region.Physics.Manager;
-
-using OpenMetaverse;
-using Nini.Config;
 
 namespace OpenSim.Region.Physics.BulletSPlugin
 {

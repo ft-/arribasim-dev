@@ -25,20 +25,17 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Threading;
 using log4net;
 using OpenMetaverse;
-using OpenSim.Framework;
 using OpenSim.Framework.Monitoring;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.ScriptEngine.Interfaces;
-using OpenSim.Region.ScriptEngine.Shared;
 using OpenSim.Region.ScriptEngine.Shared.Api.Plugins;
-using Timer=OpenSim.Region.ScriptEngine.Shared.Api.Plugins.Timer;
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Threading;
+using Timer = OpenSim.Region.ScriptEngine.Shared.Api.Plugins.Timer;
 
 namespace OpenSim.Region.ScriptEngine.Shared.Api
 {

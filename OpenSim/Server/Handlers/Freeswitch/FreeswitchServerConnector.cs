@@ -25,18 +25,16 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using Nini.Config;
+using OpenSim.Framework.Servers.HttpServer;
+using OpenSim.Server.Base;
+using OpenSim.Server.Handlers.Base;
+using OpenSim.Services.Interfaces;
 using System;
 using System.Collections;
-using System.Web;
 using System.Reflection;
-using Nini.Config;
-using OpenSim.Server.Base;
-using OpenSim.Services.Interfaces;
-using OpenSim.Framework.Servers.HttpServer;
-using OpenSim.Server.Handlers.Base;
-using log4net;
-using OpenMetaverse;
-using OpenMetaverse.StructuredData;
+using System.Web;
 
 namespace OpenSim.Server.Handlers.Freeswitch
 {

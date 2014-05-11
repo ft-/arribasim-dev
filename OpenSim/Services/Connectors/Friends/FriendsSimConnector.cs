@@ -25,17 +25,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using log4net;
+using OpenMetaverse;
+using OpenSim.Framework;
+using OpenSim.Server.Base;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-
-using OpenSim.Services.Interfaces;
 using GridRegion = OpenSim.Services.Interfaces.GridRegion;
-using OpenSim.Server.Base;
-using OpenSim.Framework;
-
-using OpenMetaverse;
-using log4net;
 
 namespace OpenSim.Services.Connectors.Friends
 {

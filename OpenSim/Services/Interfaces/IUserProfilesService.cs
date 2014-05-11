@@ -25,10 +25,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using OpenSim.Framework;
 using OpenMetaverse;
 using OpenMetaverse.StructuredData;
+using OpenSim.Framework;
 
 namespace OpenSim.Services.Interfaces
 {

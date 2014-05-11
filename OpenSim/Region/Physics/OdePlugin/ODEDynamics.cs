@@ -38,15 +38,10 @@
  * settings use.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using log4net;
-using OpenMetaverse;
 using Ode.NET;
-using OpenSim.Framework;
+using OpenMetaverse;
 using OpenSim.Region.Physics.Manager;
+using System;
 
 namespace OpenSim.Region.Physics.OdePlugin
 {

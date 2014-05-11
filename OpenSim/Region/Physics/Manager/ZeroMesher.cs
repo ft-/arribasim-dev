@@ -25,11 +25,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using Nini.Config;
+using OpenMetaverse;
+using OpenSim.Framework;
 using System;
 using System.Collections.Generic;
-using OpenSim.Framework;
-using OpenMetaverse;
-using Nini.Config;
 
 /*
  * This is the zero mesher.

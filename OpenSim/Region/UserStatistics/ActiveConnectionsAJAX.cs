@@ -25,17 +25,15 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Text;
-using Mono.Data.SqliteClient;
 using OpenMetaverse;
 using OpenMetaverse.StructuredData;
 using OpenSim.Framework;
-using OpenSim.Region.Framework.Scenes;
 using OpenSim.Framework.Monitoring;
+using OpenSim.Region.Framework.Scenes;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Text;
 
 namespace OpenSim.Region.UserStatistics
 {

@@ -25,19 +25,17 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using OpenMetaverse;
 using log4net;
 using Nini.Config;
-using System.Reflection;
-using OpenSim.Services.Base;
-using OpenSim.Services.Interfaces;
-using OpenSim.Services.InventoryService;
+using OpenMetaverse;
 using OpenSim.Data;
 using OpenSim.Framework;
 using OpenSim.Server.Base;
+using OpenSim.Services.Interfaces;
+using OpenSim.Services.InventoryService;
+using System;
+using System.Collections.Generic;
+using System.Reflection;
 
 namespace OpenSim.Services.HypergridService
 {

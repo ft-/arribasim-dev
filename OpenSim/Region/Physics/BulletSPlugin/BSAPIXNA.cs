@@ -1,3 +1,9 @@
+using BulletXNA;
+using BulletXNA.BulletCollision;
+using BulletXNA.BulletDynamics;
+using BulletXNA.LinearMath;
+using OpenMetaverse;
+using OpenSim.Framework;
 /*
  * Copyright (c) Contributors, http://opensimulator.org/
  * See CONTRIBUTORS.TXT for a full list of copyright holders.
@@ -27,18 +33,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.InteropServices;
-using System.Text;
-
-using OpenSim.Framework;
-
-using OpenMetaverse;
-
-using BulletXNA;
-using BulletXNA.LinearMath;
-using BulletXNA.BulletCollision;
-using BulletXNA.BulletDynamics;
-using BulletXNA.BulletCollision.CollisionDispatch;
 
 namespace OpenSim.Region.Physics.BulletSPlugin
 {

@@ -25,28 +25,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using OpenMetaverse;
+using OpenSim.Framework;
 using System;
-using System.IO;
-using System.Threading;
-using System.Collections;
 using System.Collections.Generic;
-using System.Security.Policy;
-using System.Reflection;
 using System.Globalization;
 using System.Xml;
-using OpenMetaverse;
-using log4net;
-using Nini.Config;
-using Amib.Threading;
-using OpenSim.Framework;
-using OpenSim.Region.CoreModules;
-using OpenSim.Region.Framework.Scenes;
-using OpenSim.Region.Framework.Interfaces;
-using OpenSim.Region.ScriptEngine.Shared;
-using OpenSim.Region.ScriptEngine.Shared.Api;
-using OpenSim.Region.ScriptEngine.Shared.ScriptBase;
-using OpenSim.Region.ScriptEngine.Shared.CodeTools;
-using OpenSim.Region.ScriptEngine.Interfaces;
 
 namespace OpenSim.Region.ScriptEngine.Shared.Instance
 {

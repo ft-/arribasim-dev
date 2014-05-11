@@ -29,21 +29,14 @@
  * https://github.com/openmetaversefoundation/simiangrid/
  */
 
+using log4net;
+using Nini.Config;
+using OpenSim.Services.Interfaces;
 using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
-using System.Net;
 using System.Reflection;
-
-using Nini.Config;
-using log4net;
-using OpenMetaverse;
-
-using OpenSim.Framework;
-using OpenSim.Framework.Console;
-using OpenSim.Services.Interfaces;
 
 
 namespace OpenSim.Services.MapImageService

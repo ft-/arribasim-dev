@@ -25,23 +25,18 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using Nini.Config;
 using log4net;
-using System;
-using System.Reflection;
-using System.IO;
-using System.Net;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Xml;
-using System.Xml.Serialization;
-using System.Collections.Generic;
-using OpenSim.Server.Base;
-using OpenSim.Services.Interfaces;
-using FriendInfo = OpenSim.Services.Interfaces.FriendInfo;
+using OpenMetaverse;
 using OpenSim.Framework;
 using OpenSim.Framework.Servers.HttpServer;
-using OpenMetaverse;
+using OpenSim.Server.Base;
+using OpenSim.Services.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
+using System.Xml;
+using FriendInfo = OpenSim.Services.Interfaces.FriendInfo;
 
 namespace OpenSim.Server.Handlers.Friends
 {

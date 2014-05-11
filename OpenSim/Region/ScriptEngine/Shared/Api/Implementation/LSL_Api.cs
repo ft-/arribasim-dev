@@ -25,40 +25,32 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Runtime.Remoting.Lifetime;
-using System.Text;
-using System.Threading;
-using System.Text.RegularExpressions;
-using Nini.Config;
 using log4net;
+using Nini.Config;
 using OpenMetaverse;
 using OpenMetaverse.Packets;
-using OpenSim;
 using OpenSim.Framework;
-
-using OpenSim.Region.CoreModules;
 using OpenSim.Region.CoreModules.World.Land;
-using OpenSim.Region.CoreModules.World.Terrain;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
 using OpenSim.Region.Framework.Scenes.Animation;
 using OpenSim.Region.Framework.Scenes.Scripting;
 using OpenSim.Region.Physics.Manager;
-using OpenSim.Region.ScriptEngine.Shared;
-using OpenSim.Region.ScriptEngine.Shared.Api.Plugins;
-using OpenSim.Region.ScriptEngine.Shared.ScriptBase;
 using OpenSim.Region.ScriptEngine.Interfaces;
 using OpenSim.Region.ScriptEngine.Shared.Api.Interfaces;
+using OpenSim.Region.ScriptEngine.Shared.ScriptBase;
 using OpenSim.Services.Interfaces;
-using GridRegion = OpenSim.Services.Interfaces.GridRegion;
-using PresenceInfo = OpenSim.Services.Interfaces.PresenceInfo;
-using PrimType = OpenSim.Region.Framework.Scenes.PrimType;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Runtime.Remoting.Lifetime;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading;
 using AssetLandmark = OpenSim.Framework.AssetLandmark;
-using RegionFlags = OpenSim.Framework.RegionFlags;
-
+using GridRegion = OpenSim.Services.Interfaces.GridRegion;
 using LSL_Float = OpenSim.Region.ScriptEngine.Shared.LSL_Types.LSLFloat;
 using LSL_Integer = OpenSim.Region.ScriptEngine.Shared.LSL_Types.LSLInteger;
 using LSL_Key = OpenSim.Region.ScriptEngine.Shared.LSL_Types.LSLString;
@@ -66,9 +58,10 @@ using LSL_List = OpenSim.Region.ScriptEngine.Shared.LSL_Types.list;
 using LSL_Rotation = OpenSim.Region.ScriptEngine.Shared.LSL_Types.Quaternion;
 using LSL_String = OpenSim.Region.ScriptEngine.Shared.LSL_Types.LSLString;
 using LSL_Vector = OpenSim.Region.ScriptEngine.Shared.LSL_Types.Vector3;
-using System.Reflection;
-using System.Linq;
 using PermissionMask = OpenSim.Framework.PermissionMask;
+using PresenceInfo = OpenSim.Services.Interfaces.PresenceInfo;
+using PrimType = OpenSim.Region.Framework.Scenes.PrimType;
+using RegionFlags = OpenSim.Framework.RegionFlags;
 
 namespace OpenSim.Region.ScriptEngine.Shared.Api
 {
