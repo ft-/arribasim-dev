@@ -76,6 +76,7 @@ namespace OpenSim.Region.ClientStack.Linden
         private ReaderWriterLock m_idsRwLock = new ReaderWriterLock();
 
         private Dictionary<UUID, Queue<OSD>> queues = new Dictionary<UUID, Queue<OSD>>();
+        private ReaderWriterLock queuesRwLock = new ReaderWriterLock();
         private Dictionary<UUID, UUID> m_QueueUUIDAvatarMapping = new Dictionary<UUID, UUID>();
         private ReaderWriterLock m_QueueUUIDAvatarMappingRwLock = new ReaderWriterLock();
         private Dictionary<UUID, UUID> m_AvatarQueueUUIDMapping = new Dictionary<UUID, UUID>();
@@ -166,7 +167,8 @@ namespace OpenSim.Region.ClientStack.Linden
         {
             MainConsole.Instance.OutputFormat("For scene {0}", m_scene.Name);
 
-            lock (queues)
+            queuesRwLock.AcquireReaderLock(-1);
+            try
             {
                 foreach (KeyValuePair<UUID, Queue<OSD>> kvp in queues)
                 {
@@ -174,6 +176,10 @@ namespace OpenSim.Region.ClientStack.Linden
                         "For agent {0} there are {1} messages queued for send.", 
                         kvp.Key, kvp.Value.Count);
                 }
+            }
+            finally
+            {
+                queuesRwLock.ReleaseReaderLock();
             }
         }
 
@@ -184,17 +190,34 @@ namespace OpenSim.Region.ClientStack.Linden
         /// <returns></returns>
         private Queue<OSD> TryGetQueue(UUID agentId)
         {
-            lock (queues)
+            queuesRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (!queues.ContainsKey(agentId))
                 {
                     m_log.DebugFormat(
                         "[EVENTQUEUE]: Adding new queue for agent {0} in region {1}", 
                         agentId, m_scene.RegionInfo.RegionName);
-                    queues[agentId] = new Queue<OSD>();
+                    LockCookie lc = queuesRwLock.UpgradeToWriterLock(-1);
+                    try
+                    {
+                        /* recheck due to multi-threading nature */
+                        if (!queues.ContainsKey(agentId))
+                        {
+                            queues[agentId] = new Queue<OSD>();
+                        }
+                    }
+                    finally
+                    {
+                        queuesRwLock.DowngradeFromWriterLock(ref lc);
+                    }
                 }
 
                 return queues[agentId];
+            }
+            finally
+            {
+                queuesRwLock.ReleaseReaderLock();
             }
         }
 
@@ -205,7 +228,8 @@ namespace OpenSim.Region.ClientStack.Linden
         /// <returns></returns>
         private Queue<OSD> GetQueue(UUID agentId)
         {
-            lock (queues)
+            queuesRwLock.AcquireReaderLock(-1);
+            try
             {
                 if (queues.ContainsKey(agentId))
                 {
@@ -213,6 +237,10 @@ namespace OpenSim.Region.ClientStack.Linden
                 }
                 else
                     return null;
+            }
+            finally
+            {
+                queuesRwLock.ReleaseReaderLock();
             }
         }
 
@@ -226,8 +254,15 @@ namespace OpenSim.Region.ClientStack.Linden
                 Queue<OSD> queue = GetQueue(avatarID);
                 if (queue != null)
                 {
-                    lock (queue)
+                    queuesRwLock.AcquireReaderLock(-1);
+                    try
+                    {
                         queue.Enqueue(ev);
+                    }
+                    finally
+                    {
+                        queuesRwLock.ReleaseReaderLock();
+                    }
                 }
                 else if (DebugLevel > 0)
                 {
@@ -258,8 +293,15 @@ namespace OpenSim.Region.ClientStack.Linden
         {
             //m_log.DebugFormat("[EVENTQUEUE]: Closed client {0} in region {1}", agentID, m_scene.RegionInfo.RegionName);
 
-            lock (queues)
+            queuesRwLock.AcquireWriterLock(-1);
+            try
+            {
                 queues.Remove(agentID);
+            }
+            finally
+            {
+                queuesRwLock.ReleaseWriterLock();
+            }
 
             List<UUID> removeitems = new List<UUID>();
             m_AvatarQueueUUIDMappingRwLock.AcquireWriterLock(-1);
