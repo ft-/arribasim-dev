@@ -763,13 +763,18 @@ namespace OpenSim.Framework
             OSDBinary visualparams = new OSDBinary(m_visualparams);
             data["visualparams"] = visualparams;
 
-            lock (m_attachments)
+            m_attachmentsRwLock.AcquireReaderLock(-1);
+            try
             {
                 // Attachments
                 OSDArray attachs = new OSDArray(m_attachments.Count);
                 foreach (AvatarAttachment attach in GetAttachments())
                     attachs.Add(attach.Pack());
                 data["attachments"] = attachs;
+            }
+            finally
+            {
+                m_attachmentsRwLock.ReleaseReaderLock();
             }
 
             return data;
