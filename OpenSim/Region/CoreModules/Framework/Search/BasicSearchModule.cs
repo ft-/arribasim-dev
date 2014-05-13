@@ -54,7 +54,7 @@ namespace OpenSim.Region.CoreModules.Framework.Search
         public void Initialise(IConfigSource config)
         {
             string umanmod = config.Configs["Modules"].GetString("SearchModule", Name);
-            if (umanmod == Name)
+            if (umanmod == Name || umanmod == "OpenSimSearch" /* we have to support openSimSearch with our People and Groups capability */)
             {
                 m_Enabled = true;
                 m_log.DebugFormat("[BASIC SEARCH MODULE]: {0} is enabled", Name);
