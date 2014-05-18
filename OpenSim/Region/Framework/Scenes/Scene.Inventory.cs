@@ -2431,6 +2431,11 @@ namespace OpenSim.Region.Framework.Scenes
             {
                 if (ownerID != UUID.Zero)
                 {
+                    /* when owner changes here, clear out the FromFolderID (new owner does not have the same folders) */
+                    if(sog.OwnerID != ownerID)
+                    {
+                        sog.FromFolderID = UUID.Zero;
+                    }
                     sog.SetOwnerId(ownerID);
                     sog.SetGroup(groupID, remoteClient);
                     sog.ScheduleGroupForFullUpdate();
@@ -2460,6 +2465,7 @@ namespace OpenSim.Region.Framework.Scenes
                         child.TriggerScriptChangedEvent(Changed.OWNER);
                     }
 
+                    sog.FromFolderID = UUID.Zero; /* owner changes, so clear the FromFolderID */
                     sog.SetOwnerId(groupID);
                     sog.ApplyNextOwnerPermissions();
                 }
