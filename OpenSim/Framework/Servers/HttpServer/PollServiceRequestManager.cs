@@ -61,7 +61,7 @@ namespace OpenSim.Framework.Servers.HttpServer
 
         private readonly BaseHttpServer m_server;
 
-        private BlockingQueue<PollServiceHttpRequest> m_requests = new BlockingQueue<PollServiceHttpRequest>();
+        private ThreadedClasses.BlockingQueue<PollServiceHttpRequest> m_requests = new ThreadedClasses.BlockingQueue<PollServiceHttpRequest>();
         private static ThreadedClasses.RwLockedList<PollServiceHttpRequest> m_longPollRequests = new ThreadedClasses.RwLockedList<PollServiceHttpRequest>();
 
         private uint m_WorkerThreadCount = 0;
@@ -89,7 +89,7 @@ namespace OpenSim.Framework.Servers.HttpServer
                     m_server.Port.ToString(),
                     StatType.Pull,
                     MeasuresOfInterest.AverageChangeOverTime,
-                    stat => stat.Value = m_requests.Count(),
+                    stat => stat.Value = m_requests.Count,
                     StatVerbosity.Debug));
 
             StatsManager.RegisterStat(
@@ -211,18 +211,25 @@ namespace OpenSim.Framework.Servers.HttpServer
             if (m_longPollRequests.Count > 0 && IsRunning)
                 m_longPollRequests.ForEach(req => m_requests.Enqueue(req));
 
-            while (m_requests.Count() > 0)
+            try
             {
-                try
+                while (true)
                 {
                     wreq = m_requests.Dequeue(0);
                     ResponsesProcessed++;
-                    wreq.DoHTTPGruntWork(
-                        m_server, wreq.PollServiceArgs.NoEvents(wreq.RequestID, wreq.PollServiceArgs.Id));
+                    try
+                    {
+                        wreq.DoHTTPGruntWork(
+                            m_server, wreq.PollServiceArgs.NoEvents(wreq.RequestID, wreq.PollServiceArgs.Id));
+                    }
+                    catch
+                    {
+
+                    }
                 }
-                catch
-                {
-                }
+            }
+            catch
+            {
             }
 
             m_longPollRequests.Clear();
