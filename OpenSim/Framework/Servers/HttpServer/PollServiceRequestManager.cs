@@ -62,7 +62,7 @@ namespace OpenSim.Framework.Servers.HttpServer
         private readonly BaseHttpServer m_server;
 
         private BlockingQueue<PollServiceHttpRequest> m_requests = new BlockingQueue<PollServiceHttpRequest>();
-        private static List<PollServiceHttpRequest> m_longPollRequests = new List<PollServiceHttpRequest>();
+        private static ThreadedClasses.RwLockedList<PollServiceHttpRequest> m_longPollRequests = new ThreadedClasses.RwLockedList<PollServiceHttpRequest>();
 
         private uint m_WorkerThreadCount = 0;
         private Thread[] m_workerThreads;
@@ -159,8 +159,7 @@ namespace OpenSim.Framework.Servers.HttpServer
             {
                 if (req.PollServiceArgs.Type == PollServiceEventArgs.EventType.LongPoll)
                 {
-                    lock (m_longPollRequests)
-                        m_longPollRequests.Add(req);
+                    m_longPollRequests.Add(req);
                 }
                 else
                     m_requests.Enqueue(req);
@@ -181,22 +180,18 @@ namespace OpenSim.Framework.Servers.HttpServer
                 Watchdog.UpdateThread();
 
 //                List<PollServiceHttpRequest> not_ready = new List<PollServiceHttpRequest>();
-                lock (m_longPollRequests)
+                if (m_longPollRequests.Count > 0 && IsRunning)
                 {
-                    if (m_longPollRequests.Count > 0 && IsRunning)
-                    {
-                        List<PollServiceHttpRequest> ready = m_longPollRequests.FindAll(req =>
-                            (req.PollServiceArgs.HasEvents(req.RequestID, req.PollServiceArgs.Id) || // there are events in this EQ
-                            (Environment.TickCount - req.RequestTime) > req.PollServiceArgs.TimeOutms) // no events, but timeout
-                            );
+                    List<PollServiceHttpRequest> ready = m_longPollRequests.FindAll(req =>
+                        (req.PollServiceArgs.HasEvents(req.RequestID, req.PollServiceArgs.Id) || // there are events in this EQ
+                        (Environment.TickCount - req.RequestTime) > req.PollServiceArgs.TimeOutms) // no events, but timeout
+                        );
 
-                        ready.ForEach(req =>
-                            {
-                                m_requests.Enqueue(req);
-                                m_longPollRequests.Remove(req);
-                            });
-
-                    }
+                    ready.ForEach(req =>
+                        {
+                            m_requests.Enqueue(req);
+                            m_longPollRequests.Remove(req);
+                        });
 
                 }
             }
@@ -213,11 +208,8 @@ namespace OpenSim.Framework.Servers.HttpServer
 
             PollServiceHttpRequest wreq;
 
-            lock (m_longPollRequests)
-            {
-                if (m_longPollRequests.Count > 0 && IsRunning)
-                    m_longPollRequests.ForEach(req => m_requests.Enqueue(req));
-            }
+            if (m_longPollRequests.Count > 0 && IsRunning)
+                m_longPollRequests.ForEach(req => m_requests.Enqueue(req));
 
             while (m_requests.Count() > 0)
             {
