@@ -544,7 +544,15 @@ namespace OpenSim.Region.CoreModules.World.WorldMap
             {
                 while (true)
                 {
-                    MapRequestState st = requests.Dequeue(1000);
+                    MapRequestState st;
+                    try
+                    {
+                        st = requests.Dequeue(1000);
+                    }
+                    catch (ThreadedClasses.BlockingQueue<MapRequestState>.TimeoutException)
+                    {
+                        continue;
+                    }
 
                     // end gracefully
                     if (st.agentID == STOP_UUID)

@@ -249,7 +249,15 @@ namespace OpenSim.Framework.Servers.HttpServer
 
         public void WaitPerformResponse()
         {
-            PollServiceHttpRequest req = m_requests.Dequeue(5000);
+            PollServiceHttpRequest req;
+            try
+            {
+                req = m_requests.Dequeue(5000);
+            }
+            catch
+            {
+                req = null;
+            }
 //            m_log.DebugFormat("[YYY]: Dequeued {0}", (req == null ? "null" : req.PollServiceArgs.Type.ToString()));
 
             if (req != null)
