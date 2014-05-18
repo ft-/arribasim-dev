@@ -54,8 +54,8 @@ namespace OpenSim.Region.OptionalModules.Avatar.Concierge
 
         private const int DEBUG_CHANNEL = 2147483647;
 
-        private List<IScene> m_scenes = new List<IScene>();
-        private List<IScene> m_conciergedScenes = new List<IScene>();
+        private ThreadedClasses.RwLockedList<IScene> m_scenes = new ThreadedClasses.RwLockedList<IScene>();
+        private ThreadedClasses.RwLockedList<IScene> m_conciergedScenes = new ThreadedClasses.RwLockedList<IScene>();
 
         private bool m_replacingChatModule = false;
 
@@ -70,8 +70,6 @@ namespace OpenSim.Region.OptionalModules.Avatar.Concierge
         private string m_xmlRpcPassword = String.Empty;
         private string m_brokerURI = String.Empty;
         private int m_brokerUpdateTimeout = 300;
-
-        internal object m_syncy = new object();
 
         internal bool m_enabled = false;
 
@@ -142,29 +140,23 @@ namespace OpenSim.Region.OptionalModules.Avatar.Concierge
 
             MainServer.Instance.AddXmlRPCHandler("concierge_update_welcome", XmlRpcUpdateWelcomeMethod, false);
 
-            lock (m_syncy)
-            {
-                if (!m_scenes.Contains(scene))
-                {
-                    m_scenes.Add(scene);
+            m_scenes.Add(scene);
 
-                    if (m_regions == null || m_regions.IsMatch(scene.RegionInfo.RegionName))
-                        m_conciergedScenes.Add(scene);
+            if (m_regions == null || m_regions.IsMatch(scene.RegionInfo.RegionName))
+                m_conciergedScenes.Add(scene);
 
-                    // subscribe to NewClient events
-                    scene.EventManager.OnNewClient += OnNewClient;
+            // subscribe to NewClient events
+            scene.EventManager.OnNewClient += OnNewClient;
 
-                    // subscribe to *Chat events
-                    scene.EventManager.OnChatFromWorld += OnChatFromWorld;
-                    if (!m_replacingChatModule)
-                        scene.EventManager.OnChatFromClient += OnChatFromClient;
-                    scene.EventManager.OnChatBroadcast += OnChatBroadcast;
+            // subscribe to *Chat events
+            scene.EventManager.OnChatFromWorld += OnChatFromWorld;
+            if (!m_replacingChatModule)
+                scene.EventManager.OnChatFromClient += OnChatFromClient;
+            scene.EventManager.OnChatBroadcast += OnChatBroadcast;
 
-                    // subscribe to agent change events
-                    scene.EventManager.OnMakeRootAgent += OnMakeRootAgent;
-                    scene.EventManager.OnMakeChildAgent += OnMakeChildAgent;
-                }
-            }
+            // subscribe to agent change events
+            scene.EventManager.OnMakeRootAgent += OnMakeRootAgent;
+            scene.EventManager.OnMakeChildAgent += OnMakeChildAgent;
             m_log.InfoFormat("[Concierge]: initialized for {0}", scene.RegionInfo.RegionName);
         }
 
@@ -174,31 +166,22 @@ namespace OpenSim.Region.OptionalModules.Avatar.Concierge
 
             MainServer.Instance.RemoveXmlRPCHandler("concierge_update_welcome");
 
-            lock (m_syncy)
-            {
-                // unsubscribe from NewClient events
-                scene.EventManager.OnNewClient -= OnNewClient;
+            // unsubscribe from NewClient events
+            scene.EventManager.OnNewClient -= OnNewClient;
 
-                // unsubscribe from *Chat events
-                scene.EventManager.OnChatFromWorld -= OnChatFromWorld;
-                if (!m_replacingChatModule)
-                    scene.EventManager.OnChatFromClient -= OnChatFromClient;
-                scene.EventManager.OnChatBroadcast -= OnChatBroadcast;
+            // unsubscribe from *Chat events
+            scene.EventManager.OnChatFromWorld -= OnChatFromWorld;
+            if (!m_replacingChatModule)
+                scene.EventManager.OnChatFromClient -= OnChatFromClient;
+            scene.EventManager.OnChatBroadcast -= OnChatBroadcast;
 
-                // unsubscribe from agent change events
-                scene.EventManager.OnMakeRootAgent -= OnMakeRootAgent;
-                scene.EventManager.OnMakeChildAgent -= OnMakeChildAgent;
+            // unsubscribe from agent change events
+            scene.EventManager.OnMakeRootAgent -= OnMakeRootAgent;
+            scene.EventManager.OnMakeChildAgent -= OnMakeChildAgent;
 
-                if (m_scenes.Contains(scene))
-                {
-                    m_scenes.Remove(scene);
-                }
+            m_scenes.Remove(scene);
+            m_conciergedScenes.Remove(scene);
 
-                if (m_conciergedScenes.Contains(scene))
-                {
-                    m_conciergedScenes.Remove(scene);
-                }
-            }
             m_log.InfoFormat("[Concierge]: removed {0}", scene.RegionInfo.RegionName);
         }
 
