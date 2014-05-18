@@ -56,9 +56,8 @@ namespace OpenSim.Groups
         private ForeignImporter m_ForeignImporter;
         private string m_ServiceLocation;
         private IConfigSource m_Config;
-        private ReaderWriterLock m_RwLock = new ReaderWriterLock();
 
-        private Dictionary<string, GroupsServiceHGConnector> m_NetworkConnectors = new Dictionary<string, GroupsServiceHGConnector>();
+        private ThreadedClasses.RwLockedDictionary<string, GroupsServiceHGConnector> m_NetworkConnectors = new ThreadedClasses.RwLockedDictionary<string, GroupsServiceHGConnector>();
         private RemoteConnectorCacheWrapper m_CacheWrapper; // for caching info of external group services
 
         #region ISharedRegionModule
@@ -688,23 +687,13 @@ namespace OpenSim.Groups
 
         private GroupsServiceHGConnector GetConnector(string url)
         {
-            m_RwLock.AcquireReaderLock(-1);
             try
             {
-                if (m_NetworkConnectors.ContainsKey(url))
-		{
-                    return m_NetworkConnectors[url];
-		}
-
-                LockCookie lc = m_RwLock.UpgradeToWriterLock(-1);
-                GroupsServiceHGConnector c = new GroupsServiceHGConnector(url);
-                m_NetworkConnectors[url] = c;
-                m_RwLock.DowngradeFromWriterLock(ref lc);
-                return c;
+                return m_NetworkConnectors[url];
             }
-            finally
+            catch(KeyNotFoundException)
             {
-                m_RwLock.ReleaseReaderLock();
+                return m_NetworkConnectors[url] = new GroupsServiceHGConnector(url);
             }
         }
         #endregion

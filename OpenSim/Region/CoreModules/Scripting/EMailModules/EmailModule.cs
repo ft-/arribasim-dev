@@ -69,9 +69,8 @@ namespace OpenSim.Region.CoreModules.Scripting.EmailModules
         private int m_MaxEmailSize = 4096;  // largest email allowed by default, as per lsl docs.
 
         // Scenes by Region Handle
-        private Dictionary<ulong, Scene> m_Scenes =
-            new Dictionary<ulong, Scene>();
-        private ReaderWriterLock m_ScenesRwLock = new ReaderWriterLock();
+        private ThreadedClasses.RwLockedDictionary<ulong, Scene> m_Scenes =
+            new ThreadedClasses.RwLockedDictionary<ulong, Scene>();
 
         private bool m_Enabled = false;
 
@@ -126,35 +125,20 @@ namespace OpenSim.Region.CoreModules.Scripting.EmailModules
             if (!m_Enabled)
                 return;
 
-        // It's a go!
-            m_ScenesRwLock.AcquireWriterLock(-1);
-            try
-            {
-                // Claim the interface slot
-                scene.RegisterModuleInterface<IEmailModule>(this);
+            // It's a go!
 
-                // Add to scene list
-                m_Scenes.Add(scene.RegionInfo.RegionHandle, scene);
-            }
-            finally
-            {
-                m_ScenesRwLock.ReleaseWriterLock();
-            }
+            // Claim the interface slot
+            scene.RegisterModuleInterface<IEmailModule>(this);
+
+            // Add to scene list
+            m_Scenes.Add(scene.RegionInfo.RegionHandle, scene);
 
             m_log.Info("[EMAIL] Activated DefaultEmailModule");
         }
 
         public void RemoveRegion(Scene scene)
         {
-            m_ScenesRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_Scenes.Remove(scene.RegionInfo.RegionHandle);
-            }
-            finally
-            {
-                m_ScenesRwLock.ReleaseWriterLock();
-            }
+            m_Scenes.Remove(scene.RegionInfo.RegionHandle);
         }
 
         public void PostInitialise()
@@ -213,25 +197,25 @@ namespace OpenSim.Region.CoreModules.Scripting.EmailModules
 
         private SceneObjectPart findPrim(UUID objectID, out string ObjectRegionName)
         {
-            m_ScenesRwLock.AcquireReaderLock(-1);
             try
             {
-                foreach (Scene s in m_Scenes.Values)
+                m_Scenes.ForEach(delegate(Scene s)
                 {
                     SceneObjectPart part = s.GetSceneObjectPart(objectID);
                     if (part != null)
                     {
-                        ObjectRegionName = s.RegionInfo.RegionName;
+                        string _ObjectRegionName = s.RegionInfo.RegionName;
                         uint localX = s.RegionInfo.WorldLocX;
                         uint localY = s.RegionInfo.WorldLocY;
-                        ObjectRegionName = ObjectRegionName + " (" + localX + ", " + localY + ")";
-                        return part;
+                        _ObjectRegionName = _ObjectRegionName + " (" + localX + ", " + localY + ")";
+                        throw new ThreadedClasses.ReturnValueException<KeyValuePair<string, SceneObjectPart>>(new KeyValuePair<string, SceneObjectPart>(_ObjectRegionName, part));
                     }
-                }
+                });
             }
-            finally
+            catch (ThreadedClasses.ReturnValueException<KeyValuePair<string, SceneObjectPart>> e)
             {
-                m_ScenesRwLock.ReleaseReaderLock();
+                ObjectRegionName = e.Value.Key;
+                return e.Value.Value;
             }
             ObjectRegionName = string.Empty;
             return null;

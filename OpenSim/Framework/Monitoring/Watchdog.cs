@@ -160,8 +160,7 @@ namespace OpenSim.Framework.Monitoring
         private static bool m_enabled;
 
         private static readonly ILog m_log = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-        private static Dictionary<int, ThreadWatchdogInfo> m_threads;
-        private static ReaderWriterLock m_threadsRwLock = new ReaderWriterLock();
+        private static ThreadedClasses.RwLockedDictionary<int, ThreadWatchdogInfo> m_threads;
         private static System.Timers.Timer m_watchdogTimer;
 
         /// <summary>
@@ -174,7 +173,7 @@ namespace OpenSim.Framework.Monitoring
 
         static Watchdog()
         {
-            m_threads = new Dictionary<int, ThreadWatchdogInfo>();
+            m_threads = new ThreadedClasses.RwLockedDictionary<int, ThreadWatchdogInfo>();
             m_watchdogTimer = new System.Timers.Timer(WATCHDOG_INTERVAL_MS);
             m_watchdogTimer.AutoReset = false;
             m_watchdogTimer.Elapsed += WatchdogTimerElapsed;
@@ -226,15 +225,7 @@ namespace OpenSim.Framework.Monitoring
             m_log.DebugFormat(
                 "[WATCHDOG]: Started tracking thread {0}, ID {1}", twi.Thread.Name, twi.Thread.ManagedThreadId);
 
-            m_threadsRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_threads.Add(twi.Thread.ManagedThreadId, twi);
-            }
-            finally
-            {
-                m_threadsRwLock.ReleaseWriterLock();
-            }
+            m_threads.Add(twi.Thread.ManagedThreadId, twi);
 
             thread.Start();
 
@@ -258,61 +249,40 @@ namespace OpenSim.Framework.Monitoring
         /// </returns>
         public static bool RemoveThread()
         {
-            m_threadsRwLock.AcquireWriterLock(-1);
-            try
-            {
-                return RemoveThread(Thread.CurrentThread.ManagedThreadId);
-            }
-            finally
-            {
-                m_threadsRwLock.ReleaseWriterLock();
-            }
+            return RemoveThread(Thread.CurrentThread.ManagedThreadId);
         }
 
         private static bool RemoveThread(int threadID)
         {
             ThreadWatchdogInfo twi;
-            if (m_threads.TryGetValue(threadID, out twi))
+            if (m_threads.Remove(threadID, out twi))
             {
                 m_log.DebugFormat(
                     "[WATCHDOG]: Removing thread {0}, ID {1}", twi.Thread.Name, twi.Thread.ManagedThreadId);
-
                 twi.Cleanup();
-                m_threads.Remove(threadID);
-
                 return true;
             }
-            else
-            {
-                m_log.WarnFormat(
-                    "[WATCHDOG]: Requested to remove thread with ID {0} but this is not being monitored", threadID);
+            m_log.WarnFormat(
+                "[WATCHDOG]: Requested to remove thread with ID {0} but this is not being monitored", threadID);
 
-                return false;
-            }
+            return false;
         }
 
         public static bool AbortThread(int threadID)
         {
-            m_threadsRwLock.AcquireWriterLock(-1);
-            try
+            ThreadWatchdogInfo twi;
+            if (m_threads.Remove(threadID, out twi))
             {
-                if (m_threads.ContainsKey(threadID))
-                {
-                    ThreadWatchdogInfo twi = m_threads[threadID];
-                    twi.Thread.Abort();
-                    RemoveThread(threadID);
+                twi.Thread.Abort();
+                m_log.DebugFormat(
+                    "[WATCHDOG]: Removing thread {0}, ID {1}", twi.Thread.Name, twi.Thread.ManagedThreadId);
+                twi.Cleanup();
+                return true;
+            }
+            m_log.WarnFormat(
+                "[WATCHDOG]: Requested to remove thread with ID {0} but this is not being monitored", threadID);
 
-                    return true;
-                }
-                else
-                {
-                    return false;
-                }
-            }
-            finally
-            {
-                m_threadsRwLock.ReleaseWriterLock();
-            }
+            return false;
         }
 
         private static void UpdateThread(int threadID)
@@ -323,23 +293,14 @@ namespace OpenSim.Framework.Monitoring
             // of a lock for speed. Adding/removing threads is a very rare operation compared to
             // UpdateThread(), and a single UpdateThread() failure here and there won't break
             // anything
-            m_threadsRwLock.AcquireReaderLock(-1);
-            try
+            if (m_threads.TryGetValue(threadID, out threadInfo))
             {
-                if (m_threads.TryGetValue(threadID, out threadInfo))
-                {
-                    threadInfo.LastTick = Environment.TickCount & Int32.MaxValue;
-                    threadInfo.IsTimedOut = false;
-                }
-                else
-                {
-                    m_log.WarnFormat("[WATCHDOG]: Asked to update thread {0} which is not being monitored", threadID);
-                }
+                threadInfo.LastTick = Environment.TickCount & Int32.MaxValue;
+                threadInfo.IsTimedOut = false;
             }
-            catch { }
-            finally
+            else
             {
-                m_threadsRwLock.ReleaseReaderLock();
+                m_log.WarnFormat("[WATCHDOG]: Asked to update thread {0} which is not being monitored", threadID);
             }
         }
         
@@ -349,15 +310,7 @@ namespace OpenSim.Framework.Monitoring
         /// <returns></returns>
         public static ThreadWatchdogInfo[] GetThreadsInfo()
         {
-            m_threadsRwLock.AcquireReaderLock(-1);
-            try
-            {
-                return m_threads.Values.ToArray();
-            }
-            finally
-            {
-                m_threadsRwLock.ReleaseReaderLock();
-            }
+            return m_threads.Values.ToArray();
         }
 
         /// <summary>
@@ -366,18 +319,14 @@ namespace OpenSim.Framework.Monitoring
         /// <returns>The watchdog info.  null if the thread isn't being monitored.</returns>
         public static ThreadWatchdogInfo GetCurrentThreadInfo()
         {
-            m_threadsRwLock.AcquireReaderLock(-1);
             try
             {
-                if (m_threads.ContainsKey(Thread.CurrentThread.ManagedThreadId))
-                    return m_threads[Thread.CurrentThread.ManagedThreadId];
+                return m_threads[Thread.CurrentThread.ManagedThreadId];
             }
-            finally
+            catch(KeyNotFoundException)
             {
-                m_threadsRwLock.ReleaseReaderLock();
+                return null;
             }
-
-            return null;
         }
 
         /// <summary>
@@ -403,39 +352,31 @@ namespace OpenSim.Framework.Monitoring
             {
                 List<ThreadWatchdogInfo> callbackInfos = null;
 
-                m_threadsRwLock.AcquireWriterLock(-1);
-                try
+                foreach (ThreadWatchdogInfo threadInfo in m_threads.Values)
                 {
-                    foreach (ThreadWatchdogInfo threadInfo in m_threads.Values)
+                    if (threadInfo.Thread.ThreadState == ThreadState.Stopped)
                     {
-                        if (threadInfo.Thread.ThreadState == ThreadState.Stopped)
-                        {
-                            RemoveThread(threadInfo.Thread.ManagedThreadId);
+                        RemoveThread(threadInfo.Thread.ManagedThreadId);
 
+                        if (callbackInfos == null)
+                            callbackInfos = new List<ThreadWatchdogInfo>();
+
+                        callbackInfos.Add(threadInfo);
+                    }
+                    else if (!threadInfo.IsTimedOut && now - threadInfo.LastTick >= threadInfo.Timeout)
+                    {
+                        threadInfo.IsTimedOut = true;
+
+                        if (threadInfo.AlarmIfTimeout)
+                        {
                             if (callbackInfos == null)
                                 callbackInfos = new List<ThreadWatchdogInfo>();
 
-                            callbackInfos.Add(threadInfo);
-                        }
-                        else if (!threadInfo.IsTimedOut && now - threadInfo.LastTick >= threadInfo.Timeout)
-                        {
-                            threadInfo.IsTimedOut = true;
-
-                            if (threadInfo.AlarmIfTimeout)
-                            {
-                                if (callbackInfos == null)
-                                    callbackInfos = new List<ThreadWatchdogInfo>();
-
-                                // Send a copy of the watchdog info to prevent race conditions where the watchdog
-                                // thread updates the monitoring info after an alarm has been sent out.
-                                callbackInfos.Add(new ThreadWatchdogInfo(threadInfo));
-                            }
+                            // Send a copy of the watchdog info to prevent race conditions where the watchdog
+                            // thread updates the monitoring info after an alarm has been sent out.
+                            callbackInfos.Add(new ThreadWatchdogInfo(threadInfo));
                         }
                     }
-                }
-                finally
-                {
-                    m_threadsRwLock.ReleaseWriterLock();
                 }
 
                 if (callbackInfos != null)

@@ -51,7 +51,7 @@ using System.Security.Policy;
 using System.Text;
 using System.Threading;
 using System.Xml;
-using ScriptCompileQueue = OpenSim.Framework.LocklessQueue<object[]>;
+using ScriptCompileQueue = ThreadedClasses.NonblockingQueue<object[]>;
 using Timer = OpenSim.Region.ScriptEngine.Shared.Api.Plugins.Timer;
 
 namespace OpenSim.Region.ScriptEngine.XEngine
@@ -91,10 +91,10 @@ namespace OpenSim.Region.ScriptEngine.XEngine
         private bool m_InitialStartup = true;
         private int m_ScriptFailCount; // Number of script fails since compile queue was last empty
         private string m_ScriptErrorMessage;
-        private Dictionary<string, string> m_uniqueScripts = new Dictionary<string, string>();
+        private ThreadedClasses.RwLockedDictionary<string, string> m_uniqueScripts = new ThreadedClasses.RwLockedDictionary<string, string>();
         private bool m_AppDomainLoading;
-        private Dictionary<UUID,ArrayList> m_ScriptErrors =
-                new Dictionary<UUID,ArrayList>();
+        private ThreadedClasses.RwLockedDictionaryAutoAdd<UUID, ArrayList> m_ScriptErrors =
+                new ThreadedClasses.RwLockedDictionaryAutoAdd<UUID, ArrayList>(delegate() { return new ArrayList(); });
 
         // disable warning: need to keep a reference to XEngine.EventManager
         // alive to avoid it being garbage collected
@@ -131,45 +131,43 @@ namespace OpenSim.Region.ScriptEngine.XEngine
         /// </summary>
         private bool m_SimulatorShuttingDown;
 
-        private static List<XEngine> m_ScriptEngines =
-                new List<XEngine>();
+        private static ThreadedClasses.RwLockedList<XEngine> m_ScriptEngines =
+                new ThreadedClasses.RwLockedList<XEngine>();
 
         // Maps the local id to the script inventory items in it
 
-        private Dictionary<uint, List<UUID> > m_PrimObjects =
-                new Dictionary<uint, List<UUID> >();
-        private ReaderWriterLock m_PrimObjectsRwLock = new ReaderWriterLock();
+        private ThreadedClasses.RwLockedDictionary<uint, ThreadedClasses.RwLockedList<UUID>> m_PrimObjects =
+                new ThreadedClasses.RwLockedDictionary<uint, ThreadedClasses.RwLockedList<UUID>>();
 
         // Maps the UUID above to the script instance
 
-        private Dictionary<UUID, IScriptInstance> m_Scripts =
-                new Dictionary<UUID, IScriptInstance>();
-        private ReaderWriterLock m_ScriptsRwLock = new ReaderWriterLock();
+        private ThreadedClasses.RwLockedDictionary<UUID, IScriptInstance> m_Scripts =
+                new ThreadedClasses.RwLockedDictionary<UUID, IScriptInstance>();
 
         // Maps the asset ID to the assembly
 
-        private Dictionary<UUID, string> m_Assemblies =
-                new Dictionary<UUID, string>();
+        private ThreadedClasses.RwLockedDictionary<UUID, string> m_Assemblies =
+                new ThreadedClasses.RwLockedDictionary<UUID, string>();
 
-        private Dictionary<string, int> m_AddingAssemblies =
-                new Dictionary<string, int>();
+        private ThreadedClasses.RwLockedDictionaryAutoAdd<string, int> m_AddingAssemblies =
+                new ThreadedClasses.RwLockedDictionaryAutoAdd<string, int>(delegate() { return 0; });
 
-        private Dictionary<string, Dictionary<KeyValuePair<int, int>, KeyValuePair<int, int>>> m_AssemblyLineMaps = 
-            new Dictionary<string, Dictionary<KeyValuePair<int, int>, KeyValuePair<int, int>>>();
+        private ThreadedClasses.RwLockedDictionary<string, Dictionary<KeyValuePair<int, int>, KeyValuePair<int, int>>> m_AssemblyLineMaps =
+            new ThreadedClasses.RwLockedDictionary<string, Dictionary<KeyValuePair<int, int>, KeyValuePair<int, int>>>();
 
         // This will list AppDomains by script asset
 
-        private Dictionary<UUID, AppDomain> m_AppDomains =
-                new Dictionary<UUID, AppDomain>();
+        private ThreadedClasses.RwLockedDictionary<UUID, AppDomain> m_AppDomains =
+                new ThreadedClasses.RwLockedDictionary<UUID, AppDomain>();
 
         // List the scripts running in each appdomain
 
-        private Dictionary<UUID, List<UUID> > m_DomainScripts =
-                new Dictionary<UUID, List<UUID> >();
+        private ThreadedClasses.RwLockedDictionaryAutoAdd<UUID, ThreadedClasses.RwLockedList<UUID>> m_DomainScripts =
+                new ThreadedClasses.RwLockedDictionaryAutoAdd<UUID, ThreadedClasses.RwLockedList<UUID>>(delegate() { return new ThreadedClasses.RwLockedList<UUID>(); });
 
         private ScriptCompileQueue m_CompileQueue = new ScriptCompileQueue();
         IWorkItemResult m_CurrentCompile = null;
-        private Dictionary<UUID, int> m_CompileDict = new Dictionary<UUID, int>();
+        private ThreadedClasses.RwLockedDictionary<UUID, int> m_CompileDict = new ThreadedClasses.RwLockedDictionary<UUID, int>();
 
         private ScriptEngineConsoleCommands m_consoleCommands;
 
@@ -189,11 +187,6 @@ namespace OpenSim.Region.ScriptEngine.XEngine
         public Scene World
         {
             get { return m_Scene; }
-        }
-
-        public static List<XEngine> ScriptEngines
-        {
-            get { return m_ScriptEngines; }
         }
 
         public IScriptModule ScriptModule
@@ -241,22 +234,20 @@ namespace OpenSim.Region.ScriptEngine.XEngine
             m_ScriptConfig = configSource.Configs["XEngine"];
             m_ConfigSource = configSource;
 
-            string rawScriptStopStrategy = m_ScriptConfig.GetString("ScriptStopStrategy", "abort");
+            string rawScriptStopStrategy = m_ScriptConfig.GetString("ScriptStopStrategy", "co-op");
 
             m_log.InfoFormat("[XEngine]: Script stop strategy is {0}", rawScriptStopStrategy);
+            if(rawScriptStopStrategy != "co-op")
+            {
+                m_ScriptConfig = null;
+                m_log.Warn("[XEngine]: DISABLING SCRIPTS! Please change ScriptStopStrategy to co-op in [XEngine] section and delete ScriptEngines folder");
+                return;
+            }
 
-            if (rawScriptStopStrategy == "co-op")
-            {
-                ScriptClassName = "XEngineScript";
-                ScriptBaseClassName = typeof(XEngineScriptBase).FullName;
-                ScriptBaseClassParameters = typeof(XEngineScriptBase).GetConstructor(new Type[] { typeof(WaitHandle) }).GetParameters();
-                ScriptReferencedAssemblies = new string[] { Path.GetFileName(typeof(XEngineScriptBase).Assembly.Location) };
-            }
-            else
-            {
-                ScriptClassName = "Script";
-                ScriptBaseClassName = typeof(ScriptBaseClass).FullName;
-            }
+            ScriptClassName = "XEngineScript";
+            ScriptBaseClassName = typeof(XEngineScriptBase).FullName;
+            ScriptBaseClassParameters = typeof(XEngineScriptBase).GetConstructor(new Type[] { typeof(WaitHandle) }).GetParameters();
+            ScriptReferencedAssemblies = new string[] { Path.GetFileName(typeof(XEngineScriptBase).Assembly.Location) };
 
 //            Console.WriteLine("ASSEMBLY NAME: {0}", ScriptReferencedAssemblies[0]);
         }
@@ -321,15 +312,7 @@ namespace OpenSim.Region.ScriptEngine.XEngine
                     break;
             }
 
-            m_ScriptsRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_ScriptEngines.Add(this);
-            }
-            finally
-            {
-                m_ScriptsRwLock.ReleaseWriterLock();
-            }
+            m_ScriptEngines.Add(this);
 
             // Needs to be here so we can queue the scripts that need starting
             //
@@ -433,48 +416,14 @@ namespace OpenSim.Region.ScriptEngine.XEngine
 
             IScriptInstance si;
 
-            m_ScriptsRwLock.AcquireReaderLock(-1);
-            try
-            {
-                // XXX: We can't give the user feedback on a bad item id because this may apply to a different script
-                // engine
-                if (!m_Scripts.TryGetValue(itemId, out si))
-                    return;
-            }
-            finally
-            {
-                m_ScriptsRwLock.ReleaseReaderLock();
-            }
+            // XXX: We can't give the user feedback on a bad item id because this may apply to a different script
+            // engine
+            if (!m_Scripts.TryGetValue(itemId, out si))
+                return;
 
             si.DebugLevel = newLevel;
             MainConsole.Instance.OutputFormat("Set debug level of {0} {1} to {2}", si.ScriptName, si.ItemID, newLevel);
         }
-
-        /// <summary>
-        /// Change debug level
-        /// </summary>
-        /// <param name="module"></param>
-        /// <param name="args"></param>
-//        private void HandleDebugLevelCommand(string module, string[] args)
-//        {
-//            if (args.Length == 3)
-//            {
-//                int newDebug;
-//                if (int.TryParse(args[2], out newDebug))
-//                {
-//                    DebugLevel = newDebug;
-//                    MainConsole.Instance.OutputFormat("Debug level set to {0}", newDebug);
-//                }
-//            }
-//            else if (args.Length == 2)
-//            {
-//                MainConsole.Instance.OutputFormat("Current debug level is {0}", DebugLevel);
-//            }
-//            else
-//            {
-//                MainConsole.Instance.Output("Usage: debug xengine 0..1");
-//            }
-//        }
 
         /// <summary>
         /// Parse the raw item id into a script instance from the command params if it's present.
@@ -499,56 +448,48 @@ namespace OpenSim.Region.ScriptEngine.XEngine
             if (!(MainConsole.Instance.ConsoleScene == null || MainConsole.Instance.ConsoleScene == m_Scene))
                 return;
 
-            m_ScriptsRwLock.AcquireWriterLock(-1);
-            try
+            string rawItemId;
+            UUID itemId = UUID.Zero;
+    
+            if (cmdparams.Length == 2)
             {
-                string rawItemId;
-                UUID itemId = UUID.Zero;
+                IEnumerable<IScriptInstance> scripts = m_Scripts.Values;
+
+                if (keySelector != null)
+                    scripts = scripts.OrderBy<IScriptInstance, TKey>(keySelector);
+
+                foreach (IScriptInstance instance in scripts)
+                    action(instance);
+
+                return;
+            }
     
-                if (cmdparams.Length == 2)
-                {
-                    IEnumerable<IScriptInstance> scripts = m_Scripts.Values;
-
-                    if (keySelector != null)
-                        scripts = scripts.OrderBy<IScriptInstance, TKey>(keySelector);
-
-                    foreach (IScriptInstance instance in scripts)
-                        action(instance);
-
-                    return;
-                }
-    
-                for (int i = 2; i < cmdparams.Length; i++)
-                {
-                    rawItemId = cmdparams[i];
+            for (int i = 2; i < cmdparams.Length; i++)
+            {
+                rawItemId = cmdparams[i];
         
-                    if (!UUID.TryParse(rawItemId, out itemId))
+                if (!UUID.TryParse(rawItemId, out itemId))
+                {
+                    MainConsole.Instance.OutputFormat("ERROR: {0} is not a valid UUID", rawItemId);
+                    continue;
+                }
+        
+                if (itemId != UUID.Zero)
+                {
+                    IScriptInstance instance = GetInstance(itemId);
+                    if (instance == null)
                     {
-                        MainConsole.Instance.OutputFormat("ERROR: {0} is not a valid UUID", rawItemId);
+                        // Commented out for now since this will cause false reports on simulators with more than
+                        // one scene where the current command line set region is 'root' (which causes commands to
+                        // go to both regions... (sigh)
+//                        MainConsole.Instance.OutputFormat("Error - No item found with id {0}", itemId);
                         continue;
                     }
-        
-                    if (itemId != UUID.Zero)
+                    else
                     {
-                        IScriptInstance instance = GetInstance(itemId);
-                        if (instance == null)
-                        {
-                            // Commented out for now since this will cause false reports on simulators with more than
-                            // one scene where the current command line set region is 'root' (which causes commands to
-                            // go to both regions... (sigh)
-    //                        MainConsole.Instance.OutputFormat("Error - No item found with id {0}", itemId);
-                            continue;
-                        }
-                        else
-                        {
-                            action(instance);
-                        }
+                        action(instance);
                     }
                 }
-            }
-            finally
-            {
-                m_ScriptsRwLock.ReleaseWriterLock();
             }
         }
 
@@ -567,20 +508,12 @@ namespace OpenSim.Region.ScriptEngine.XEngine
 
             long scriptsLoaded, eventsQueued = 0, eventsProcessed = 0;
 
-            m_ScriptsRwLock.AcquireReaderLock(-1);
-            try
-            {
-                scriptsLoaded = m_Scripts.Count;
+            scriptsLoaded = m_Scripts.Count;
 
-                foreach (IScriptInstance si in m_Scripts.Values)
-                {
-                    eventsQueued += si.EventsQueued;
-                    eventsProcessed += si.EventsProcessed;
-                }
-            }
-            finally
+            foreach(IScriptInstance si in m_Scripts.Values)
             {
-                m_ScriptsRwLock.ReleaseReaderLock();
+                eventsQueued += si.EventsQueued;
+                eventsProcessed += si.EventsProcessed;
             }
 
             sb.AppendFormat("Scripts loaded             : {0}\n", scriptsLoaded);
@@ -617,16 +550,8 @@ namespace OpenSim.Region.ScriptEngine.XEngine
 
             if (cmdparams.Length == 2)
             {
-                m_ScriptsRwLock.AcquireReaderLock(-1);
-                try
-                {
-                    MainConsole.Instance.OutputFormat(
-                        "Showing {0} scripts in {1}", m_Scripts.Count, m_Scene.RegionInfo.RegionName);
-                }
-                finally
-                {
-                    m_ScriptsRwLock.ReleaseReaderLock();
-                }
+                MainConsole.Instance.OutputFormat(
+                    "Showing {0} scripts in {1}", m_Scripts.Count, m_Scene.RegionInfo.RegionName);
             }
 
             HandleScriptsAction<long>(cmdparams, HandleShowScript, si => si.EventsProcessed);
@@ -726,69 +651,60 @@ namespace OpenSim.Region.ScriptEngine.XEngine
             if (!m_Enabled)
                 return;
 
-            m_ScriptsRwLock.AcquireWriterLock(-1);
-            try
+            m_log.InfoFormat(
+                "[XEngine]: Shutting down {0} scripts in {1}", m_Scripts.Count, m_Scene.RegionInfo.RegionName);
+
+            /* standard foreach on RwLockedDictionary makes copy first */
+            foreach (IScriptInstance instance in m_Scripts.Values)
             {
-                m_log.InfoFormat(
-                    "[XEngine]: Shutting down {0} scripts in {1}", m_Scripts.Count, m_Scene.RegionInfo.RegionName);
-
-                foreach (IScriptInstance instance in m_Scripts.Values)
+                // Force a final state save
+                //
+                string assembly;
+                if (m_Assemblies.TryGetValue(instance.AssetID, out assembly))
                 {
-                    // Force a final state save
-                    //
-                    if (m_Assemblies.ContainsKey(instance.AssetID))
+                    try
                     {
-                        string assembly = m_Assemblies[instance.AssetID];
-
-                        try
-                        {
-                            instance.SaveState(assembly);
-                        }
-                        catch (Exception e)
-                        {
-                            m_log.Error(
-                                string.Format(
-                                    "[XEngine]: Failed final state save for script {0}.{1}, item UUID {2}, prim UUID {3} in {4}.  Exception ",
-                                    instance.PrimName, instance.ScriptName, instance.ItemID, instance.ObjectID, World.Name)
-                                , e);
-                        }
+                        instance.SaveState(assembly);
                     }
-
-                    // Clear the event queue and abort the instance thread
-                    //
-                    instance.ClearQueue();
-                    instance.Stop(0);
-
-                    // Release events, timer, etc
-                    //
-                    instance.DestroyScriptInstance();
-
-                    // Unload scripts and app domains.
-                    // Must be done explicitly because they have infinite
-                    // lifetime.
-                    // However, don't bother to do this if the simulator is shutting
-                    // down since it takes a long time with many scripts.
-                    if (!m_SimulatorShuttingDown)
+                    catch (Exception e)
                     {
-                        m_DomainScripts[instance.AppDomain].Remove(instance.ItemID);
-                        if (m_DomainScripts[instance.AppDomain].Count == 0)
-                        {
-                            m_DomainScripts.Remove(instance.AppDomain);
-                            UnloadAppDomain(instance.AppDomain);
-                        }
+                        m_log.Error(
+                            string.Format(
+                                "[XEngine]: Failed final state save for script {0}.{1}, item UUID {2}, prim UUID {3} in {4}.  Exception ",
+                                instance.PrimName, instance.ScriptName, instance.ItemID, instance.ObjectID, World.Name)
+                            , e);
                     }
                 }
 
-                m_Scripts.Clear();
-                m_PrimObjects.Clear();
-                m_Assemblies.Clear();
-                m_DomainScripts.Clear();
-                m_ScriptEngines.Remove(this);
+                // Clear the event queue and abort the instance thread
+                //
+                instance.ClearQueue();
+                instance.Stop(0);
+
+                // Release events, timer, etc
+                //
+                instance.DestroyScriptInstance();
+
+                // Unload scripts and app domains.
+                // Must be done explicitly because they have infinite
+                // lifetime.
+                // However, don't bother to do this if the simulator is shutting
+                // down since it takes a long time with many scripts.
+                if (!m_SimulatorShuttingDown)
+                {
+                    m_DomainScripts[instance.AppDomain].Remove(instance.ItemID);
+                    if(m_DomainScripts.RemoveIf(instance.AppDomain, delegate(ThreadedClasses.RwLockedList<UUID> l) { return l.Count == 0; }))
+                    {
+                        UnloadAppDomain(instance.AppDomain);
+                    }
+                }
             }
-            finally
-            {
-                m_ScriptsRwLock.ReleaseWriterLock();
-            }
+
+            m_Scripts.Clear();
+            m_PrimObjects.Clear();
+            m_Assemblies.Clear();
+            m_DomainScripts.Clear();
+            m_ScriptEngines.Remove(this);
         }
 
         public void RegionLoaded(Scene scene)
@@ -834,16 +750,7 @@ namespace OpenSim.Region.ScriptEngine.XEngine
             if (!m_Enabled)
                 return;
 
-            m_ScriptsRwLock.AcquireWriterLock(-1);
-            try
-            {
-                if (m_ScriptEngines.Contains(this))
-                    m_ScriptEngines.Remove(this);
-            }
-            finally
-            {
-                m_ScriptsRwLock.ReleaseWriterLock();
-            }
+            m_ScriptEngines.Remove(this);
         }
 
         public object DoBackup(object o)
@@ -856,34 +763,11 @@ namespace OpenSim.Region.ScriptEngine.XEngine
 
 //            m_log.Debug("[XEngine] Backing up script states");
 
-            List<IScriptInstance> instances = new List<IScriptInstance>();
-
-            m_ScriptsRwLock.AcquireReaderLock(-1);
-            try
+            m_Scripts.ForEach(delegate(IScriptInstance i)
             {
-                foreach (IScriptInstance instance in m_Scripts.Values)
-                    instances.Add(instance);
-            }
-            finally
-            {
-                m_ScriptsRwLock.ReleaseReaderLock();
-            }
-
-            foreach (IScriptInstance i in instances)
-            {
-                string assembly = String.Empty;
-
-                m_ScriptsRwLock.AcquireReaderLock(-1);
-                try
-                {
-                    if (!m_Assemblies.ContainsKey(i.AssetID))
-                        continue;
-                    assembly = m_Assemblies[i.AssetID];
-                }
-                finally
-                {
-                    m_ScriptsRwLock.ReleaseReaderLock();
-                }
+                string assembly;
+                if (!m_Assemblies.TryGetValue(i.AssetID, out assembly))
+                    return;
 
                 try
                 {
@@ -897,9 +781,7 @@ namespace OpenSim.Region.ScriptEngine.XEngine
                             i.PrimName, i.ScriptName, i.ItemID, i.ObjectID, World.Name)
                         , e);
                 }
-            }
-
-            instances.Clear();
+            });
 
             if (saveTime > 0)
                 m_ThreadPool.QueueWorkItem(new WorkItemCallback(this.DoBackup),
@@ -910,7 +792,7 @@ namespace OpenSim.Region.ScriptEngine.XEngine
 
         public void SaveAllState()
         {
-            foreach (IScriptInstance inst in m_Scripts.Values)
+            m_Scripts.ForEach(delegate(IScriptInstance inst)
             {
                 if (inst.EventTime() > m_EventLimit)
                 {
@@ -918,7 +800,7 @@ namespace OpenSim.Region.ScriptEngine.XEngine
                     if (!m_KillTimedOutScripts)
                         inst.Start();
                 }
-            }
+            });
         }
 
         public object DoMaintenance(object p)
@@ -1049,20 +931,14 @@ namespace OpenSim.Region.ScriptEngine.XEngine
 
             if (stateSource == (int)StateSource.ScriptedRez)
             {
-                lock (m_CompileDict)
-                {
-                    m_CompileDict[itemID] = 0;
-                }
+                m_CompileDict[itemID] = 0;
 
                 DoOnRezScript(parms);
             }
             else
             {
                 m_CompileQueue.Enqueue(parms);
-                lock (m_CompileDict)
-                {
-                    m_CompileDict[itemID] = 0;
-                }
+                m_CompileDict[itemID] = 0;
 
 //                m_log.DebugFormat("[XEngine]: Added script {0} to compile queue", itemID);
 
@@ -1097,17 +973,25 @@ namespace OpenSim.Region.ScriptEngine.XEngine
 
             int scriptsStarted = 0;
 
-            while (m_CompileQueue.Dequeue(out o))
+            try
             {
-                if (DoOnRezScript(o))
+                while(true)
                 {
-                    scriptsStarted++;
+                    o = m_CompileQueue.Dequeue();
+                    if (DoOnRezScript(o))
+                    {
+                        scriptsStarted++;
 
-                    if (m_InitialStartup)
-                        if (scriptsStarted % 50 == 0)
-                            m_log.InfoFormat(
-                                "[XEngine]: Started {0} scripts in {1}", scriptsStarted, m_Scene.Name);
+                        if (m_InitialStartup)
+                            if (scriptsStarted % 50 == 0)
+                                m_log.InfoFormat(
+                                    "[XEngine]: Started {0} scripts in {1}", scriptsStarted, m_Scene.Name);
+                    }
                 }
+            }
+            catch(InvalidOperationException)
+            {
+
             }
 
             if (m_InitialStartup)
@@ -1143,11 +1027,9 @@ namespace OpenSim.Region.ScriptEngine.XEngine
 
 //            m_log.DebugFormat("[XEngine]: DoOnRezScript called for script {0}", itemID);
 
-            lock (m_CompileDict)
+            if(!m_CompileDict.Remove(itemID))
             {
-                if (!m_CompileDict.ContainsKey(itemID))
-                    return false;
-                m_CompileDict.Remove(itemID);
+                return false;
             }
 
             // Get the asset ID of the script, so we can check if we
@@ -1216,199 +1098,122 @@ namespace OpenSim.Region.ScriptEngine.XEngine
                 {
                     foreach (string warning in warnings)
                     {
-                        lock (m_ScriptErrors)
-                        {
-                            if (!m_ScriptErrors.ContainsKey(itemID))
-                                m_ScriptErrors[itemID] = new ArrayList();
-
-                            m_ScriptErrors[itemID].Add(warning);
-                            //                        try
-                            //                        {
-                            //                            // DISPLAY WARNING INWORLD
-                            //                            string text = "Warning:\n" + warning;
-                            //                            if (text.Length > 1000)
-                            //                                text = text.Substring(0, 1000);
-                            //                            if (!ShowScriptSaveResponse(item.OwnerID,
-                            //                                    assetID, text, true))
-                            //                            {
-                            //                                if (presence != null && (!postOnRez))
-                            //                                    presence.ControllingClient.SendAgentAlertMessage("Script saved with warnings, check debug window!", false);
-                            //
-                            //                                World.SimChat(Utils.StringToBytes(text),
-                            //                                              ChatTypeEnum.DebugChannel, 2147483647,
-                            //                                              part.AbsolutePosition,
-                            //                                              part.Name, part.UUID, false);
-                            //                            }
-                            //                        }
-                            //                        catch (Exception e2) // LEGIT: User Scripting
-                            //                        {
-                            //                            m_log.Error("[XEngine]: " +
-                            //                                    "Error displaying warning in-world: " +
-                            //                                    e2.ToString());
-                            //                            m_log.Error("[XEngine]: " +
-                            //                                    "Warning:\r\n" +
-                            //                                    warning);
-                            //                        }
-                        }
+                        m_ScriptErrors[itemID].Add(warning);
                     }
                 }
             }
             catch (Exception e)
             {
-//                    m_log.ErrorFormat(
-//                        "[XEngine]: Exception when rezzing script with item ID {0}, {1}{2}", 
-//                        itemID, e.Message, e.StackTrace);
-                lock(m_ScriptErrors)
-                {
-                    if (!m_ScriptErrors.ContainsKey(itemID))
-                        m_ScriptErrors[itemID] = new ArrayList();
-                    // DISPLAY ERROR INWORLD
-//                    m_ScriptErrorMessage += "Failed to compile script in object: '" + part.ParentGroup.RootPart.Name + "' Script name: '" + item.Name + "' Error message: " + e.Message.ToString();
-//
-                    m_ScriptFailCount++;
-                    m_ScriptErrors[itemID].Add(e.Message.ToString());
-//                    string text = "Error compiling script '" + item.Name + "':\n" + e.Message.ToString();
-//                    if (text.Length > 1000)
-//                        text = text.Substring(0, 1000);
-//                    if (!ShowScriptSaveResponse(item.OwnerID,
-//                            assetID, text, false))
-//                    {
-//                        if (presence != null && (!postOnRez))
-//                            presence.ControllingClient.SendAgentAlertMessage("Script saved with errors, check debug window!", false);
-//                        World.SimChat(Utils.StringToBytes(text),
-//                                      ChatTypeEnum.DebugChannel, 2147483647,
-//                                      part.AbsolutePosition,
-//                                      part.Name, part.UUID, false);
-//                    }
-//                }
-//                catch (Exception e2) // LEGIT: User Scripting
-//                {
-//                    m_log.Error("[XEngine]: "+
-//                            "Error displaying error in-world: " +
-//                            e2.ToString());
-//                    m_log.Error("[XEngine]: " +
-//                            "Errormessage: Error compiling script:\r\n" +
-//                            e.Message.ToString());
-                }
-
+                Interlocked.Increment(ref m_ScriptFailCount);
+                m_ScriptErrors[itemID].Add(e.Message.ToString());
                 return false;
             }
 
+            IScriptInstance i_instance = null;
             ScriptInstance instance = null;
-            m_ScriptsRwLock.AcquireWriterLock(-1);
-            try
+            // Create the object record
+            if (m_Scripts.TryGetValue(itemID, out i_instance) ? i_instance.AssetID == assetID : false)
             {
-                // Create the object record
-                if ((!m_Scripts.ContainsKey(itemID)) ||
-                    (m_Scripts[itemID].AssetID != assetID))
+                instance = (ScriptInstance)i_instance;
+            }
+            else
+            {
+                if(i_instance != null)
                 {
-                    UUID appDomain = assetID;
-
-                    if (part.ParentGroup.IsAttachment)
-                        appDomain = part.ParentGroup.RootPart.UUID;
-
-                    if (!m_AppDomains.ContainsKey(appDomain))
-                    {
-                        try
-                        {
-                            AppDomainSetup appSetup = new AppDomainSetup();
-                            appSetup.PrivateBinPath = Path.Combine(
-                                    m_ScriptEnginesPath,
-                                    m_Scene.RegionInfo.RegionID.ToString());
-
-                            Evidence baseEvidence = AppDomain.CurrentDomain.Evidence;
-                            Evidence evidence = new Evidence(baseEvidence);
-
-                            AppDomain sandbox;
-                            if (m_AppDomainLoading)
-                            {
-                                sandbox = AppDomain.CreateDomain(
-                                                m_Scene.RegionInfo.RegionID.ToString(),
-                                                evidence, appSetup);
-                                sandbox.AssemblyResolve +=
-                                    new ResolveEventHandler(
-                                        AssemblyResolver.OnAssemblyResolve);
-                            }
-                            else
-                            {
-                                sandbox = AppDomain.CurrentDomain;
-                            }
-                            
-                            //PolicyLevel sandboxPolicy = PolicyLevel.CreateAppDomainLevel();
-                            //AllMembershipCondition sandboxMembershipCondition = new AllMembershipCondition();
-                            //PermissionSet sandboxPermissionSet = sandboxPolicy.GetNamedPermissionSet("Internet");
-                            //PolicyStatement sandboxPolicyStatement = new PolicyStatement(sandboxPermissionSet);
-                            //CodeGroup sandboxCodeGroup = new UnionCodeGroup(sandboxMembershipCondition, sandboxPolicyStatement);
-                            //sandboxPolicy.RootCodeGroup = sandboxCodeGroup;
-                            //sandbox.SetAppDomainPolicy(sandboxPolicy);
-                            
-                            m_AppDomains[appDomain] = sandbox;
-
-                            m_DomainScripts[appDomain] = new List<UUID>();
-                        }
-                        catch (Exception e)
-                        {
-                            m_log.ErrorFormat("[XEngine] Exception creating app domain:\n {0}", e.ToString());
-                            m_ScriptErrorMessage += "Exception creating app domain:\n";
-                            m_ScriptFailCount++;
-                            lock (m_AddingAssemblies) 
-                            {
-                                m_AddingAssemblies[assembly]--;
-                            }
-                            return false;
-                        }
-                    }
-                    m_DomainScripts[appDomain].Add(itemID);
-
-                    instance = new ScriptInstance(this, part,
-                                                  item,
-                                                  startParam, postOnRez,
-                                                  m_MaxScriptQueue);
-
-                    if (!instance.Load(m_AppDomains[appDomain], assembly, stateSource))
-                        return false;
-
-//                    if (DebugLevel >= 1)
-//                    m_log.DebugFormat(
-//                        "[XEngine] Loaded script {0}.{1}, item UUID {2}, prim UUID {3} @ {4}.{5}",
-//                        part.ParentGroup.RootPart.Name, item.Name, itemID, part.UUID,
-//                        part.ParentGroup.RootPart.AbsolutePosition, part.ParentGroup.Scene.RegionInfo.RegionName);
-
-                    if (presence != null)
-                    {
-                        ShowScriptSaveResponse(item.OwnerID,
-                                assetID, "Compile successful", true);
-                    }
-
-                    instance.AppDomain = appDomain;
-                    instance.LineMap = m_AssemblyLineMaps[assembly];
-
-                    m_Scripts[itemID] = instance;
+                    instance = (ScriptInstance)i_instance;
                 }
-            }
-            finally
-            {
-                m_ScriptsRwLock.ReleaseWriterLock();
-            }
 
-            m_PrimObjectsRwLock.AcquireWriterLock(-1);
-            try
-            {
-                if (!m_PrimObjects.ContainsKey(localID))
-                    m_PrimObjects[localID] = new List<UUID>();
+                UUID appDomain = assetID;
 
-                if (!m_PrimObjects[localID].Contains(itemID))
-                    m_PrimObjects[localID].Add(itemID);
-            }
-            finally
-            {
-                m_PrimObjectsRwLock.ReleaseWriterLock();
-            }
+                if (part.ParentGroup.IsAttachment)
+                    appDomain = part.ParentGroup.RootPart.UUID;
 
-            if (!m_Assemblies.ContainsKey(assetID))
-                m_Assemblies[assetID] = assembly;
+                AppDomain appDom;
+                try
+                {
+                    appDom = m_AppDomains.GetOrAddIfNotExists(appDomain, delegate()
+                    {
+                        AppDomainSetup appSetup = new AppDomainSetup();
+                        appSetup.PrivateBinPath = Path.Combine(
+                                m_ScriptEnginesPath,
+                                m_Scene.RegionInfo.RegionID.ToString());
 
-            lock (m_AddingAssemblies) 
+                        Evidence baseEvidence = AppDomain.CurrentDomain.Evidence;
+                        Evidence evidence = new Evidence(baseEvidence);
+
+                        AppDomain sandbox;
+                        if (m_AppDomainLoading)
+                        {
+                            sandbox = AppDomain.CreateDomain(
+                                            m_Scene.RegionInfo.RegionID.ToString(),
+                                            evidence, appSetup);
+                            sandbox.AssemblyResolve +=
+                                new ResolveEventHandler(
+                                    AssemblyResolver.OnAssemblyResolve);
+                        }
+                        else
+                        {
+                            sandbox = AppDomain.CurrentDomain;
+                        }
+
+                        //PolicyLevel sandboxPolicy = PolicyLevel.CreateAppDomainLevel();
+                        //AllMembershipCondition sandboxMembershipCondition = new AllMembershipCondition();
+                        //PermissionSet sandboxPermissionSet = sandboxPolicy.GetNamedPermissionSet("Internet");
+                        //PolicyStatement sandboxPolicyStatement = new PolicyStatement(sandboxPermissionSet);
+                        //CodeGroup sandboxCodeGroup = new UnionCodeGroup(sandboxMembershipCondition, sandboxPolicyStatement);
+                        //sandboxPolicy.RootCodeGroup = sandboxCodeGroup;
+                        //sandbox.SetAppDomainPolicy(sandboxPolicy);
+
+                        return sandbox;
+                    });
+                    m_DomainScripts[appDomain].Add(itemID);
+                }
+                catch (Exception e)
+                {
+                    m_log.ErrorFormat("[XEngine] Exception creating app domain:\n {0}", e.ToString());
+                    m_ScriptErrorMessage += "Exception creating app domain:\n";
+                    Interlocked.Increment(ref m_ScriptFailCount);
+                    lock(m_AddingAssemblies)
+                    {
+                        m_AddingAssemblies[assembly]--;
+                    }
+                    return false;
+                }
+
+                instance = new ScriptInstance(this, part,
+                                                item,
+                                                startParam, postOnRez,
+                                                m_MaxScriptQueue);
+
+                if (!instance.Load(m_AppDomains[appDomain], assembly, stateSource))
+                    return false;
+
+    //                    if (DebugLevel >= 1)
+    //                    m_log.DebugFormat(
+    //                        "[XEngine] Loaded script {0}.{1}, item UUID {2}, prim UUID {3} @ {4}.{5}",
+    //                        part.ParentGroup.RootPart.Name, item.Name, itemID, part.UUID,
+    //                        part.ParentGroup.RootPart.AbsolutePosition, part.ParentGroup.Scene.RegionInfo.RegionName);
+
+                if (presence != null)
+                {
+                    ShowScriptSaveResponse(item.OwnerID,
+                            assetID, "Compile successful", true);
+                }
+
+                instance.AppDomain = appDomain;
+                instance.LineMap = m_AssemblyLineMaps[assembly];
+
+                m_Scripts[itemID] = instance;
+            } /*XXXX*/
+
+            m_PrimObjects.GetOrAddIfNotExists(localID, delegate() 
+            { 
+                return new ThreadedClasses.RwLockedList<UUID>(); 
+            }).Add(itemID);
+
+            m_Assemblies[assetID] = assembly;
+
+            lock(m_AddingAssemblies)
             {
                 m_AddingAssemblies[assembly]--;
             }
@@ -1430,27 +1235,14 @@ namespace OpenSim.Region.ScriptEngine.XEngine
         public void OnRemoveScript(uint localID, UUID itemID)
         {
             // If it's not yet been compiled, make sure we don't try
-            lock (m_CompileDict)
-            {
-                if (m_CompileDict.ContainsKey(itemID))
-                    m_CompileDict.Remove(itemID);
-            }
+            m_CompileDict.Remove(itemID);
 
             IScriptInstance instance = null;
 
-            m_ScriptsRwLock.AcquireWriterLock(-1);
-            try
+            // Do we even have it?
+            if (!m_Scripts.Remove(itemID, out instance))
             {
-                // Do we even have it?
-                if (!m_Scripts.ContainsKey(itemID))
-                    return;
-
-                instance = m_Scripts[itemID];
-                m_Scripts.Remove(itemID);
-            }
-            finally
-            {
-                m_ScriptsRwLock.ReleaseWriterLock();
+                return;
             }
 
             instance.ClearQueue();
@@ -1459,36 +1251,23 @@ namespace OpenSim.Region.ScriptEngine.XEngine
 
 //                bool objectRemoved = false;
 
-            m_PrimObjectsRwLock.AcquireWriterLock(-1);
-            try
+            // Remove the script from it's prim
+            ThreadedClasses.RwLockedList<UUID> localList;
+            if(m_PrimObjects.TryGetValue(localID, out localList))
             {
-                // Remove the script from it's prim
-                if (m_PrimObjects.ContainsKey(localID))
-                {
-                    // Remove inventory item record
-                    if (m_PrimObjects[localID].Contains(itemID))
-                        m_PrimObjects[localID].Remove(itemID);
+                // Remove inventory item record
+                localList.Remove(itemID);
 
-                    // If there are no more scripts, remove prim
-                    if (m_PrimObjects[localID].Count == 0)
-                    {
-                        m_PrimObjects.Remove(localID);
-//                            objectRemoved = true;
-                    }
-                }
-            }
-            finally
-            {
-                m_PrimObjectsRwLock.ReleaseWriterLock();
+                // If there are no more scripts, remove prim
+                m_PrimObjects.RemoveIf(localID, delegate(ThreadedClasses.RwLockedList<UUID> l) { return l.Count != 0; });
             }
 
             instance.RemoveState();
             instance.DestroyScriptInstance();
 
             m_DomainScripts[instance.AppDomain].Remove(instance.ItemID);
-            if (m_DomainScripts[instance.AppDomain].Count == 0)
+            if(m_DomainScripts.RemoveIf(instance.AppDomain, delegate(ThreadedClasses.RwLockedList<UUID> appDomainList) { return appDomainList.Count == 0; }))
             {
-                m_DomainScripts.Remove(instance.AppDomain);
                 UnloadAppDomain(instance.AppDomain);
             }
 
@@ -1532,23 +1311,22 @@ namespace OpenSim.Region.ScriptEngine.XEngine
                 {
                     // Do not remove assembly files if another instance of the script
                     // is currently initialising
-                    if (!m_AddingAssemblies.ContainsKey(m_Assemblies[assetID])
-                        || m_AddingAssemblies[m_Assemblies[assetID]] == 0) 
+                    if (m_AddingAssemblies.RemoveIf(m_Assemblies[assetID], delegate(int c) { return c == 0; }))
                     {
-//                        m_log.DebugFormat("[XEngine] Removing unreferenced assembly {0}", m_Assemblies[assetID]);
+                        //                        m_log.DebugFormat("[XEngine] Removing unreferenced assembly {0}", m_Assemblies[assetID]);
                         try
                         {
                             if (File.Exists(m_Assemblies[assetID]))
                                 File.Delete(m_Assemblies[assetID]);
-                            
-                            if (File.Exists(m_Assemblies[assetID]+".text"))
-                                File.Delete(m_Assemblies[assetID]+".text");
-                            
-                            if (File.Exists(m_Assemblies[assetID]+".mdb"))
-                                File.Delete(m_Assemblies[assetID]+".mdb");
-                            
-                            if (File.Exists(m_Assemblies[assetID]+".map"))
-                                File.Delete(m_Assemblies[assetID]+".map");
+
+                            if (File.Exists(m_Assemblies[assetID] + ".text"))
+                                File.Delete(m_Assemblies[assetID] + ".text");
+
+                            if (File.Exists(m_Assemblies[assetID] + ".mdb"))
+                                File.Delete(m_Assemblies[assetID] + ".mdb");
+
+                            if (File.Exists(m_Assemblies[assetID] + ".map"))
+                                File.Delete(m_Assemblies[assetID] + ".map");
                         }
                         catch (Exception)
                         {
@@ -1562,14 +1340,11 @@ namespace OpenSim.Region.ScriptEngine.XEngine
 
         private void UnloadAppDomain(UUID id)
         {
-            if (m_AppDomains.ContainsKey(id))
+            AppDomain domain;
+            if (m_AppDomains.Remove(id, out domain))
             {
-                AppDomain domain = m_AppDomains[id];
-                m_AppDomains.Remove(id);
-
                 if (domain != AppDomain.CurrentDomain)
                     AppDomain.Unload(domain);
-                domain = null;
                 // m_log.DebugFormat("[XEngine] Unloaded app domain {0}", id.ToString());
             }
         }
@@ -1630,36 +1405,26 @@ namespace OpenSim.Region.ScriptEngine.XEngine
         public bool PostObjectEvent(uint localID, EventParams p)
         {
             bool result = false;
-            List<UUID> uuids = null;
+            ThreadedClasses.RwLockedList<UUID> uuids = null;
 
-            m_PrimObjectsRwLock.AcquireReaderLock(-1);
-            try
+            if (!m_PrimObjects.TryGetValue(localID, out uuids))
+                return false;
+
+            foreach (UUID itemID in uuids)
             {
-                if (!m_PrimObjects.ContainsKey(localID))
-                    return false;
-
-                uuids = m_PrimObjects[localID];
-
-                foreach (UUID itemID in uuids)
+                IScriptInstance instance = null;
+                try
                 {
-                    IScriptInstance instance = null;
-                    try
-                    {
-                        if (m_Scripts.ContainsKey(itemID))
-                            instance = m_Scripts[itemID];
-                    }
-                    catch { /* ignore race conditions */ }
-    
-                    if (instance != null)
-                    {
-                        instance.PostEvent(p);
-                        result = true;
-                    }
+                    if (m_Scripts.ContainsKey(itemID))
+                        instance = m_Scripts[itemID];
                 }
-            }
-            finally
-            {
-                m_PrimObjectsRwLock.ReleaseReaderLock();
+                catch { /* ignore race conditions */ }
+    
+                if (instance != null)
+                {
+                    instance.PostEvent(p);
+                    result = true;
+                }
             }
             
             return result;
@@ -1673,20 +1438,11 @@ namespace OpenSim.Region.ScriptEngine.XEngine
         /// <returns></returns>
         public bool PostScriptEvent(UUID itemID, EventParams p)
         {
-            m_ScriptsRwLock.AcquireReaderLock(-1);
-            try
+            IScriptInstance instance;
+            if (m_Scripts.TryGetValue(itemID, out instance))
             {
-                if (m_Scripts.ContainsKey(itemID))
-                {
-                    IScriptInstance instance = m_Scripts[itemID];
-                    if (instance != null)
-                        instance.PostEvent(p);
-                    return true;
-                }
-            }
-            finally
-            {
-                m_ScriptsRwLock.ReleaseReaderLock();
+                instance.PostEvent(p);
+                return true;
             }
             return false;
         }
@@ -1769,17 +1525,11 @@ namespace OpenSim.Region.ScriptEngine.XEngine
 
         private IScriptInstance GetInstance(UUID itemID)
         {
-            m_ScriptsRwLock.AcquireReaderLock(-1);
-            try
-            {
-                if (!m_Scripts.ContainsKey(itemID))
-                    return null;
-                return m_Scripts[itemID];
-            }
-            finally
-            {
-                m_ScriptsRwLock.ReleaseReaderLock();
-            }
+            IScriptInstance val;
+
+            if (!m_Scripts.TryGetValue(itemID, out val))
+                return null;
+            return val;
         }
 
         public void SetScriptState(UUID itemID, bool running)
@@ -1877,16 +1627,10 @@ namespace OpenSim.Region.ScriptEngine.XEngine
 
             List<IScriptInstance> instances = new List<IScriptInstance>();
 
-            m_ScriptsRwLock.AcquireReaderLock(-1);
-            try
+            m_Scripts.ForEach(delegate(IScriptInstance instance)
             {
-                foreach (IScriptInstance instance in m_Scripts.Values)
-                    instances.Add(instance);
-            }
-            finally
-            {
-                m_ScriptsRwLock.ReleaseReaderLock();
-            }
+                instances.Add(instance);
+            });
 
             foreach (IScriptInstance i in instances)
             {
@@ -2238,38 +1982,25 @@ namespace OpenSim.Region.ScriptEngine.XEngine
         public ArrayList GetScriptErrors(UUID itemID)
         {
             System.Threading.Thread.Sleep(1000);
-
-            lock (m_ScriptErrors)
+            ArrayList ret;
+            if (m_ScriptErrors.Remove(itemID, out ret))
             {
-                if (m_ScriptErrors.ContainsKey(itemID))
-                {
-                    ArrayList ret = m_ScriptErrors[itemID];
-                    m_ScriptErrors.Remove(itemID);
-                    return ret;
-                }
-                return new ArrayList();
+                return ret;
             }
+            return new ArrayList();
         }
 
         public Dictionary<uint, float> GetObjectScriptsExecutionTimes()
         {
             long tickNow = Util.EnvironmentTickCount();
             Dictionary<uint, float> topScripts = new Dictionary<uint, float>();
-            m_ScriptsRwLock.AcquireReaderLock(-1);
-            try
+            m_Scripts.ForEach(delegate(IScriptInstance si)
             {
-                foreach (IScriptInstance si in m_Scripts.Values)
-                {
-                    if (!topScripts.ContainsKey(si.LocalID))
-                        topScripts[si.RootLocalID] = 0;
+                if (!topScripts.ContainsKey(si.LocalID))
+                    topScripts[si.RootLocalID] = 0;
 
-                    topScripts[si.RootLocalID] += CalculateAdjustedExectionTime(si, tickNow);
-                }
-            }
-            finally
-            {
-                m_ScriptsRwLock.ReleaseReaderLock();
-            }
+                topScripts[si.RootLocalID] += CalculateAdjustedExectionTime(si, tickNow);
+            });
 
             return topScripts;
         }

@@ -38,38 +38,18 @@ namespace OpenSim.Framework
     /// </remarks>
     public class DOMap
     {
-        private IDictionary<string, object> m_map;
-        private ReaderWriterLock m_mapRwLock = new ReaderWriterLock();
+        private ThreadedClasses.RwLockedDictionary<string, object> m_map = new ThreadedClasses.RwLockedDictionary<string, object>();
         
         public void Add(string ns, string objName, object dynObj)
         {
             DAMap.ValidateNamespace(ns);
 
-            m_mapRwLock.AcquireWriterLock(-1);
-            try
-            {
-                if (m_map == null)
-                    m_map = new Dictionary<string, object>();
-
-                m_map.Add(objName, dynObj);
-            }
-            finally
-            {
-                m_mapRwLock.ReleaseWriterLock();
-            }
+            m_map.Add(objName, dynObj);
         }
 
         public bool ContainsKey(string key)
         {
-            m_mapRwLock.AcquireReaderLock(-1);
-            try
-            {
-                return Get(key) != null;
-            }
-            finally
-            {
-                m_mapRwLock.ReleaseReaderLock();
-            }
+            return m_map.ContainsKey(key);
         }
 
         /// <summary>
@@ -81,34 +61,12 @@ namespace OpenSim.Framework
         /// <param name='key'></param>
         public object Get(string key)
         {
-            m_mapRwLock.AcquireReaderLock(-1);
-            try
-            {
-                if (m_map == null)
-                    return null;
-                else
-                    return m_map[key];
-            }
-            finally
-            {
-                m_mapRwLock.ReleaseReaderLock();
-            }
+            return m_map[key];
         }
 
         public bool Remove(string key)
         {
-            m_mapRwLock.AcquireWriterLock(-1);
-            try
-            {
-                if (m_map == null)
-                    return false;
-                else
-                    return m_map.Remove(key);
-            }
-            finally
-            {
-                m_mapRwLock.ReleaseWriterLock();
-            }
+            return m_map.Remove(key);
         }
     }
 }

@@ -38,14 +38,13 @@ namespace OpenSim.Region.Physics.BulletSPlugin
 
         delegate bool ConstraintAction(BSConstraint constrain);
 
-        private List<BSConstraint> m_constraints;
-        private ReaderWriterLock m_constraintsRwLock = new ReaderWriterLock();
+        private ThreadedClasses.RwLockedList<BSConstraint> m_constraints;
         private BulletWorld m_world;
 
         public BSConstraintCollection(BulletWorld world)
         {
             m_world = world;
-            m_constraints = new List<BSConstraint>();
+            m_constraints = new ThreadedClasses.RwLockedList<BSConstraint>();
         }
 
         public void Dispose()
@@ -55,35 +54,19 @@ namespace OpenSim.Region.Physics.BulletSPlugin
 
         public void Clear()
         {
-            m_constraintsRwLock.AcquireWriterLock(-1);
-            try
+            foreach (BSConstraint cons in m_constraints)
             {
-                foreach (BSConstraint cons in m_constraints)
-                {
-                    cons.Dispose();
-                }
-                m_constraints.Clear();
-            }
-            finally
-            {
-                m_constraintsRwLock.ReleaseWriterLock();
+                m_constraints.Remove(cons);
+                cons.Dispose();
             }
         }
 
         public bool AddConstraint(BSConstraint cons)
         {
-            m_constraintsRwLock.AcquireWriterLock(-1);
-            try
-            {
-                // There is only one constraint between any bodies. Remove any old just to make sure.
-                RemoveAndDestroyConstraint(cons.Body1, cons.Body2);
+            // There is only one constraint between any bodies. Remove any old just to make sure.
+            RemoveAndDestroyConstraint(cons.Body1, cons.Body2);
 
-                m_constraints.Add(cons);
-            }
-            finally
-            {
-                m_constraintsRwLock.ReleaseWriterLock();
-            }
+            m_constraints.Add(cons);
 
             return true;
         }
@@ -92,31 +75,26 @@ namespace OpenSim.Region.Physics.BulletSPlugin
         // Return 'true' if a constraint was found.
         public bool TryGetConstraint(BulletBody body1, BulletBody body2, out BSConstraint returnConstraint)
         {
-            bool found = false;
-            BSConstraint foundConstraint = null;
-
             uint lookingID1 = body1.ID;
             uint lookingID2 = body2.ID;
-            m_constraintsRwLock.AcquireReaderLock(-1);
             try
             {
-                foreach (BSConstraint constrain in m_constraints)
+                m_constraints.ForEach(delegate(BSConstraint constrain)
                 {
                     if ((constrain.Body1.ID == lookingID1 && constrain.Body2.ID == lookingID2)
                         || (constrain.Body1.ID == lookingID2 && constrain.Body2.ID == lookingID1))
                     {
-                        foundConstraint = constrain;
-                        found = true;
-                        break;
+                        throw new ThreadedClasses.ReturnValueException<BSConstraint>(constrain);
                     }
-                }
+                });
             }
-            finally
+            catch(ThreadedClasses.ReturnValueException<BSConstraint> e)
             {
-                m_constraintsRwLock.ReleaseReaderLock();
+                returnConstraint = e.Value;
+                return true;
             }
-            returnConstraint = foundConstraint;
-            return found;
+            returnConstraint = default(BSConstraint);
+            return false;
         }
 
         // Remove any constraint between the passed bodies.
@@ -125,19 +103,11 @@ namespace OpenSim.Region.Physics.BulletSPlugin
         public bool RemoveAndDestroyConstraint(BulletBody body1, BulletBody body2)
         {
             bool ret = false;
-            m_constraintsRwLock.AcquireWriterLock(-1);
-            try
+            BSConstraint constrain;
+            if (this.TryGetConstraint(body1, body2, out constrain))
             {
-                BSConstraint constrain;
-                if (this.TryGetConstraint(body1, body2, out constrain))
-                {
-                    // remove the constraint from our collection
-                    ret = RemoveAndDestroyConstraint(constrain);
-                }
-            }
-            finally
-            {
-                m_constraintsRwLock.ReleaseWriterLock();
+                // remove the constraint from our collection
+                ret = RemoveAndDestroyConstraint(constrain);
             }
 
             return ret;
@@ -149,16 +119,8 @@ namespace OpenSim.Region.Physics.BulletSPlugin
         public bool RemoveAndDestroyConstraint(BSConstraint constrain)
         {
             bool removed = false;
-            m_constraintsRwLock.AcquireWriterLock(-1);
-            try
-            {
-                // remove the constraint from our collection
-                removed = m_constraints.Remove(constrain);
-            }
-            finally
-            {
-                m_constraintsRwLock.ReleaseWriterLock();
-            }
+            // remove the constraint from our collection
+            removed = m_constraints.Remove(constrain);
             // Dispose() is safe to call multiple times
             constrain.Dispose();
             return removed;
@@ -170,25 +132,17 @@ namespace OpenSim.Region.Physics.BulletSPlugin
         {
             List<BSConstraint> toRemove = new List<BSConstraint>();
             uint lookingID = body1.ID;
-            m_constraintsRwLock.AcquireWriterLock(-1);
-            try
+            m_constraints.ForEach(delegate(BSConstraint constrain)
             {
-                foreach (BSConstraint constrain in m_constraints)
+                if (constrain.Body1.ID == lookingID || constrain.Body2.ID == lookingID)
                 {
-                    if (constrain.Body1.ID == lookingID || constrain.Body2.ID == lookingID)
-                    {
-                        toRemove.Add(constrain);
-                    }
+                    toRemove.Add(constrain);
                 }
-                foreach (BSConstraint constrain in toRemove)
-                {
-                    m_constraints.Remove(constrain);
-                    constrain.Dispose();
-                }
-            }
-            finally
+            });
+            foreach (BSConstraint constrain in toRemove)
             {
-                m_constraintsRwLock.ReleaseWriterLock();
+                m_constraints.Remove(constrain);
+                constrain.Dispose();
             }
             return (toRemove.Count > 0);
         }
@@ -196,18 +150,10 @@ namespace OpenSim.Region.Physics.BulletSPlugin
         public bool RecalculateAllConstraints()
         {
             bool ret = false;
-            m_constraintsRwLock.AcquireReaderLock(-1);
-            try
+            foreach(BSConstraint constrain in m_constraints)
             {
-                foreach (BSConstraint constrain in m_constraints)
-                {
-                    constrain.CalculateTransforms();
-                    ret = true;
-                }
-            }
-            finally
-            {
-                m_constraintsRwLock.ReleaseReaderLock();
+                constrain.CalculateTransforms();
+                ret = true;
             }
             return ret;
         }

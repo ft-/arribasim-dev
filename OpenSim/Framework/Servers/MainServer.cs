@@ -39,8 +39,7 @@ namespace OpenSim.Framework.Servers
 //        private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         private static BaseHttpServer instance = null;
-        private static Dictionary<uint, BaseHttpServer> m_Servers = new Dictionary<uint, BaseHttpServer>();
-        private static ReaderWriterLock m_ServersRwLock = new ReaderWriterLock();
+        private static ThreadedClasses.RwLockedDictionary<uint, BaseHttpServer> m_Servers = new ThreadedClasses.RwLockedDictionary<uint, BaseHttpServer>();
 
         /// <summary>
         /// Control the printing of certain debug messages.
@@ -60,16 +59,10 @@ namespace OpenSim.Framework.Servers
             {
                 s_debugLevel = value;
 
-                m_ServersRwLock.AcquireReaderLock(-1);
-                try
+                m_Servers.ForEach(delegate(BaseHttpServer server)
                 {
-                    foreach (BaseHttpServer server in m_Servers.Values)
-                        server.DebugLevel = s_debugLevel;
-                }
-                finally
-                {
-                    m_ServersRwLock.ReleaseReaderLock();
-                }
+                    server.DebugLevel = s_debugLevel;
+                });
             }
         }
 
@@ -90,16 +83,8 @@ namespace OpenSim.Framework.Servers
 
             set
             {
-                m_ServersRwLock.AcquireReaderLock(-1);
-                try
-                {
-                    if (!m_Servers.ContainsValue(value))
-                        throw new Exception("HTTP server must already have been registered to be set as the main instance");
-                }
-                finally
-                {
-                    m_ServersRwLock.ReleaseReaderLock();
-                }
+                if (!m_Servers.ContainsValue(value))
+                    throw new Exception("HTTP server must already have been registered to be set as the main instance");
 
                 instance = value;
             }
@@ -116,15 +101,7 @@ namespace OpenSim.Framework.Servers
         {
             get 
             {
-                m_ServersRwLock.AcquireReaderLock(-1);
-                try
-                {
-                    return new Dictionary<uint, BaseHttpServer>(m_Servers);
-                }
-                finally
-                {
-                    m_ServersRwLock.ReleaseReaderLock();
-                }
+                return new Dictionary<uint, BaseHttpServer>(m_Servers);
             }
         }
 
@@ -240,48 +217,40 @@ namespace OpenSim.Framework.Servers
 
             StringBuilder handlers = new StringBuilder();
 
-            m_ServersRwLock.AcquireReaderLock(-1);
-            try
+            foreach (BaseHttpServer httpServer in m_Servers.Values)
             {
-                foreach (BaseHttpServer httpServer in m_Servers.Values)
-                {
-                    handlers.AppendFormat(
-                        "Registered HTTP Handlers for server at {0}:{1}\n", httpServer.ListenIPAddress, httpServer.Port);
+                handlers.AppendFormat(
+                    "Registered HTTP Handlers for server at {0}:{1}\n", httpServer.ListenIPAddress, httpServer.Port);
         
-                    handlers.AppendFormat("* XMLRPC:\n");
-                    foreach (String s in httpServer.GetXmlRpcHandlerKeys())
-                        handlers.AppendFormat("\t{0}\n", s);
+                handlers.AppendFormat("* XMLRPC:\n");
+                foreach (String s in httpServer.GetXmlRpcHandlerKeys())
+                    handlers.AppendFormat("\t{0}\n", s);
         
-                    handlers.AppendFormat("* HTTP:\n");
-                    foreach (String s in httpServer.GetHTTPHandlerKeys())
-                        handlers.AppendFormat("\t{0}\n", s);
+                handlers.AppendFormat("* HTTP:\n");
+                foreach (String s in httpServer.GetHTTPHandlerKeys())
+                    handlers.AppendFormat("\t{0}\n", s);
 
-                    handlers.AppendFormat("* HTTP (poll):\n");
-                    foreach (String s in httpServer.GetPollServiceHandlerKeys())
-                        handlers.AppendFormat("\t{0}\n", s);
+                handlers.AppendFormat("* HTTP (poll):\n");
+                foreach (String s in httpServer.GetPollServiceHandlerKeys())
+                    handlers.AppendFormat("\t{0}\n", s);
                     
-                    handlers.AppendFormat("* JSONRPC:\n");
-                    foreach (String s in httpServer.GetJsonRpcHandlerKeys())
-                        handlers.AppendFormat("\t{0}\n", s);
+                handlers.AppendFormat("* JSONRPC:\n");
+                foreach (String s in httpServer.GetJsonRpcHandlerKeys())
+                    handlers.AppendFormat("\t{0}\n", s);
         
 //                    handlers.AppendFormat("* Agent:\n");
 //                    foreach (String s in httpServer.GetAgentHandlerKeys())
 //                        handlers.AppendFormat("\t{0}\n", s);
         
-                    handlers.AppendFormat("* LLSD:\n");
-                    foreach (String s in httpServer.GetLLSDHandlerKeys())
-                        handlers.AppendFormat("\t{0}\n", s);
+                handlers.AppendFormat("* LLSD:\n");
+                foreach (String s in httpServer.GetLLSDHandlerKeys())
+                    handlers.AppendFormat("\t{0}\n", s);
         
-                    handlers.AppendFormat("* StreamHandlers ({0}):\n", httpServer.GetStreamHandlerKeys().Count);
-                    foreach (String s in httpServer.GetStreamHandlerKeys())
-                        handlers.AppendFormat("\t{0}\n", s);
+                handlers.AppendFormat("* StreamHandlers ({0}):\n", httpServer.GetStreamHandlerKeys().Count);
+                foreach (String s in httpServer.GetStreamHandlerKeys())
+                    handlers.AppendFormat("\t{0}\n", s);
 
-                    handlers.Append("\n");
-                }
-            }
-            finally
-            {
-                m_ServersRwLock.ReleaseReaderLock();
+                handlers.Append("\n");
             }
 
             MainConsole.Instance.Output(handlers.ToString());
@@ -293,18 +262,7 @@ namespace OpenSim.Framework.Servers
         /// <param name='server'></param>
         public static void AddHttpServer(BaseHttpServer server)
         {
-            m_ServersRwLock.AcquireWriterLock(-1);
-            try
-            {
-                if (m_Servers.ContainsKey(server.Port))
-                    throw new Exception(string.Format("HTTP server for port {0} already exists.", server.Port));
-
-                m_Servers.Add(server.Port, server);
-            }
-            finally
-            {
-                m_ServersRwLock.ReleaseWriterLock();
-            }
+            m_Servers.AddIfNotExists(server.Port, delegate() { return server; });
         }
 
         /// <summary>
@@ -317,18 +275,11 @@ namespace OpenSim.Framework.Servers
         /// <returns></returns>
         public static bool RemoveHttpServer(uint port)
         {
-            m_ServersRwLock.AcquireWriterLock(-1);
-            try
+            if (instance != null && instance.Port == port)
             {
-                if (instance != null && instance.Port == port)
-                    instance = null;
-
-                return m_Servers.Remove(port);
+                instance = null;
             }
-            finally
-            {
-                m_ServersRwLock.ReleaseWriterLock();
-            }
+            return m_Servers.Remove(port);
         }
 
         /// <summary>
@@ -341,15 +292,7 @@ namespace OpenSim.Framework.Servers
         /// <returns>true if a server with the given port is registered, false otherwise.</returns>
         public static bool ContainsHttpServer(uint port)
         {
-            m_ServersRwLock.AcquireReaderLock(-1);
-            try
-            {
-                return m_Servers.ContainsKey(port);
-            }
-            finally
-            {
-                m_ServersRwLock.ReleaseReaderLock();
-            }
+            return m_Servers.ContainsKey(port);
         }
 
         /// <summary>
@@ -378,38 +321,22 @@ namespace OpenSim.Framework.Servers
         public static IHttpServer GetHttpServer(uint port, IPAddress ipaddr)
         {
             if (port == 0)
-                return Instance;
+                return instance;
             
-            if (instance != null && port == Instance.Port)
-                return Instance;
+            if (instance != null && port == instance.Port)
+                return instance;
 
-            m_ServersRwLock.AcquireReaderLock(-1);
-            try
+            return m_Servers.GetOrAddIfNotExists(port, delegate()
             {
-                if (m_Servers.ContainsKey(port))
-                    return m_Servers[port];
+                BaseHttpServer server = new BaseHttpServer(port);
 
-                LockCookie lc = m_ServersRwLock.UpgradeToWriterLock(-1);
-                try
-                {
-                    m_Servers[port] = new BaseHttpServer(port);
+                if (ipaddr != null)
+                    server.ListenIPAddress = ipaddr;
 
-                    if (ipaddr != null)
-                        m_Servers[port].ListenIPAddress = ipaddr;
+                server.Start();
+                return server;
 
-                    m_Servers[port].Start();
-                }
-                finally
-                {
-                    m_ServersRwLock.DowngradeFromWriterLock(ref lc);
-                }
-
-                return m_Servers[port];
-            }
-            finally
-            {
-                m_ServersRwLock.ReleaseReaderLock();
-            }
+            });
         }
     }
 }

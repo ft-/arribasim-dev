@@ -241,7 +241,7 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
             if (active == 1)
                 m_listenerManager.Activate(itemID, handle);
             else if (active == 0)
-                m_listenerManager.Dectivate(itemID, handle);
+                m_listenerManager.Deactivate(itemID, handle);
         }
 
         /// <summary>
@@ -514,12 +514,11 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
 
     public class ListenerManager
     {
-        private Dictionary<int, List<ListenerInfo>> m_listeners =
-                new Dictionary<int, List<ListenerInfo>>();
+        private ThreadedClasses.RwLockedDictionary<int, ThreadedClasses.RwLockedList<ListenerInfo>> m_listeners =
+                new ThreadedClasses.RwLockedDictionary<int, ThreadedClasses.RwLockedList<ListenerInfo>>();
         private int m_maxlisteners;
         private int m_maxhandles;
         private int m_curlisteners;
-        private ReaderWriterLock m_ListenerRwLock = new ReaderWriterLock();
 
         /// <summary>
         /// Total number of listeners
@@ -528,15 +527,7 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
         {
             get
             {
-                m_ListenerRwLock.AcquireReaderLock(-1);
-                try
-                {
-                    return m_listeners.Count;
-                }
-                finally
-                {
-                    m_ListenerRwLock.ReleaseReaderLock();
-                }
+                return m_listeners.Count;
             }
         }
 
@@ -571,8 +562,7 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
 
             if (m_curlisteners < m_maxlisteners)
             {
-                m_ListenerRwLock.AcquireReaderLock(-1);
-                try
+                lock(m_listeners) /* serialize handle creation here */
                 {
                     int newHandle = GetNewHandle(itemID);
 
@@ -582,30 +572,17 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
                                 itemID, hostID, channel, name, id, msg,
                                 regexBitfield);
 
-                        LockCookie lc = m_ListenerRwLock.UpgradeToWriterLock(-1);
-                        try
+
+                        ThreadedClasses.RwLockedList<ListenerInfo> listeners = 
+                            m_listeners.GetOrAddIfNotExists(channel, delegate()
                         {
-                            List<ListenerInfo> listeners;
-                            if (!m_listeners.TryGetValue(
-                                    channel, out listeners))
-                            {
-                                listeners = new List<ListenerInfo>();
-                                m_listeners.Add(channel, listeners);
-                            }
-                            listeners.Add(li);
-                            m_curlisteners++;
-                        }
-                        finally
-                        {
-                            m_ListenerRwLock.DowngradeFromWriterLock(ref lc);
-                        }
+                            return new ThreadedClasses.RwLockedList<ListenerInfo>();
+                        });
+                        listeners.Add(li);
+                        Interlocked.Increment(ref m_curlisteners);
 
                         return newHandle;
                     }
-                }
-                finally
-                {
-                    m_ListenerRwLock.ReleaseReaderLock();
                 }
             }
             return -1;
@@ -613,32 +590,26 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
 
         public void Remove(UUID itemID, int handle)
         {
-            m_ListenerRwLock.AcquireWriterLock(-1);
-            try
+            /* standard foreach is implemented in RwLockedDictionary to make a copy first */
+            foreach (KeyValuePair<int, ThreadedClasses.RwLockedList<ListenerInfo>> lis
+                    in m_listeners)
             {
-                foreach (KeyValuePair<int, List<ListenerInfo>> lis
-                        in m_listeners)
+                /* standard foreach is implemented in RwLockedDictionary to make a copy first */
+                foreach (ListenerInfo li in lis.Value)
                 {
-                    foreach (ListenerInfo li in lis.Value)
+                    if (li.GetItemID().Equals(itemID) &&
+                            li.GetHandle().Equals(handle))
                     {
-                        if (li.GetItemID().Equals(itemID) &&
-                                li.GetHandle().Equals(handle))
+                        lis.Value.Remove(li);
+                        if (lis.Value.Count == 0)
                         {
-                            lis.Value.Remove(li);
-                            if (lis.Value.Count == 0)
-                            {
-                                m_listeners.Remove(lis.Key);
-                                m_curlisteners--;
-                            }
-                            // there should be only one, so we bail out early
-                            return;
+                            m_listeners.Remove(lis.Key);
+                            Interlocked.Decrement(ref m_curlisteners);
                         }
+                        // there should be only one, so we bail out early
+                        return;
                     }
                 }
-            }
-            finally
-            {
-                m_ListenerRwLock.ReleaseWriterLock();
             }
         }
 
@@ -647,93 +618,82 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
             List<int> emptyChannels = new List<int>();
             List<ListenerInfo> removedListeners = new List<ListenerInfo>();
 
-            m_ListenerRwLock.AcquireWriterLock(-1);
-            try
+            /* standard foreach is implemented in RwLockedDictionary to make a copy first */
+            foreach (KeyValuePair<int, ThreadedClasses.RwLockedList<ListenerInfo>> lis
+                    in m_listeners)
             {
-                foreach (KeyValuePair<int, List<ListenerInfo>> lis
-                        in m_listeners)
+                lis.Value.ForEach(delegate(ListenerInfo li)
                 {
-                    foreach (ListenerInfo li in lis.Value)
+                    if (li.GetItemID().Equals(itemID))
                     {
-                        if (li.GetItemID().Equals(itemID))
-                        {
-                            // store them first, else the enumerated bails on
-                            // us
-                            removedListeners.Add(li);
-                        }
+                        // store them first, else the enumerated bails on
+                        // us
+                        removedListeners.Add(li);
                     }
-                    foreach (ListenerInfo li in removedListeners)
-                    {
-                        lis.Value.Remove(li);
-                        m_curlisteners--;
-                    }
-                    removedListeners.Clear();
-                    if (lis.Value.Count == 0)
-                    {
-                        // again, store first, remove later
-                        emptyChannels.Add(lis.Key);
-                    }
+                });
+                foreach (ListenerInfo li in removedListeners)
+                {
+                    lis.Value.Remove(li);
+                    m_curlisteners--;
                 }
-                foreach (int channel in emptyChannels)
+                removedListeners.Clear();
+                if (lis.Value.Count == 0)
                 {
-                    m_listeners.Remove(channel);
+                    // again, store first, remove later
+                    emptyChannels.Add(lis.Key);
                 }
             }
-            finally
+            foreach (int channel in emptyChannels)
             {
-                m_ListenerRwLock.ReleaseWriterLock();
+                m_listeners.Remove(channel);
             }
         }
 
         public void Activate(UUID itemID, int handle)
         {
-            m_ListenerRwLock.AcquireReaderLock(-1);
             try
             {
-                foreach (KeyValuePair<int, List<ListenerInfo>> lis
-                        in m_listeners)
+                m_listeners.ForEach(delegate(KeyValuePair<int, ThreadedClasses.RwLockedList<ListenerInfo>> lis)
                 {
-                    foreach (ListenerInfo li in lis.Value)
+                    lis.Value.ForEach(delegate(ListenerInfo li)
                     {
                         if (li.GetItemID().Equals(itemID) &&
                                 li.GetHandle() == handle)
                         {
                             li.Activate();
                             // only one, bail out
-                            return;
+                            throw new ThreadedClasses.ReturnValueException<bool>(true);
                         }
-                    }
-                }
+                    });
+                });
             }
-            finally
+            catch(ThreadedClasses.ReturnValueException<bool>)
             {
-                m_ListenerRwLock.ReleaseReaderLock();
+
             }
         }
 
-        public void Dectivate(UUID itemID, int handle)
+        public void Deactivate(UUID itemID, int handle)
         {
-            m_ListenerRwLock.AcquireReaderLock(-1);
             try
             {
-                foreach (KeyValuePair<int, List<ListenerInfo>> lis
-                        in m_listeners)
+                m_listeners.ForEach(delegate(KeyValuePair<int, ThreadedClasses.RwLockedList<ListenerInfo>> lis)
                 {
-                    foreach (ListenerInfo li in lis.Value)
+                    lis.Value.ForEach(delegate(ListenerInfo li)
                     {
                         if (li.GetItemID().Equals(itemID) &&
                                 li.GetHandle() == handle)
                         {
                             li.Deactivate();
                             // only one, bail out
-                            return;
+                            throw new ThreadedClasses.ReturnValueException<bool>(true);
                         }
-                    }
-                }
+                    });
+                });
             }
-            finally
+            catch (ThreadedClasses.ReturnValueException<bool>)
             {
-                m_ListenerRwLock.ReleaseReaderLock();
+
             }
         }
 
@@ -748,14 +708,14 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
             List<int> handles = new List<int>();
 
             // build a list of used keys for this specific itemID...
-            foreach (KeyValuePair<int, List<ListenerInfo>> lis in m_listeners)
+            m_listeners.ForEach(delegate(KeyValuePair<int, ThreadedClasses.RwLockedList<ListenerInfo>> lis)
             {
-                foreach (ListenerInfo li in lis.Value)
+                lis.Value.ForEach(delegate(ListenerInfo li)
                 {
                     if (li.GetItemID().Equals(itemID))
                         handles.Add(li.GetHandle());
-                }
-            }
+                });
+            });
 
             // Note: 0 is NOT a valid handle for llListen() to return
             for (int i = 1; i <= m_maxhandles; i++)
@@ -803,51 +763,43 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
         {
             List<ListenerInfo> collection = new List<ListenerInfo>();
 
-            m_ListenerRwLock.AcquireReaderLock(-1);
-            try
+            ThreadedClasses.RwLockedList<ListenerInfo> listeners;
+            if (!m_listeners.TryGetValue(channel, out listeners))
             {
-                List<ListenerInfo> listeners;
-                if (!m_listeners.TryGetValue(channel, out listeners))
-                {
-                    return collection;
-                }
+                return collection;
+            }
 
-                foreach (ListenerInfo li in listeners)
-                {
-                    if (!li.IsActive())
-                    {
-                        continue;
-                    }
-                    if (!itemID.Equals(UUID.Zero) &&
-                            !li.GetItemID().Equals(itemID))
-                    {
-                        continue;
-                    }
-                    if (li.GetName().Length > 0 && (
-                        ((li.RegexBitfield & OS_LISTEN_REGEX_NAME) != OS_LISTEN_REGEX_NAME && !li.GetName().Equals(name)) ||
-                        ((li.RegexBitfield & OS_LISTEN_REGEX_NAME) == OS_LISTEN_REGEX_NAME && !Regex.IsMatch(name, li.GetName()))
-                    ))
-                    {
-                        continue;
-                    }
-                    if (!li.GetID().Equals(UUID.Zero) && !li.GetID().Equals(id))
-                    {
-                        continue;
-                    }
-                    if (li.GetMessage().Length > 0 && (
-                        ((li.RegexBitfield & OS_LISTEN_REGEX_MESSAGE) != OS_LISTEN_REGEX_MESSAGE && !li.GetMessage().Equals(msg)) ||
-                        ((li.RegexBitfield & OS_LISTEN_REGEX_MESSAGE) == OS_LISTEN_REGEX_MESSAGE && !Regex.IsMatch(msg, li.GetMessage()))
-                    ))
-                    {
-                        continue;
-                    }
-                    collection.Add(li);
-                }
-            }
-            finally
+            listeners.ForEach(delegate(ListenerInfo li)
             {
-                m_ListenerRwLock.ReleaseReaderLock();
-            }
+                if (!li.IsActive())
+                {
+                    return;
+                }
+                if (!itemID.Equals(UUID.Zero) &&
+                        !li.GetItemID().Equals(itemID))
+                {
+                    return;
+                }
+                if (li.GetName().Length > 0 && (
+                    ((li.RegexBitfield & OS_LISTEN_REGEX_NAME) != OS_LISTEN_REGEX_NAME && !li.GetName().Equals(name)) ||
+                    ((li.RegexBitfield & OS_LISTEN_REGEX_NAME) == OS_LISTEN_REGEX_NAME && !Regex.IsMatch(name, li.GetName()))
+                ))
+                {
+                    return;
+                }
+                if (!li.GetID().Equals(UUID.Zero) && !li.GetID().Equals(id))
+                {
+                    return;
+                }
+                if (li.GetMessage().Length > 0 && (
+                    ((li.RegexBitfield & OS_LISTEN_REGEX_MESSAGE) != OS_LISTEN_REGEX_MESSAGE && !li.GetMessage().Equals(msg)) ||
+                    ((li.RegexBitfield & OS_LISTEN_REGEX_MESSAGE) == OS_LISTEN_REGEX_MESSAGE && !Regex.IsMatch(msg, li.GetMessage()))
+                ))
+                {
+                    return;
+                }
+                collection.Add(li);
+            });
             return collection;
         }
 
@@ -855,22 +807,14 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
         {
             List<Object> data = new List<Object>();
 
-            m_ListenerRwLock.AcquireReaderLock(-1);
-            try
+            m_listeners.ForEach(delegate(ThreadedClasses.RwLockedList<ListenerInfo> list)
             {
-                foreach (List<ListenerInfo> list in m_listeners.Values)
+                foreach (ListenerInfo l in list)
                 {
-                    foreach (ListenerInfo l in list)
-                    {
-                        if (l.GetItemID() == itemID)
-                            data.AddRange(l.GetSerializationData());
-                    }
+                    if (l.GetItemID() == itemID)
+                        data.AddRange(l.GetSerializationData());
                 }
-            }
-            finally
-            {
-                m_ListenerRwLock.ReleaseReaderLock();
-            }
+            });
             return (Object[])data.ToArray();
         }
 
@@ -890,19 +834,12 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
                 ListenerInfo info =
                         ListenerInfo.FromData(localID, itemID, hostID, item);
 
-                m_ListenerRwLock.AcquireWriterLock(-1);
                 try
                 {
-                    if (!m_listeners.ContainsKey((int)item[2]))
-                    {
-                        m_listeners.Add((int)item[2],
-                                new List<ListenerInfo>());
-                    }
-                    m_listeners[(int)item[2]].Add(info);
+                    m_listeners.AddIfNotExists((int)item[2], delegate() { return new ThreadedClasses.RwLockedList<ListenerInfo>(); });
                 }
-                finally
+                catch(ThreadedClasses.RwLockedDictionary<int, ThreadedClasses.RwLockedList<ListenerInfo>>.KeyAlreadyExistsException)
                 {
-                    m_ListenerRwLock.ReleaseWriterLock();
                 }
 
                 idx += dataItemLength;

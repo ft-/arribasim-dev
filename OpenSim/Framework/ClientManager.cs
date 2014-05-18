@@ -38,29 +38,17 @@ namespace OpenSim.Framework
     /// </summary>
     public class ClientManager
     {
-        /// <summary>A dictionary mapping from <seealso cref="UUID"/>
-        /// to <seealso cref="IClientAPI"/> references</summary>
-        private Dictionary<UUID, IClientAPI> m_dict1;
-        /// <summary>A dictionary mapping from <seealso cref="IPEndPoint"/>
-        /// to <seealso cref="IClientAPI"/> references</summary>
-        private Dictionary<IPEndPoint, IClientAPI> m_dict2;
-        /// <summary>An immutable collection of <seealso cref="IClientAPI"/>
-        /// references</summary>
-        private IClientAPI[] m_array;
-        /// <summary>Synchronization object for writing to the collections</summary>
-        private object m_syncRoot = new object();
+        private ThreadedClasses.RwLockedDoubleDictionary<UUID, IPEndPoint, IClientAPI> m_ClientDict =
+            new ThreadedClasses.RwLockedDoubleDictionary<UUID, IPEndPoint, IClientAPI>();
 
         /// <summary>Number of clients in the collection</summary>
-        public int Count { get { return m_dict1.Count; } }
+        public int Count { get { return m_ClientDict.Count; } }
 
         /// <summary>
         /// Default constructor
         /// </summary>
         public ClientManager()
         {
-            m_dict1 = new Dictionary<UUID, IClientAPI>();
-            m_dict2 = new Dictionary<IPEndPoint, IClientAPI>();
-            m_array = new IClientAPI[0];
         }
 
         /// <summary>
@@ -72,26 +60,15 @@ namespace OpenSim.Framework
         /// otherwise false if the given key already existed in the collection</returns>
         public bool Add(IClientAPI value)
         {
-            lock (m_syncRoot)
+            try
             {
-                if (m_dict1.ContainsKey(value.AgentId) || m_dict2.ContainsKey(value.RemoteEndPoint))
-                    return false;
-
-                m_dict1[value.AgentId] = value;
-                m_dict2[value.RemoteEndPoint] = value;
-
-                IClientAPI[] oldArray = m_array;
-                int oldLength = oldArray.Length;
-
-                IClientAPI[] newArray = new IClientAPI[oldLength + 1];
-                for (int i = 0; i < oldLength; i++)
-                    newArray[i] = oldArray[i];
-                newArray[oldLength] = value;
-
-                m_array = newArray;
+                m_ClientDict.Add(value.AgentId, value.RemoteEndPoint, value);
+                return true;
             }
-
-            return true;
+            catch(Exception)
+            {
+                return false;
+            }
         }
 
         /// <summary>
@@ -102,31 +79,7 @@ namespace OpenSim.Framework
         /// was not present in the collection</returns>
         public bool Remove(UUID key)
         {
-            lock (m_syncRoot)
-            {
-                IClientAPI value;
-                if (m_dict1.TryGetValue(key, out value))
-                {
-                    m_dict1.Remove(key);
-                    m_dict2.Remove(value.RemoteEndPoint);
-
-                    IClientAPI[] oldArray = m_array;
-                    int oldLength = oldArray.Length;
-
-                    IClientAPI[] newArray = new IClientAPI[oldLength - 1];
-                    int j = 0;
-                    for (int i = 0; i < oldLength; i++)
-                    {
-                        if (oldArray[i] != value)
-                            newArray[j++] = oldArray[i];
-                    }
-
-                    m_array = newArray;
-                    return true;
-                }
-            }
-
-            return false;
+            return m_ClientDict.Remove(key);
         }
 
         /// <summary>
@@ -134,12 +87,7 @@ namespace OpenSim.Framework
         /// </summary>
         public void Clear()
         {
-            lock (m_syncRoot)
-            {
-                m_dict1.Clear();
-                m_dict2.Clear();
-                m_array = new IClientAPI[0];
-            }
+            m_ClientDict.Clear();
         }
 
         /// <summary>
@@ -149,7 +97,7 @@ namespace OpenSim.Framework
         /// <returns>True if the UUID was found in the collection, otherwise false</returns>
         public bool ContainsKey(UUID key)
         {
-            return m_dict1.ContainsKey(key);
+            return m_ClientDict.ContainsKey(key);
         }
 
         /// <summary>
@@ -159,7 +107,7 @@ namespace OpenSim.Framework
         /// <returns>True if the endpoint was found in the collection, otherwise false</returns>
         public bool ContainsKey(IPEndPoint key)
         {
-            return m_dict2.ContainsKey(key);
+            return m_ClientDict.ContainsKey(key);
         }
 
         /// <summary>
@@ -170,12 +118,7 @@ namespace OpenSim.Framework
         /// <returns>True if the lookup succeeded, otherwise false</returns>
         public bool TryGetValue(UUID key, out IClientAPI value)
         {
-            try { return m_dict1.TryGetValue(key, out value); }
-            catch (Exception)
-            {
-                value = null;
-                return false;
-            }
+            return m_ClientDict.TryGetValue(key, out value);
         }
 
         /// <summary>
@@ -186,12 +129,7 @@ namespace OpenSim.Framework
         /// <returns>True if the lookup succeeded, otherwise false</returns>
         public bool TryGetValue(IPEndPoint key, out IClientAPI value)
         {
-            try { return m_dict2.TryGetValue(key, out value); }
-            catch (Exception)
-            {
-                value = null;
-                return false;
-            }
+            return m_ClientDict.TryGetValue(key, out value);
         }
 
         /// <summary>
@@ -201,7 +139,7 @@ namespace OpenSim.Framework
         /// <param name="action">Action to perform on each element</param>
         public void ForEach(Action<IClientAPI> action)
         {
-            IClientAPI[] localArray = m_array;
+            IClientAPI[] localArray = m_ClientDict.Values.ToArray();
             Parallel.For(0, localArray.Length,
                 delegate(int i)
                 { action(localArray[i]); }
@@ -215,7 +153,7 @@ namespace OpenSim.Framework
         /// <param name="action">Action to perform on each element</param>
         public void ForEachSync(Action<IClientAPI> action)
         {
-            IClientAPI[] localArray = m_array;
+            IClientAPI[] localArray = m_ClientDict.Values.ToArray();
             for (int i = 0; i < localArray.Length; i++)
                 action(localArray[i]);
         }

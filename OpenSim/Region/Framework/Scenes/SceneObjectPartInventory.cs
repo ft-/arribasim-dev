@@ -84,7 +84,7 @@ namespace OpenSim.Region.Framework.Scenes
             get { return m_items; }
             set
             {
-                m_items = value;
+                m_items.Replace(value);
                 m_inventorySerial++;
                 QueryScriptStates();
             }
@@ -94,8 +94,7 @@ namespace OpenSim.Region.Framework.Scenes
         {
             get
             {
-                lock (m_items)
-                    return m_items.Count;
+                return m_items.Count;
             }
         }
         
@@ -132,36 +131,25 @@ namespace OpenSim.Region.Framework.Scenes
             if (null == m_part)
                 return;
             
-            lock (m_items)
+            if (0 == m_items.Count)
+                return;
+
+            m_items.ForEach(delegate(TaskInventoryItem item)
             {
-                if (0 == m_items.Count)
-                    return;
-
-                IList<TaskInventoryItem> items = GetInventoryItems();
-                m_items.Clear();
-
-                foreach (TaskInventoryItem item in items)
-                {
-                    item.ResetIDs(m_part.UUID);
-                    m_items.Add(item.ItemID, item);
-                }
-            }
+                item.ResetIDs(m_part.UUID);
+            });
         }
 
         public void ResetObjectID()
         {
-            lock (Items)
+            m_items.ForEach(delegate(TaskInventoryItem item)
             {
-                IList<TaskInventoryItem> items = new List<TaskInventoryItem>(Items.Values);
-                Items.Clear();
-    
-                foreach (TaskInventoryItem item in items)
+                lock (item)
                 {
                     item.ParentPartID = m_part.UUID;
                     item.ParentID = m_part.UUID;
-                    Items.Add(item.ItemID, item);
                 }
-            }
+            });
         }
 
         /// <summary>
@@ -170,12 +158,9 @@ namespace OpenSim.Region.Framework.Scenes
         /// <param name="ownerId"></param>
         public void ChangeInventoryOwner(UUID ownerId)
         {
-            lock (Items)
+            if (0 == Items.Count)
             {
-                if (0 == Items.Count)
-                {
-                    return;
-                }
+                return;
             }
 
             HasInventoryChanged = true;
@@ -199,12 +184,9 @@ namespace OpenSim.Region.Framework.Scenes
         /// <param name="groupID"></param>
         public void ChangeInventoryGroup(UUID groupID)
         {
-            lock (Items)
+            if (0 == Items.Count)
             {
-                if (0 == Items.Count)
-                {
-                    return;
-                }
+                return;
             }
 
             // Don't let this set the HasGroupChanged flag for attachments
@@ -229,15 +211,16 @@ namespace OpenSim.Region.Framework.Scenes
             if (m_part == null || m_part.ParentGroup == null || m_part.ParentGroup.Scene == null)
                 return;
 
-            lock (Items)
+            m_items.ForEach(delegate(TaskInventoryItem item)
             {
-                foreach (TaskInventoryItem item in Items.Values)
+                bool running;
+                if(item.InvType != (int)InventoryType.LSL)
                 {
-                    bool running;
-                    if (TryGetScriptInstanceRunning(m_part.ParentGroup.Scene, item, out running))
-                        item.ScriptRunning = running;
+                    return;
                 }
-            }
+                if (TryGetScriptInstanceRunning(m_part.ParentGroup.Scene, item, out running))
+                    item.ScriptRunning = running;
+            });
         }
 
         public bool TryGetScriptInstanceRunning(UUID itemId, out bool running)
@@ -346,11 +329,8 @@ namespace OpenSim.Region.Framework.Scenes
             if (stateSource == 2 && // Prim crossing
                     m_part.ParentGroup.Scene.m_trustBinaries)
             {
-                lock (m_items)
-                {
-                    m_items[item.ItemID].PermsMask = 0;
-                    m_items[item.ItemID].PermsGranter = UUID.Zero;
-                }
+                m_items[item.ItemID].PermsMask = 0;
+                m_items[item.ItemID].PermsGranter = UUID.Zero;
                 
                 m_part.ParentGroup.Scene.EventManager.TriggerRezScript(
                     m_part.LocalId, item.ItemID, String.Empty, startParam, postOnRez, engine, stateSource);
@@ -484,15 +464,7 @@ namespace OpenSim.Region.Framework.Scenes
         /// </param>
         public void RemoveScriptInstance(UUID itemId, bool sceneObjectBeingDeleted)
         {
-            bool scriptPresent = false;
-
-            lock (m_items)
-            {
-                if (m_items.ContainsKey(itemId))
-                    scriptPresent = true;
-            }
-            
-            if (scriptPresent)
+            if (m_items.ContainsKey(itemId))
             {
                 if (!sceneObjectBeingDeleted)
                     m_part.RemoveScriptEvents(itemId);
@@ -522,8 +494,7 @@ namespace OpenSim.Region.Framework.Scenes
         {
             TaskInventoryItem scriptItem;
 
-            lock (m_items)
-                m_items.TryGetValue(itemId, out scriptItem);
+            m_items.TryGetValue(itemId, out scriptItem);
 
             if (scriptItem != null)
             {
@@ -563,13 +534,17 @@ namespace OpenSim.Region.Framework.Scenes
         /// <returns></returns>
         private bool InventoryContainsName(string name)
         {
-            lock (m_items)
+            try
             {
-                foreach (TaskInventoryItem item in m_items.Values)
+                m_items.ForEach(delegate(TaskInventoryItem item)
                 {
                     if (item.Name == name)
-                        return true;
-                }
+                        throw new ThreadedClasses.ReturnValueException<bool>(true);
+                });
+            }
+            catch(ThreadedClasses.ReturnValueException<bool>)
+            {
+                return true;
             }
             return false;
         }
@@ -651,8 +626,7 @@ namespace OpenSim.Region.Framework.Scenes
             item.Name = name;
             item.GroupID = m_part.GroupID;
 
-            lock (m_items)
-                m_items.Add(item.ItemID, item);
+            m_items.Add(item.ItemID, item);
 
             if (allowedDrop) 
                 m_part.TriggerScriptChangedEvent(Changed.ALLOWED_DROP);
@@ -674,13 +648,16 @@ namespace OpenSim.Region.Framework.Scenes
         /// <param name="items"></param>
         public void RestoreInventoryItems(ICollection<TaskInventoryItem> items)
         {
+            Dictionary<UUID, TaskInventoryItem> list = new Dictionary<UUID, TaskInventoryItem>();
+            foreach (TaskInventoryItem item in items)
+            {
+                list.Add(item.ItemID, item);
+                //                    m_part.TriggerScriptChangedEvent(Changed.INVENTORY);
+            }
+
             lock (m_items)
             {
-                foreach (TaskInventoryItem item in items)
-                {
-                    m_items.Add(item.ItemID, item);
-//                    m_part.TriggerScriptChangedEvent(Changed.INVENTORY);
-                }
+                m_items.AddRange(list);
                 m_inventorySerial++;
             }
         }
@@ -694,21 +671,24 @@ namespace OpenSim.Region.Framework.Scenes
         {
             TaskInventoryItem item;
 
-            lock (m_items)
-                m_items.TryGetValue(itemId, out item);
+            m_items.TryGetValue(itemId, out item);
 
             return item;
         }
 
         public TaskInventoryItem GetInventoryItem(string name)
         {
-            lock (m_items)
+            try
             {
-                foreach (TaskInventoryItem item in m_items.Values)
+                m_items.ForEach(delegate(TaskInventoryItem item)
                 {
                     if (item.Name == name)
-                        return item;
-                }
+                        throw new ThreadedClasses.ReturnValueException<TaskInventoryItem>(item);
+                });
+            }
+            catch(ThreadedClasses.ReturnValueException<TaskInventoryItem> e)
+            {
+                return e.Value;
             }
 
             return null;
@@ -718,14 +698,11 @@ namespace OpenSim.Region.Framework.Scenes
         {
             List<TaskInventoryItem> items = new List<TaskInventoryItem>();
 
-            lock (m_items)
+            m_items.ForEach(delegate(TaskInventoryItem item)
             {
-                foreach (TaskInventoryItem item in m_items.Values)
-                {
-                    if (item.Name == name)
-                        items.Add(item);
-                }
-            }
+                if (item.Name == name)
+                    items.Add(item);
+            });
 
             return items;
         }
@@ -911,57 +888,54 @@ namespace OpenSim.Region.Framework.Scenes
 
                 InventoryStringBuilder invString = new InventoryStringBuilder(m_part.UUID, UUID.Zero);
 
-                lock (m_items)
+                m_items.ForEach(delegate(TaskInventoryItem item)
                 {
-                    foreach (TaskInventoryItem item in m_items.Values)
-                    {
 //                        m_log.DebugFormat(
 //                            "[PRIM INVENTORY]: Adding item {0} {1} for serial {2} on prim {3} {4} {5}",
 //                            item.Name, item.ItemID, m_inventorySerial, m_part.Name, m_part.UUID, m_part.LocalId);
 
-                        UUID ownerID = item.OwnerID;
-                        uint everyoneMask = 0;
-                        uint baseMask = item.BasePermissions;
-                        uint ownerMask = item.CurrentPermissions;
-                        uint groupMask = item.GroupPermissions;
+                    UUID ownerID = item.OwnerID;
+                    uint everyoneMask = 0;
+                    uint baseMask = item.BasePermissions;
+                    uint ownerMask = item.CurrentPermissions;
+                    uint groupMask = item.GroupPermissions;
 
-                        invString.AddItemStart();
-                        invString.AddNameValueLine("item_id", item.ItemID.ToString());
-                        invString.AddNameValueLine("parent_id", m_part.UUID.ToString());
+                    invString.AddItemStart();
+                    invString.AddNameValueLine("item_id", item.ItemID.ToString());
+                    invString.AddNameValueLine("parent_id", m_part.UUID.ToString());
 
-                        invString.AddPermissionsStart();
+                    invString.AddPermissionsStart();
 
-                        invString.AddNameValueLine("base_mask", Utils.UIntToHexString(baseMask));
-                        invString.AddNameValueLine("owner_mask", Utils.UIntToHexString(ownerMask));
-                        invString.AddNameValueLine("group_mask", Utils.UIntToHexString(groupMask));
-                        invString.AddNameValueLine("everyone_mask", Utils.UIntToHexString(everyoneMask));
-                        invString.AddNameValueLine("next_owner_mask", Utils.UIntToHexString(item.NextPermissions));
+                    invString.AddNameValueLine("base_mask", Utils.UIntToHexString(baseMask));
+                    invString.AddNameValueLine("owner_mask", Utils.UIntToHexString(ownerMask));
+                    invString.AddNameValueLine("group_mask", Utils.UIntToHexString(groupMask));
+                    invString.AddNameValueLine("everyone_mask", Utils.UIntToHexString(everyoneMask));
+                    invString.AddNameValueLine("next_owner_mask", Utils.UIntToHexString(item.NextPermissions));
 
-                        invString.AddNameValueLine("creator_id", item.CreatorID.ToString());
-                        invString.AddNameValueLine("owner_id", ownerID.ToString());
+                    invString.AddNameValueLine("creator_id", item.CreatorID.ToString());
+                    invString.AddNameValueLine("owner_id", ownerID.ToString());
 
-                        invString.AddNameValueLine("last_owner_id", item.LastOwnerID.ToString());
+                    invString.AddNameValueLine("last_owner_id", item.LastOwnerID.ToString());
 
-                        invString.AddNameValueLine("group_id", item.GroupID.ToString());
-                        invString.AddSectionEnd();
+                    invString.AddNameValueLine("group_id", item.GroupID.ToString());
+                    invString.AddSectionEnd();
 
-                        invString.AddNameValueLine("asset_id", item.AssetID.ToString());
-                        invString.AddNameValueLine("type", Utils.AssetTypeToString((AssetType)item.Type));
-                        invString.AddNameValueLine("inv_type", Utils.InventoryTypeToString((InventoryType)item.InvType));
-                        invString.AddNameValueLine("flags", Utils.UIntToHexString(item.Flags));
+                    invString.AddNameValueLine("asset_id", item.AssetID.ToString());
+                    invString.AddNameValueLine("type", Utils.AssetTypeToString((AssetType)item.Type));
+                    invString.AddNameValueLine("inv_type", Utils.InventoryTypeToString((InventoryType)item.InvType));
+                    invString.AddNameValueLine("flags", Utils.UIntToHexString(item.Flags));
 
-                        invString.AddSaleStart();
-                        invString.AddNameValueLine("sale_type", "not");
-                        invString.AddNameValueLine("sale_price", "0");
-                        invString.AddSectionEnd();
+                    invString.AddSaleStart();
+                    invString.AddNameValueLine("sale_type", "not");
+                    invString.AddNameValueLine("sale_price", "0");
+                    invString.AddSectionEnd();
 
-                        invString.AddNameValueLine("name", item.Name + "|");
-                        invString.AddNameValueLine("desc", item.Description + "|");
+                    invString.AddNameValueLine("name", item.Name + "|");
+                    invString.AddNameValueLine("desc", item.Description + "|");
 
-                        invString.AddNameValueLine("creation_date", item.CreationDate.ToString());
-                        invString.AddSectionEnd();
-                    }
-                }
+                    invString.AddNameValueLine("creation_date", item.CreationDate.ToString());
+                    invString.AddSectionEnd();
+                });
 
                 m_inventoryFileData = Utils.StringToBytes(invString.BuildString);
 
@@ -978,43 +952,40 @@ namespace OpenSim.Region.Framework.Scenes
         /// <param name="xferManager"></param>
         public void RequestInventoryFile(IClientAPI client, IXfer xferManager)
         {
-            lock (m_items)
+            // Don't send a inventory xfer name if there are no items.  Doing so causes viewer 3 to crash when rezzing
+            // a new script if any previous deletion has left the prim inventory empty.
+            if (m_items.Count == 0) // No inventory
             {
-                // Don't send a inventory xfer name if there are no items.  Doing so causes viewer 3 to crash when rezzing
-                // a new script if any previous deletion has left the prim inventory empty.
-                if (m_items.Count == 0) // No inventory
-                {
 //                    m_log.DebugFormat(
 //                        "[PRIM INVENTORY]: Not sending inventory data for part {0} {1} {2} for {3} since no items",
 //                        m_part.Name, m_part.LocalId, m_part.UUID, client.Name);
 
-                    client.SendTaskInventory(m_part.UUID, 0, new byte[0]);
-                    return;
-                }
-
-                CreateInventoryFile();
-    
-                // In principle, we should only do the rest if the inventory changed;
-                // by sending m_inventorySerial to the client, it ought to know
-                // that nothing changed and that it doesn't need to request the file. 
-                // Unfortunately, it doesn't look like the client optimizes this; 
-                // the client seems to always come back and request the Xfer, 
-                // no matter what value m_inventorySerial has.
-                // FIXME: Could probably be > 0 here rather than > 2
-                if (m_inventoryFileData.Length > 2)
-                {
-                    // Add the file for Xfer
-    //                m_log.DebugFormat(
-    //                    "[PRIM INVENTORY]: Adding inventory file {0} (length {1}) for transfer on {2} {3} {4}",
-    //                    m_inventoryFileName, m_inventoryFileData.Length, m_part.Name, m_part.UUID, m_part.LocalId);
-                    
-                    xferManager.AddNewFile(m_inventoryFileName, m_inventoryFileData);
-                }
-    
-                // Tell the client we're ready to Xfer the file
-                client.SendTaskInventory(m_part.UUID, (short)m_inventorySerial,
-                        Util.StringToBytes256(m_inventoryFileName));
+                client.SendTaskInventory(m_part.UUID, 0, new byte[0]);
+                return;
             }
+
+            CreateInventoryFile();
+    
+            // In principle, we should only do the rest if the inventory changed;
+            // by sending m_inventorySerial to the client, it ought to know
+            // that nothing changed and that it doesn't need to request the file. 
+            // Unfortunately, it doesn't look like the client optimizes this; 
+            // the client seems to always come back and request the Xfer, 
+            // no matter what value m_inventorySerial has.
+            // FIXME: Could probably be > 0 here rather than > 2
+            if (m_inventoryFileData.Length > 2)
+            {
+                // Add the file for Xfer
+//                m_log.DebugFormat(
+//                    "[PRIM INVENTORY]: Adding inventory file {0} (length {1}) for transfer on {2} {3} {4}",
+//                    m_inventoryFileName, m_inventoryFileData.Length, m_part.Name, m_part.UUID, m_part.LocalId);
+                    
+                xferManager.AddNewFile(m_inventoryFileName, m_inventoryFileData);
+            }
+    
+            // Tell the client we're ready to Xfer the file
+            client.SendTaskInventory(m_part.UUID, (short)m_inventorySerial,
+                    Util.StringToBytes256(m_inventoryFileName));
         }
 
         /// <summary>
@@ -1095,24 +1066,21 @@ namespace OpenSim.Region.Framework.Scenes
         {
             uint mask=0x7fffffff;
 
-            lock (m_items)
+            foreach(TaskInventoryItem item in m_items.Values)
             {
-                foreach (TaskInventoryItem item in m_items.Values)
-                {
-                    if ((item.CurrentPermissions & item.NextPermissions & (uint)PermissionMask.Copy) == 0)
-                        mask &= ~((uint)PermissionMask.Copy >> 13);
-                    if ((item.CurrentPermissions & item.NextPermissions & (uint)PermissionMask.Transfer) == 0)
-                        mask &= ~((uint)PermissionMask.Transfer >> 13);
-                    if ((item.CurrentPermissions & item.NextPermissions & (uint)PermissionMask.Modify) == 0)
-                        mask &= ~((uint)PermissionMask.Modify >> 13);
+                if ((item.CurrentPermissions & item.NextPermissions & (uint)PermissionMask.Copy) == 0)
+                    mask &= ~((uint)PermissionMask.Copy >> 13);
+                if ((item.CurrentPermissions & item.NextPermissions & (uint)PermissionMask.Transfer) == 0)
+                    mask &= ~((uint)PermissionMask.Transfer >> 13);
+                if ((item.CurrentPermissions & item.NextPermissions & (uint)PermissionMask.Modify) == 0)
+                    mask &= ~((uint)PermissionMask.Modify >> 13);
     
-                    if ((item.CurrentPermissions & (uint)PermissionMask.Copy) == 0)
-                        mask &= ~(uint)PermissionMask.Copy;
-                    if ((item.CurrentPermissions & (uint)PermissionMask.Transfer) == 0)
-                        mask &= ~(uint)PermissionMask.Transfer;
-                    if ((item.CurrentPermissions & (uint)PermissionMask.Modify) == 0)
-                        mask &= ~(uint)PermissionMask.Modify;
-                }
+                if ((item.CurrentPermissions & (uint)PermissionMask.Copy) == 0)
+                    mask &= ~(uint)PermissionMask.Copy;
+                if ((item.CurrentPermissions & (uint)PermissionMask.Transfer) == 0)
+                    mask &= ~(uint)PermissionMask.Transfer;
+                if ((item.CurrentPermissions & (uint)PermissionMask.Modify) == 0)
+                    mask &= ~(uint)PermissionMask.Modify;
             }
                 
             return mask;
@@ -1120,41 +1088,35 @@ namespace OpenSim.Region.Framework.Scenes
 
         public void ApplyNextOwnerPermissions()
         {
-            lock (m_items)
+            m_items.ForEach(delegate(TaskInventoryItem item)
             {
-                foreach (TaskInventoryItem item in m_items.Values)
-                {
 //                    m_log.DebugFormat (
 //                        "[SCENE OBJECT PART INVENTORY]: Applying next permissions {0} to {1} in {2} with current {3}, base {4}, everyone {5}",
 //                        item.NextPermissions, item.Name, m_part.Name, item.CurrentPermissions, item.BasePermissions, item.EveryonePermissions);
 
-                    if (item.InvType == (int)InventoryType.Object)
-                    {
-                        uint perms = item.CurrentPermissions;
-                        PermissionsUtil.ApplyFoldedPermissions(perms, ref perms);
-                        item.CurrentPermissions = perms;
-                    }
-
-                    item.CurrentPermissions &= item.NextPermissions;
-                    item.BasePermissions &= item.NextPermissions;
-                    item.EveryonePermissions &= item.NextPermissions;
-                    item.OwnerChanged = true;
-                    item.PermsMask = 0;
-                    item.PermsGranter = UUID.Zero;
+                if (item.InvType == (int)InventoryType.Object)
+                {
+                    uint perms = item.CurrentPermissions;
+                    PermissionsUtil.ApplyFoldedPermissions(perms, ref perms);
+                    item.CurrentPermissions = perms;
                 }
-            }
+
+                item.CurrentPermissions &= item.NextPermissions;
+                item.BasePermissions &= item.NextPermissions;
+                item.EveryonePermissions &= item.NextPermissions;
+                item.OwnerChanged = true;
+                item.PermsMask = 0;
+                item.PermsGranter = UUID.Zero;
+            });
         }
 
         public void ApplyGodPermissions(uint perms)
         {
-            lock (m_items)
+            m_items.ForEach(delegate(TaskInventoryItem item)
             {
-                foreach (TaskInventoryItem item in m_items.Values)
-                {
-                    item.CurrentPermissions = perms;
-                    item.BasePermissions = perms;
-                }
-            }
+                item.CurrentPermissions = perms;
+                item.BasePermissions = perms;
+            });
             
             m_inventorySerial++;
             HasInventoryChanged = true;
@@ -1166,15 +1128,19 @@ namespace OpenSim.Region.Framework.Scenes
         /// <returns></returns>
         public bool ContainsScripts()
         {
-            lock (m_items)
+            try
             {
-                foreach (TaskInventoryItem item in m_items.Values)
+                m_items.ForEach(delegate(TaskInventoryItem item)
                 {
                     if (item.InvType == (int)InventoryType.LSL)
                     {
-                        return true;
+                        throw new ThreadedClasses.ReturnValueException<bool>(true);
                     }
-                }
+                });
+            }
+            catch(ThreadedClasses.ReturnValueException<bool>)
+            {
+                return true;
             }
 
             return false;
@@ -1187,14 +1153,11 @@ namespace OpenSim.Region.Framework.Scenes
         public int ScriptCount()
         {
             int count = 0;
-            lock (m_items)
+            foreach(TaskInventoryItem item in m_items.Values)
             {
-                foreach (TaskInventoryItem item in m_items.Values)
+                if (item.InvType == (int)InventoryType.LSL)
                 {
-                    if (item.InvType == (int)InventoryType.LSL)
-                    {
-                        count++;
-                    }
+                    count++;
                 }
             }
 
@@ -1233,35 +1196,28 @@ namespace OpenSim.Region.Framework.Scenes
         {
             List<UUID> ret = new List<UUID>();
 
-            lock (m_items)
+            m_items.ForEach(delegate(TaskInventoryItem item)
             {
-                foreach (TaskInventoryItem item in m_items.Values)
-                    ret.Add(item.ItemID);
-            }
+                ret.Add(item.ItemID);
+            });
 
             return ret;
         }
 
         public List<TaskInventoryItem> GetInventoryItems()
         {
-            List<TaskInventoryItem> ret = new List<TaskInventoryItem>();
-
-            lock (m_items)
-                ret = new List<TaskInventoryItem>(m_items.Values);
-
-            return ret;
+            return new List<TaskInventoryItem>(m_items.Values);
         }
 
         public List<TaskInventoryItem> GetInventoryItems(InventoryType type)
         {
             List<TaskInventoryItem> ret = new List<TaskInventoryItem>();
 
-            lock (m_items)
+            m_items.ForEach(delegate(TaskInventoryItem item)
             {
-                foreach (TaskInventoryItem item in m_items.Values)
-                    if (item.InvType == (int)type)
-                        ret.Add(item);
-            }
+                if (item.InvType == (int)type)
+                    ret.Add(item);
+            });
 
             return ret;
         }

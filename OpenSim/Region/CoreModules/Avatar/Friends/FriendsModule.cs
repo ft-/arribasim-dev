@@ -58,7 +58,6 @@ namespace OpenSim.Region.CoreModules.Avatar.Friends
         {
             public UUID PrincipalID;
             public FriendInfo[] Friends;
-            public int Refcount;
 
             public bool IsFriend(string friend)
             {
@@ -74,8 +73,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Friends
 
         protected static readonly FriendInfo[] EMPTY_FRIENDS = new FriendInfo[0];
 
-        protected List<Scene> m_Scenes = new List<Scene>();
-        protected ReaderWriterLock m_ScenesRwLock = new ReaderWriterLock();
+        protected ThreadedClasses.RwLockedList<Scene> m_Scenes = new ThreadedClasses.RwLockedList<Scene>();
 
         protected IPresenceService m_PresenceService = null;
         protected IFriendsService m_FriendsService = null;
@@ -88,8 +86,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Friends
         /// This is a complex and error-prone thing to do.  At the moment, we assume that the efficiency gained in
         /// permissions checks outweighs the disadvantages of that complexity.
         /// </remarks>
-        protected Dictionary<UUID, UserFriendData> m_Friends = new Dictionary<UUID, UserFriendData>();
-        protected ReaderWriterLock m_FriendsRwLock = new ReaderWriterLock();
+        protected ThreadedClasses.RwLockedDictionary<UUID, UserFriendData> m_Friends = new ThreadedClasses.RwLockedDictionary<UUID, UserFriendData>();
 
         /// <summary>
         /// Maintain a record of clients that need to notify about their online status. This only
@@ -282,39 +279,31 @@ namespace OpenSim.Region.CoreModules.Avatar.Friends
         /// </returns>
         protected virtual bool CacheFriends(IClientAPI client)
         {
+            bool result = false;
+            UserFriendData friendsData;
             UUID agentID = client.AgentId;
-            m_FriendsRwLock.AcquireReaderLock(-1);
-            try
+            if (!m_Friends.TryGetValue(agentID, out friendsData))
             {
-                UserFriendData friendsData;
-                if (m_Friends.TryGetValue(agentID, out friendsData))
-                {
-                    friendsData.Refcount++;
-                    return false;
-                }
-                else
-                {
-                    friendsData = new UserFriendData();
-                    friendsData.PrincipalID = agentID;
-                    friendsData.Friends = GetFriendsFromService(client);
-                    friendsData.Refcount = 1;
+                /* better to do some unnecessary fetches outside of an WriterLock instead of trying to reduce that and locking up the FriendsModule */
+                friendsData = new UserFriendData();
+                friendsData.PrincipalID = agentID;
+                friendsData.Friends = GetFriendsFromService(client);
 
-                    LockCookie lc = m_FriendsRwLock.UpgradeToWriterLock(-1);
-                    try
+                try
+                {
+                    m_Friends.AddIfNotExists(agentID, delegate()
                     {
-                        m_Friends[agentID] = friendsData;
-                    }
-                    finally
-                    {
-                        m_FriendsRwLock.DowngradeFromWriterLock(ref lc);
-                    }
-                    return true;
+                        result = true;
+                        return friendsData;
+                    });
+                }
+                catch(ThreadedClasses.RwLockedDictionary<UUID, UserFriendData>.KeyAlreadyExistsException)
+                {
+
                 }
             }
-            finally
-            {
-                m_FriendsRwLock.ReleaseReaderLock();
-            }
+
+            return result;
         }
 
         private void OnClientClosed(UUID agentID, Scene scene)
@@ -326,21 +315,25 @@ namespace OpenSim.Region.CoreModules.Avatar.Friends
                 StatusChange(agentID, false);
             }
 
-            m_FriendsRwLock.AcquireWriterLock(-1);
+            /* check if there is still an agent somewhere in that case we keep the cache stored */
             try
             {
-                UserFriendData friendsData;
-                if (m_Friends.TryGetValue(agentID, out friendsData))
+                m_Scenes.ForEach(delegate(Scene s)
                 {
-                    friendsData.Refcount--;
-                    if (friendsData.Refcount <= 0)
-                        m_Friends.Remove(agentID);
-                }
+                    s.TryGetScenePresence(agentID, out sp);
+                    if ((sp != null) && !sp.IsChildAgent && (s != scene))
+                    {
+                        throw new ThreadedClasses.ReturnValueException<bool>(true);
+                    }
+                });
             }
-            finally
+            catch (ThreadedClasses.ReturnValueException<bool>)
             {
-                m_FriendsRwLock.ReleaseWriterLock();
+                /* still somewhere that agent */
+                return;
             }
+
+            m_Friends.Remove(agentID);
         }
 
         private void OnMakeRootAgent(ScenePresence sp)
@@ -493,19 +486,18 @@ namespace OpenSim.Region.CoreModules.Avatar.Friends
         /// </summary>
         public IClientAPI LocateClientObject(UUID agentID)
         {
-            m_ScenesRwLock.AcquireReaderLock(-1);
             try
             {
-                foreach (Scene scene in m_Scenes)
+                m_Scenes.ForEach(delegate(Scene scene)
                 {
                     ScenePresence presence = scene.GetScenePresence(agentID);
                     if (presence != null && !presence.IsChildAgent)
-                        return presence.ControllingClient;
-                }
+                        throw new ThreadedClasses.ReturnValueException<IClientAPI>(presence.ControllingClient);
+                });
             }
-            finally
+            catch(ThreadedClasses.ReturnValueException<IClientAPI> e)
             {
-                m_ScenesRwLock.ReleaseReaderLock();
+                return e.Value;
             }
 
             return null;
@@ -952,16 +944,8 @@ namespace OpenSim.Region.CoreModules.Avatar.Friends
         {
             UserFriendData friendsData;
 
-            m_FriendsRwLock.AcquireReaderLock(-1);
-            try
-            {
-                if (m_Friends.TryGetValue(userID, out friendsData))
-                    return friendsData.Friends;
-            }
-            finally
-            {
-                m_FriendsRwLock.ReleaseReaderLock();
-            }
+            if (m_Friends.TryGetValue(userID, out friendsData))
+                return friendsData.Friends;
 
             return EMPTY_FRIENDS;
         }
@@ -990,30 +974,14 @@ namespace OpenSim.Region.CoreModules.Avatar.Friends
             // FIXME: Ideally, we want to avoid doing this here since it sits the EventManager.OnMakeRootAgent event
             // is on the critical path for transferring an avatar from one region to another.
             UUID agentID = client.AgentId;
-            m_FriendsRwLock.AcquireReaderLock(-1);
-            try
-            {
-                UserFriendData friendsData;
-                if (m_Friends.TryGetValue(agentID, out friendsData))
-                    friendsData.Friends = GetFriendsFromService(client);
-            }
-            finally
-            {
-                m_FriendsRwLock.ReleaseReaderLock();
-            }
+            UserFriendData friendsData;
+            if (m_Friends.TryGetValue(agentID, out friendsData))
+                friendsData.Friends = GetFriendsFromService(client);
         }
 
         public bool AreFriendsCached(UUID userID)
         {
-            m_FriendsRwLock.AcquireReaderLock(-1);
-            try
-            {
-                return m_Friends.ContainsKey(userID);
-            }
-            finally
-            {
-                m_FriendsRwLock.ReleaseReaderLock();
-            }
+            return m_Friends.ContainsKey(userID);
         }
 
         protected virtual bool StoreRights(UUID agentID, UUID friendID, int rights)

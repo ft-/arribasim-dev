@@ -90,7 +90,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         /// <summary>Packets we have sent that need to be ACKed by the client</summary>
         public readonly UnackedPacketCollection NeedAcks = new UnackedPacketCollection();
         /// <summary>ACKs that are queued up, waiting to be sent to the client</summary>
-        public readonly OpenSim.Framework.LocklessQueue<uint> PendingAcks = new OpenSim.Framework.LocklessQueue<uint>();
+        public readonly ThreadedClasses.NonblockingQueue<uint> PendingAcks = new ThreadedClasses.NonblockingQueue<uint>();
 
         /// <summary>Current packet sequence number</summary>
         public int CurrentSequence;
@@ -144,7 +144,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         /// <summary>Throttle buckets for each packet category</summary>
         private readonly TokenBucket[] m_throttleCategories;
         /// <summary>Outgoing queues for throttled packets</summary>
-        private readonly OpenSim.Framework.LocklessQueue<OutgoingPacket>[] m_packetOutboxes = new OpenSim.Framework.LocklessQueue<OutgoingPacket>[THROTTLE_CATEGORY_COUNT];
+        private readonly ThreadedClasses.NonblockingQueue<OutgoingPacket>[] m_packetOutboxes = new ThreadedClasses.NonblockingQueue<OutgoingPacket>[THROTTLE_CATEGORY_COUNT];
         /// <summary>A container that can hold one packet for each outbox, used to store
         /// dequeued packets that are being held for throttling</summary>
         private readonly OutgoingPacket[] m_nextPackets = new OutgoingPacket[THROTTLE_CATEGORY_COUNT];
@@ -209,7 +209,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                 ThrottleOutPacketType type = (ThrottleOutPacketType)i;
 
                 // Initialize the packet outboxes, where packets sit while they are waiting for tokens
-                m_packetOutboxes[i] = new OpenSim.Framework.LocklessQueue<OutgoingPacket>();
+                m_packetOutboxes[i] = new ThreadedClasses.NonblockingQueue<OutgoingPacket>();
                 // Initialize the token buckets that control the throttling for each category
                 m_throttleCategories[i] = new TokenBucket(m_throttleCategory, rates.GetRate(type));
             }
@@ -444,7 +444,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
             if (category >= 0 && category < m_packetOutboxes.Length)
             {
-                OpenSim.Framework.LocklessQueue<OutgoingPacket> queue = m_packetOutboxes[category];
+                ThreadedClasses.NonblockingQueue<OutgoingPacket> queue = m_packetOutboxes[category];
                 TokenBucket bucket = m_throttleCategories[category];
 
                 // Don't send this packet if there is already a packet waiting in the queue
@@ -495,7 +495,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         public bool DequeueOutgoing()
         {
             OutgoingPacket packet;
-            OpenSim.Framework.LocklessQueue<OutgoingPacket> queue;
+            ThreadedClasses.NonblockingQueue<OutgoingPacket> queue;
             TokenBucket bucket;
             bool packetSent = false;
             ThrottleOutPacketTypeFlags emptyCategories = 0;

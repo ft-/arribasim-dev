@@ -60,8 +60,7 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.MapImage
         private bool m_enabled = false;
         private IMapImageService m_MapService;
 
-        private Dictionary<UUID, Scene> m_scenes = new Dictionary<UUID, Scene>();
-        private ReaderWriterLock m_scenesRwLock = new ReaderWriterLock();
+        private ThreadedClasses.RwLockedDictionary<UUID, Scene> m_scenes = new ThreadedClasses.RwLockedDictionary<UUID, Scene>();
 
         private int m_refreshtime = 0;
         private int m_lastrefresh = 0;
@@ -147,15 +146,7 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.MapImage
 
             // Every shared region module has to maintain an indepedent list of
             // currently running regions
-            m_scenesRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_scenes[scene.RegionInfo.RegionID] = scene;
-            }
-            finally
-            {
-                m_scenesRwLock.ReleaseWriterLock();
-            }
+            m_scenes[scene.RegionInfo.RegionID] = scene;
 
             scene.EventManager.OnRegionReadyStatusChange += s => { if (s.Ready) UploadMapTile(s); };
         }
@@ -168,15 +159,7 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.MapImage
             if (! m_enabled)
                 return;
 
-            m_scenesRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_scenes.Remove(scene.RegionInfo.RegionID);
-            }
-            finally
-            {
-                m_scenesRwLock.ReleaseWriterLock();
-            }
+            m_scenes.Remove(scene.RegionInfo.RegionID);
         }
 
         #endregion ISharedRegionModule
@@ -193,25 +176,17 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.MapImage
                 return;
 
             m_log.DebugFormat("[MAP IMAGE SERVICE MODULE]: map refresh!");
-            m_scenesRwLock.AcquireReaderLock(-1);
-            try
+            m_scenes.ForEach(delegate(Scene scene)
             {
-                foreach (IScene scene in m_scenes.Values)
+                try
                 {
-                    try
-                    {
-                        UploadMapTile(scene);
-                    }
-                    catch (Exception ex)
-                    {
-                        m_log.WarnFormat("[MAP IMAGE SERVICE MODULE]: something bad happened {0}", ex.Message);
-                    }
+                    UploadMapTile(scene);
                 }
-            }
-            finally
-            {
-                m_scenesRwLock.ReleaseReaderLock();
-            }
+                catch (Exception ex)
+                {
+                    m_log.WarnFormat("[MAP IMAGE SERVICE MODULE]: something bad happened {0}", ex.Message);
+                }
+            });
 
             m_lastrefresh = Util.EnvironmentTickCount();
         }

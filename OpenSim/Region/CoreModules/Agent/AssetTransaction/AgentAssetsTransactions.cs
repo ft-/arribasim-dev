@@ -46,8 +46,7 @@ namespace OpenSim.Region.CoreModules.Agent.AssetTransaction
         // Fields
         private bool m_dumpAssetsToFile;
         private Scene m_Scene;
-        private ReaderWriterLock m_UploaderRwLock = new ReaderWriterLock();
-        private Dictionary<UUID, AssetXferUploader> XferUploaders = new Dictionary<UUID, AssetXferUploader>();
+        private ThreadedClasses.RwLockedDictionary<UUID, AssetXferUploader> XferUploaders = new ThreadedClasses.RwLockedDictionary<UUID, AssetXferUploader>();
 
         // Methods
         public AgentAssetTransactions(UUID agentID, Scene scene,
@@ -68,65 +67,36 @@ namespace OpenSim.Region.CoreModules.Agent.AssetTransaction
         /// <returns>The asset xfer uploader</returns>
         public AssetXferUploader RequestXferUploader(UUID transactionID)
         {
-            AssetXferUploader uploader;
-
-            m_UploaderRwLock.AcquireReaderLock(-1);
-            try
-            {
-                if (!XferUploaders.ContainsKey(transactionID))
-                {
-                    LockCookie lc = m_UploaderRwLock.UpgradeToWriterLock(-1);
-                    try
-                    {
-                        uploader = new AssetXferUploader(this, m_Scene, transactionID, m_dumpAssetsToFile);
-
-                        //                    m_log.DebugFormat(
-                        //                        "[AGENT ASSETS TRANSACTIONS]: Adding asset xfer uploader {0} since it didn't previously exist", transactionID);
-
-                        XferUploaders.Add(transactionID, uploader);
-                    }
-                    finally
-                    {
-                        m_UploaderRwLock.DowngradeFromWriterLock(ref lc);
-                    }
-                }
-                else
-                {
-                    uploader = XferUploaders[transactionID];
-                }
-            }
-            finally
-            {
-                m_UploaderRwLock.ReleaseReaderLock();
-            }
-
-            return uploader;
+            return XferUploaders.GetOrAddIfNotExists(transactionID, delegate()
+            { 
+                return new AssetXferUploader(this, m_Scene, transactionID, m_dumpAssetsToFile); 
+            });
         }
 
         public void HandleXfer(ulong xferID, uint packetID, byte[] data)
         {
             AssetXferUploader foundUploader = null;
 
-            m_UploaderRwLock.AcquireReaderLock(-1);
             try
             {
-                foreach (AssetXferUploader uploader in XferUploaders.Values)
+                XferUploaders.ForEach(delegate(AssetXferUploader uploader)
                 {
-//                    m_log.DebugFormat(
-//                        "[AGENT ASSETS TRANSACTIONS]: In HandleXfer, inspect xfer upload with xfer id {0}",
-//                        uploader.XferID);
+                    //                    m_log.DebugFormat(
+                    //                        "[AGENT ASSETS TRANSACTIONS]: In HandleXfer, inspect xfer upload with xfer id {0}",
+                    //                        uploader.XferID);
 
                     if (uploader.XferID == xferID)
                     {
-                        foundUploader = uploader;
-                        break;
+                        throw new ThreadedClasses.ReturnValueException<AssetXferUploader>(uploader);
                     }
-                }
+                });
+                foundUploader = null;
             }
-            finally
+            catch(ThreadedClasses.ReturnValueException<AssetXferUploader> e)
             {
-                m_UploaderRwLock.ReleaseReaderLock();
+                foundUploader = e.Value;
             }
+
 
             if (foundUploader != null)
             {
@@ -154,25 +124,16 @@ namespace OpenSim.Region.CoreModules.Agent.AssetTransaction
 
         public bool RemoveXferUploader(UUID transactionID)
         {
-            m_UploaderRwLock.AcquireWriterLock(-1);
-            try
-            {
-                bool removed = XferUploaders.Remove(transactionID);
+            bool removed = XferUploaders.Remove(transactionID);
 
-                if (!removed)
-                    m_log.WarnFormat(
-                        "[AGENT ASSET TRANSACTIONS]: Received request to remove xfer uploader with transaction ID {0} but none found",
-                        transactionID);
-//                else
-//                    m_log.DebugFormat(
-//                        "[AGENT ASSET TRANSACTIONS]: Removed xfer uploader with transaction ID {0}", transactionID);
-
-                return removed;
-            }
-            finally
+            if (!removed)
             {
-                m_UploaderRwLock.ReleaseWriterLock();
+                m_log.WarnFormat(
+                    "[AGENT ASSET TRANSACTIONS]: Received request to remove xfer uploader with transaction ID {0} but none found",
+                    transactionID);
             }
+
+            return removed;
         }
 
         public void RequestCreateInventoryItem(IClientAPI remoteClient,

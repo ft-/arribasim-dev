@@ -1125,15 +1125,12 @@ namespace OpenSim.Region.Framework.Scenes
         private bool CheckNeighborRegionInternal(RegionInfo region)
         {
             bool found = false;
-            lock (m_neighbours)
+            foreach (RegionInfo reg in m_neighbours)
             {
-                foreach (RegionInfo reg in m_neighbours)
+                if (reg.RegionHandle == region.RegionHandle)
                 {
-                    if (reg.RegionHandle == region.RegionHandle)
-                    {
-                        found = true;
-                        break;
-                    }
+                    found = true;
+                    break;
                 }
             }
             return found;

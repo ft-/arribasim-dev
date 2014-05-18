@@ -43,8 +43,7 @@ namespace OpenSim.Region.Framework.Scenes
                 new Dictionary<Scene, KeyframeTimer>();
 
         private Timer m_timer;
-        private Dictionary<KeyframeMotion, object> m_motions = new Dictionary<KeyframeMotion, object>();
-        private ReaderWriterLock m_lockObject = new ReaderWriterLock();
+        private ThreadedClasses.RwLockedDictionary<KeyframeMotion, object> m_motions = new ThreadedClasses.RwLockedDictionary<KeyframeMotion, object>();
         private object m_timerLock = new object();
         private const double m_tickDuration = 50.0;
 
@@ -77,19 +76,7 @@ namespace OpenSim.Region.Framework.Scenes
 
             try
             {
-                List<KeyframeMotion> motions;
-
-                m_lockObject.AcquireReaderLock(-1);
-                try
-                {
-                    motions = new List<KeyframeMotion>(m_motions.Keys);
-                }
-                finally
-                {
-                    m_lockObject.ReleaseReaderLock();
-                }
-
-                foreach (KeyframeMotion m in motions)
+                foreach (KeyframeMotion m in m_motions.Keys)
                 {
                     try
                     {
@@ -146,15 +133,7 @@ namespace OpenSim.Region.Framework.Scenes
                 }
             }
 
-            timer.m_lockObject.AcquireWriterLock(-1);
-            try
-            {
-                timer.m_motions[motion] = null;
-            }
-            finally
-            {
-                timer.m_lockObject.ReleaseWriterLock();
-            }
+            timer.m_motions[motion] = null;
         }
 
         public static void Remove(KeyframeMotion motion)
@@ -172,15 +151,7 @@ namespace OpenSim.Region.Framework.Scenes
                 }
             }
 
-            timer.m_lockObject.AcquireWriterLock(-1);
-            try
-            {
-                timer.m_motions.Remove(motion);
-            }
-            finally
-            {
-                timer.m_lockObject.ReleaseWriterLock();
-            }
+            timer.m_motions.Remove(motion);
         }
     }
 
