@@ -136,6 +136,9 @@ namespace OpenSimSearch.Modules.OpenSearch
         /// New Client Event Handler
         private void OnNewClient(IClientAPI client)
         {
+            if (!m_Enabled)
+                return;
+
             // Subscribe to messages
             client.OnDirPlacesQuery += DirPlacesQuery;
             client.OnDirFindQuery += DirFindQuery;
