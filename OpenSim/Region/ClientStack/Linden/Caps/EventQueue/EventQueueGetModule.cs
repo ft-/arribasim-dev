@@ -74,7 +74,7 @@ namespace OpenSim.Region.ClientStack.Linden
 
         private ThreadedClasses.RwLockedDictionary<UUID, int> m_ids = new ThreadedClasses.RwLockedDictionary<UUID, int>();
 
-        private ThreadedClasses.RwLockedDictionary<UUID, ThreadedClasses.NonblockingQueue<OSD>> queues = new ThreadedClasses.RwLockedDictionary<UUID, ThreadedClasses.NonblockingQueue<OSD>>();
+        private ThreadedClasses.RwLockedDictionary<UUID, ThreadedClasses.BlockingQueue<OSD>> queues = new ThreadedClasses.RwLockedDictionary<UUID, ThreadedClasses.BlockingQueue<OSD>>();
         private ThreadedClasses.RwLockedDictionary<UUID, UUID> m_QueueUUIDAvatarMapping = new ThreadedClasses.RwLockedDictionary<UUID, UUID>();
         private ThreadedClasses.RwLockedDictionary<UUID, UUID> m_AvatarQueueUUIDMapping = new ThreadedClasses.RwLockedDictionary<UUID, UUID>();
             
@@ -163,7 +163,7 @@ namespace OpenSim.Region.ClientStack.Linden
         {
             MainConsole.Instance.OutputFormat("For scene {0}", m_scene.Name);
 
-            queues.ForEach(delegate(KeyValuePair<UUID, ThreadedClasses.NonblockingQueue<OSD>> kvp)
+            queues.ForEach(delegate(KeyValuePair<UUID, ThreadedClasses.BlockingQueue<OSD>> kvp)
             {
                 MainConsole.Instance.OutputFormat(
                     "For agent {0} there are {1} messages queued for send.",
@@ -176,14 +176,14 @@ namespace OpenSim.Region.ClientStack.Linden
         /// </summary>
         /// <param name="agentId"></param>
         /// <returns></returns>
-        private Queue<OSD> TryGetQueue(UUID agentId)
+        private ThreadedClasses.BlockingQueue<OSD> TryGetQueue(UUID agentId)
         {
             return queues.GetOrAddIfNotExists(agentId, delegate()
             {
                 m_log.DebugFormat(
                     "[EVENTQUEUE]: Adding new queue for agent {0} in region {1}",
                     agentId, m_scene.RegionInfo.RegionName);
-                return new ThreadedClasses.NonblockingQueue<OSD>(); 
+                return new ThreadedClasses.BlockingQueue<OSD>(); 
             });
         }
 
@@ -192,9 +192,9 @@ namespace OpenSim.Region.ClientStack.Linden
         /// </summary>
         /// <param name="agentId"></param>
         /// <returns></returns>
-        private ThreadedClasses.NonblockingQueue<OSD> GetQueue(UUID agentId)
+        private ThreadedClasses.BlockingQueue<OSD> GetQueue(UUID agentId)
         {
-            ThreadedClasses.NonblockingQueue<OSD> queue = null;
+            ThreadedClasses.BlockingQueue<OSD> queue = null;
             queues.TryGetValue(agentId, out queue);
             return null;
         }
@@ -206,7 +206,7 @@ namespace OpenSim.Region.ClientStack.Linden
             //m_log.DebugFormat("[EVENTQUEUE]: Enqueuing event for {0} in region {1}", avatarID, m_scene.RegionInfo.RegionName);
             try
             {
-                ThreadedClasses.NonblockingQueue<OSD> queue = GetQueue(avatarID);
+                ThreadedClasses.BlockingQueue<OSD> queue = GetQueue(avatarID);
                 if (queue != null)
                 {
                     queue.Enqueue(ev);
@@ -312,7 +312,7 @@ namespace OpenSim.Region.ClientStack.Linden
 
         public bool HasEvents(UUID requestID, UUID agentID)
         {
-            Queue<OSD> queue = GetQueue(agentID);
+            ThreadedClasses.BlockingQueue<OSD> queue = GetQueue(agentID);
             if (queue != null)
             {
                 //m_log.WarnFormat("POLLED FOR EVENTS BY {0} in {1} -- {2}", agentID, m_scene.RegionInfo.RegionName, queue.Count);
@@ -342,18 +342,20 @@ namespace OpenSim.Region.ClientStack.Linden
             if (DebugLevel >= 2)
                 m_log.WarnFormat("POLLED FOR EQ MESSAGES BY {0} in {1}", pAgentId, m_scene.Name);
 
-            Queue<OSD> queue = GetQueue(pAgentId);
+            ThreadedClasses.BlockingQueue<OSD> queue = GetQueue(pAgentId);
             if (queue == null)
             {
                 return NoEvents(requestID, pAgentId);
             }
 
             OSD element;
-            lock (queue)
+            try
             {
-                if (queue.Count == 0)
-                    return NoEvents(requestID, pAgentId);
-                element = queue.Dequeue(); // 15s timeout
+                element = queue.Dequeue(15000);
+            }
+            catch
+            {
+                return NoEvents(requestID, pAgentId);
             }
 
             int thisID = m_ids[pAgentId];
