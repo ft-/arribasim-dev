@@ -138,55 +138,57 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
             // Nothing to do here?
             if (Timers.Count == 0)
                 return;
+            List<TimerInfo> tvals = new List<TimerInfo>();
 
             TimerListLock.AcquireReaderLock(-1);
             try
             {
                 // Go through all timers
-                Dictionary<string, TimerInfo>.ValueCollection tvals = Timers.Values;
-                foreach (TimerInfo ts in tvals)
-                {
-                    // Time has passed?
-                    if (ts.next < DateTime.Now.Ticks)
-                    {
-                        //m_log.Debug("Time has passed: Now: " + DateTime.Now.Ticks + ", Passed: " + ts.next);
-                        // Add it to queue
-                        m_CmdManager.m_ScriptEngine.PostScriptEvent(ts.itemID,
-                                new EventParams("timer", new Object[0],
-                                new DetectParams[0]));
-                        // set next interval
-
-                        //ts.next = DateTime.Now.ToUniversalTime().AddSeconds(ts.interval);
-                        ts.next = DateTime.Now.Ticks + ts.interval;
-                    }
-                }
+                tvals = new List<TimerInfo>(Timers.Values);
             }
             finally
             {
                 TimerListLock.ReleaseReaderLock();
+            }
+            foreach (TimerInfo ts in tvals)
+            {
+                // Time has passed?
+                if (ts.next < DateTime.Now.Ticks)
+                {
+                    //m_log.Debug("Time has passed: Now: " + DateTime.Now.Ticks + ", Passed: " + ts.next);
+                    // Add it to queue
+                    m_CmdManager.m_ScriptEngine.PostScriptEvent(ts.itemID,
+                            new EventParams("timer", new Object[0],
+                            new DetectParams[0]));
+                    // set next interval
+
+                    //ts.next = DateTime.Now.ToUniversalTime().AddSeconds(ts.interval);
+                    ts.next = DateTime.Now.Ticks + ts.interval;
+                }
             }
         }
 
         public Object[] GetSerializationData(UUID itemID)
         {
             List<Object> data = new List<Object>();
+            List<TimerInfo> tvals = new List<TimerInfo>();
 
             TimerListLock.AcquireReaderLock(-1);
             try
             {
-                Dictionary<string, TimerInfo>.ValueCollection tvals = Timers.Values;
-                foreach (TimerInfo ts in tvals)
-                {
-                    if (ts.itemID == itemID)
-                    {
-                        data.Add(ts.interval);
-                        data.Add(ts.next-DateTime.Now.Ticks);
-                    }
-                }
+                tvals = new List<TimerInfo>(Timers.Values);
             }
             finally
             {
                 TimerListLock.ReleaseReaderLock();
+            }
+            foreach (TimerInfo ts in tvals)
+            {
+                if (ts.itemID == itemID)
+                {
+                    data.Add(ts.interval);
+                    data.Add(ts.next-DateTime.Now.Ticks);
+                }
             }
             return data.ToArray();
         }
