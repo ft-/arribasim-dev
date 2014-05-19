@@ -309,7 +309,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.XmlRpcGroups
 
                 // Copy Message
                 GridInstantMessage msg = new GridInstantMessage();
-                msg.imSessionID = groupID.Guid;
+                msg.imSessionID = im.imSessionID;
                 msg.fromAgentName = im.fromAgentName;
                 msg.message = im.message;
                 msg.dialog = im.dialog;
