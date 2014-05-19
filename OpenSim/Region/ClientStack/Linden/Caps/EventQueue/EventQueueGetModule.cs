@@ -195,7 +195,10 @@ namespace OpenSim.Region.ClientStack.Linden
         private ThreadedClasses.BlockingQueue<OSD> GetQueue(UUID agentId)
         {
             ThreadedClasses.BlockingQueue<OSD> queue = null;
-            queues.TryGetValue(agentId, out queue);
+            if (queues.TryGetValue(agentId, out queue))
+            {
+                return queue;
+            }
             return null;
         }
 
