@@ -168,10 +168,6 @@ namespace OpenSimProfile.Modules.OpenProfile
         /// New Client Event Handler
         private void OnNewClient(IClientAPI client)
         {
-            if (!m_Enabled)
-            {
-                return;
-            }
             // Subscribe to messages
 
             // Classifieds
