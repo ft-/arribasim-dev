@@ -3812,8 +3812,8 @@ namespace OpenSim.Region.Framework.Scenes
 
             //m_log.Debug("   >>> ChildAgentPositionUpdate <<< " + rRegionX + "-" + rRegionY);
             // Find  the distance (in meters) between the two regions
-            uint shiftx = Util.RegionToWorldLoc(rRegionX - tRegionX);
-            uint shifty = Util.RegionToWorldLoc(rRegionY - tRegionY);
+            long shiftx = ((int)rRegionX - (int)tRegionX) * (int) Constants.RegionSize;
+            long shifty = ((int)rRegionY - (int)tRegionY) * (int)Constants.RegionSize;
 
             Vector3 offset = new Vector3(shiftx, shifty, 0f);
 
