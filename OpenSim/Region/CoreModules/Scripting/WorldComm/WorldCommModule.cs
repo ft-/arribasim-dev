@@ -834,13 +834,8 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
                 ListenerInfo info =
                         ListenerInfo.FromData(localID, itemID, hostID, item);
 
-                try
-                {
-                    m_listeners.AddIfNotExists((int)item[2], delegate() { return new ThreadedClasses.RwLockedList<ListenerInfo>(); });
-                }
-                catch(ThreadedClasses.RwLockedDictionary<int, ThreadedClasses.RwLockedList<ListenerInfo>>.KeyAlreadyExistsException)
-                {
-                }
+                ThreadedClasses.RwLockedList<ListenerInfo> li = m_listeners.GetOrAddIfNotExists((int)item[2], delegate() { return new ThreadedClasses.RwLockedList<ListenerInfo>(); });
+                li.Add(info);
 
                 idx += dataItemLength;
             }
