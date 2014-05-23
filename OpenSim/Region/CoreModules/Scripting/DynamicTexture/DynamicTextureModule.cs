@@ -67,12 +67,12 @@ namespace OpenSim.Region.CoreModules.Scripting.DynamicTexture
         /// to work around this problem.</remarks>
         public bool ReuseLowDataTextures { get; set; }
 
-        private Dictionary<UUID, Scene> RegisteredScenes = new Dictionary<UUID, Scene>();
+        private ThreadedClasses.RwLockedDictionary<UUID, Scene> RegisteredScenes = new ThreadedClasses.RwLockedDictionary<UUID, Scene>();
 
-        private Dictionary<string, IDynamicTextureRender> RenderPlugins =
-            new Dictionary<string, IDynamicTextureRender>();
+        private ThreadedClasses.RwLockedDictionary<string, IDynamicTextureRender> RenderPlugins =
+            new ThreadedClasses.RwLockedDictionary<string, IDynamicTextureRender>();
 
-        private Dictionary<UUID, DynamicTextureUpdater> Updaters = new Dictionary<UUID, DynamicTextureUpdater>();
+        private ThreadedClasses.RwLockedDictionary<UUID, DynamicTextureUpdater> Updaters = new ThreadedClasses.RwLockedDictionary<UUID, DynamicTextureUpdater>();
 
         /// <summary>
         /// Record dynamic textures that we can reuse for a given data and parameter combination rather than
@@ -97,9 +97,13 @@ namespace OpenSim.Region.CoreModules.Scripting.DynamicTexture
 
         public void RegisterRender(string handleType, IDynamicTextureRender render)
         {
-            if (!RenderPlugins.ContainsKey(handleType))
+            try
             {
                 RenderPlugins.Add(handleType, render);
+            }
+            catch
+            {
+
             }
         }
 
@@ -112,19 +116,11 @@ namespace OpenSim.Region.CoreModules.Scripting.DynamicTexture
         {
             DynamicTextureUpdater updater = null;
 
-            lock (Updaters)
+            if(Updaters.TryGetValue(updaterId, out updater))
             {
-                if (Updaters.ContainsKey(updaterId))
+                Scene scene;
+                if (RegisteredScenes.TryGetValue(updater.SimUUID, out scene))
                 {
-                    updater = Updaters[updaterId];
-                }
-            }
-
-            if (updater != null)
-            {
-                if (RegisteredScenes.ContainsKey(updater.SimUUID))
-                {
-                    Scene scene = RegisteredScenes[updater.SimUUID];
                     UUID newTextureID = updater.DataReceived(texture.Data, scene);
 
                     if (ReuseTextures
@@ -140,13 +136,7 @@ namespace OpenSim.Region.CoreModules.Scripting.DynamicTexture
 
             if (updater.UpdateTimer == 0)
             {
-                lock (Updaters)
-                {
-                    if (!Updaters.ContainsKey(updater.UpdaterID))
-                    {
-                        Updaters.Remove(updater.UpdaterID);
-                    }
-                }
+                Updaters.Remove(updater.UpdaterID);
             }
         }
 
@@ -204,12 +194,13 @@ namespace OpenSim.Region.CoreModules.Scripting.DynamicTexture
                 updater.Face = face;
                 updater.Disp = disp;
 
-                lock (Updaters)
+                try
                 {
-                    if (!Updaters.ContainsKey(updater.UpdaterID))
-                    {
-                        Updaters.Add(updater.UpdaterID, updater);
-                    }
+                    Updaters.Add(updater.UpdaterID, updater);
+                }
+                catch
+                {
+
                 }
 
                 RenderPlugins[contentType].AsyncConvertUrl(updater.UpdaterID, url, extraParams);
@@ -289,13 +280,7 @@ namespace OpenSim.Region.CoreModules.Scripting.DynamicTexture
             // We cannot reuse a dynamic texture if the data is going to be blended with something already there.
             if (objReusableTextureUUID == null)
             {
-                lock (Updaters)
-                {
-                    if (!Updaters.ContainsKey(updater.UpdaterID))
-                    {
-                        Updaters.Add(updater.UpdaterID, updater);
-                    }
-                }
+                Updaters.AddIfNotExists(updater.UpdaterID, delegate() { return updater; });
 
 //                m_log.DebugFormat(
 //                    "[DYNAMIC TEXTURE MODULE]: Requesting generation of new dynamic texture for {0} in {1}",
@@ -359,11 +344,8 @@ namespace OpenSim.Region.CoreModules.Scripting.DynamicTexture
 
         public void AddRegion(Scene scene)
         {
-            if (!RegisteredScenes.ContainsKey(scene.RegionInfo.RegionID))
-            {
-                RegisteredScenes.Add(scene.RegionInfo.RegionID, scene);
-                scene.RegisterModuleInterface<IDynamicTextureManager>(this);
-            }
+            RegisteredScenes.Add(scene.RegionInfo.RegionID, scene);
+            scene.RegisterModuleInterface<IDynamicTextureManager>(this);
         }
 
         public void RegionLoaded(Scene scene)
@@ -372,8 +354,7 @@ namespace OpenSim.Region.CoreModules.Scripting.DynamicTexture
 
         public void RemoveRegion(Scene scene)
         {
-            if (RegisteredScenes.ContainsKey(scene.RegionInfo.RegionID))
-                RegisteredScenes.Remove(scene.RegionInfo.RegionID);
+            RegisteredScenes.Remove(scene.RegionInfo.RegionID);
         }
 
         public void Close()
