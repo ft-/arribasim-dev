@@ -55,7 +55,7 @@ namespace OpenSim.Region.CoreModules.World.Land
         protected List<SceneObjectGroup> primsOverMe = new List<SceneObjectGroup>();
         protected Dictionary<uint, UUID> m_listTransactions = new Dictionary<uint, UUID>();
 
-        protected ExpiringCache<UUID, bool> m_groupMemberCache = new ExpiringCache<UUID, bool>();
+        protected ThreadedClasses.ExpiringCache<UUID, bool> m_groupMemberCache = new ThreadedClasses.ExpiringCache<UUID, bool>(30);
         protected TimeSpan m_groupMemberCacheTimeout = TimeSpan.FromSeconds(30);  // cache invalidation after 30 seconds
 
         public bool[,] LandBitmap { get; set; }

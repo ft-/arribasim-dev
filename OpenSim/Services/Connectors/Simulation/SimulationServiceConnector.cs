@@ -171,7 +171,7 @@ namespace OpenSim.Services.Connectors.Simulation
             return UpdateAgent(destination, (IAgentData)data, 200000); // yes, 200 seconds
         }
 
-        private ExpiringCache<string, bool> _failedSims = new ExpiringCache<string, bool>();
+        private ThreadedClasses.ExpiringCache<string, bool> _failedSims = new ThreadedClasses.ExpiringCache<string, bool>(30);
         /// <summary>
         /// Send updated position information about an agent in this region to a neighbor
         /// This operation may be called very frequently if an avatar is moving about in

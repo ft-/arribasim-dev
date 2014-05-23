@@ -36,14 +36,14 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.UserAccounts
 //        private static readonly ILog m_log =
 //                LogManager.GetLogger(
 //                MethodBase.GetCurrentMethod().DeclaringType);
-        
-        private ExpiringCache<UUID, UserAccount> m_UUIDCache;
-        private ExpiringCache<string, UUID> m_NameCache;
+
+        private ThreadedClasses.ExpiringCache<UUID, UserAccount> m_UUIDCache;
+        private ThreadedClasses.ExpiringCache<string, UUID> m_NameCache;
 
         public UserAccountCache()
         {
-            m_UUIDCache = new ExpiringCache<UUID, UserAccount>();
-            m_NameCache = new ExpiringCache<string, UUID>(); 
+            m_UUIDCache = new ThreadedClasses.ExpiringCache<UUID, UserAccount>(30);
+            m_NameCache = new ThreadedClasses.ExpiringCache<string, UUID>(30); 
         }
 
         public void Cache(UUID userID, UserAccount account)
@@ -78,9 +78,6 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.UserAccounts
         public UserAccount Get(string name, out bool inCache)
         {
             inCache = false;
-            if (!m_NameCache.Contains(name))
-                return null;
-
             UserAccount account = null;
             UUID uuid = UUID.Zero;
             if (m_NameCache.TryGetValue(name, out uuid))

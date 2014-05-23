@@ -53,7 +53,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Lure
 
         private string m_ThisGridURL;
 
-        private ExpiringCache<UUID, GridInstantMessage> m_PendingLures = new ExpiringCache<UUID, GridInstantMessage>();
+        private ThreadedClasses.ExpiringCache<UUID, GridInstantMessage> m_PendingLures = new ThreadedClasses.ExpiringCache<UUID, GridInstantMessage>(30);
 
         public void Initialise(IConfigSource config)
         {
@@ -157,10 +157,14 @@ namespace OpenSim.Region.CoreModules.Avatar.Lure
             {
                 UUID sessionID = new UUID(im.imSessionID);
 
-                if (!m_PendingLures.Contains(sessionID))
-                {
-                    m_log.DebugFormat("[HG LURE MODULE]: RequestTeleport sessionID={0}, regionID={1}, message={2}", im.imSessionID, im.RegionID, im.message);
+                try
+                { 
                     m_PendingLures.Add(sessionID, im, 7200); // 2 hours
+                    m_log.DebugFormat("[HG LURE MODULE]: RequestTeleport sessionID={0}, regionID={1}, message={2}", im.imSessionID, im.RegionID, im.message);
+                }
+                catch(ArgumentException)
+                {
+
                 }
 
                 // Forward. We do this, because the IM module explicitly rejects

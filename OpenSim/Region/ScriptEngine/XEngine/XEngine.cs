@@ -124,7 +124,7 @@ namespace OpenSim.Region.ScriptEngine.XEngine
 
         private string m_ScriptEnginesPath = null;
 
-        private ExpiringCache<UUID, bool> m_runFlags = new ExpiringCache<UUID, bool>();
+        private ThreadedClasses.ExpiringCache<UUID, bool> m_runFlags = new ThreadedClasses.ExpiringCache<UUID, bool>(240);
 
         /// <summary>
         /// Is the entire simulator in the process of shutting down?

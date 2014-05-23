@@ -43,7 +43,7 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.GridUser
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         private const int KEEPTIME = 30; // 30 secs
-        private ExpiringCache<string, GridUserInfo> m_Infos = new ExpiringCache<string, GridUserInfo>();
+        private ThreadedClasses.ExpiringCache<string, GridUserInfo> m_Infos = new ThreadedClasses.ExpiringCache<string, GridUserInfo>(30);
 
         #region ISharedRegionModule
 
@@ -129,8 +129,7 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.GridUser
 
         public bool LoggedOut(string userID, UUID sessionID, UUID region, Vector3 position, Vector3 lookat)
         {
-            if (m_Infos.Contains(userID))
-                m_Infos.Remove(userID);
+            m_Infos.Remove(userID);
 
             return m_RemoteConnector.LoggedOut(userID, sessionID, region, position, lookat);
         }

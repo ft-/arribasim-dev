@@ -51,7 +51,7 @@ namespace OpenSim.Region.CoreModules.Agent.TextureSender
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         /// <summary>Temporarily holds deserialized layer data information in memory</summary>
-        private readonly ExpiringCache<UUID, OpenJPEG.J2KLayerInfo[]> m_decodedCache = new ExpiringCache<UUID,OpenJPEG.J2KLayerInfo[]>();
+        private readonly ThreadedClasses.ExpiringCache<UUID, OpenJPEG.J2KLayerInfo[]> m_decodedCache = new ThreadedClasses.ExpiringCache<UUID, OpenJPEG.J2KLayerInfo[]>(30);
         /// <summary>List of client methods to notify of results of decode</summary>
         private readonly Dictionary<UUID, List<DecodedCallback>> m_notifyList = new Dictionary<UUID, List<DecodedCallback>>();
         /// <summary>Cache that will store decoded JPEG2000 layer boundary data</summary>

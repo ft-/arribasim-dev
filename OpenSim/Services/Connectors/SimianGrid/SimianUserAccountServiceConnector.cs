@@ -54,7 +54,7 @@ namespace OpenSim.Services.Connectors.SimianGrid
                 MethodBase.GetCurrentMethod().DeclaringType);
 
         private string m_serverUrl = String.Empty;
-        private ExpiringCache<UUID, UserAccount> m_accountCache = new ExpiringCache<UUID,UserAccount>();
+        private ThreadedClasses.ExpiringCache<UUID, UserAccount> m_accountCache = new ThreadedClasses.ExpiringCache<UUID, UserAccount>(30);
         private bool m_Enabled;
 
         #region ISharedRegionModule

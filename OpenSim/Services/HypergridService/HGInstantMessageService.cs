@@ -60,7 +60,7 @@ namespace OpenSim.Services.HypergridService
         protected static IInstantMessageSimConnector m_IMSimConnector;
 
         protected static Dictionary<UUID, object> m_UserLocationMap = new Dictionary<UUID, object>();
-        private static ExpiringCache<UUID, GridRegion> m_RegionCache;
+        private static ThreadedClasses.ExpiringCache<UUID, GridRegion> m_RegionCache;
 
         private static bool m_ForwardOfflineGroupMessages;
         private static bool m_InGatekeeper;
@@ -97,7 +97,7 @@ namespace OpenSim.Services.HypergridService
                 m_PresenceService = ServerUtils.LoadPlugin<IPresenceService>(presenceService, args);
                 m_UserAgentService = ServerUtils.LoadPlugin<IUserAgentService>(userAgentService, args);
 
-                m_RegionCache = new ExpiringCache<UUID, GridRegion>();
+                m_RegionCache = new ThreadedClasses.ExpiringCache<UUID, GridRegion>(30);
 
                 IConfig cnf = config.Configs["Messaging"];
                 if (cnf == null)

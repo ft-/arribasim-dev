@@ -124,9 +124,9 @@ namespace OpenSim.Region.CoreModules.Framework.EntityTransfer
         //    to the grid service.
         private class BannedRegionCache
         {
-            private ExpiringCache<UUID, ExpiringCache<ulong, DateTime>> m_bannedRegions =
-                    new ExpiringCache<UUID, ExpiringCache<ulong, DateTime>>();
-            ExpiringCache<ulong, DateTime> m_idCache;
+            private ThreadedClasses.ExpiringCache<UUID, ThreadedClasses.ExpiringCache<ulong, DateTime>> m_bannedRegions =
+                    new ThreadedClasses.ExpiringCache<UUID, ThreadedClasses.ExpiringCache<ulong, DateTime>>(30);
+            ThreadedClasses.ExpiringCache<ulong, DateTime> m_idCache;
             DateTime m_banUntil;
             public BannedRegionCache()
             {
@@ -150,13 +150,13 @@ namespace OpenSim.Region.CoreModules.Framework.EntityTransfer
             // Add this agent in this region as a banned person
             public void Add(ulong pRegionHandle, UUID pAgentID)
             {
-                if (!m_bannedRegions.TryGetValue(pAgentID, out m_idCache))
-                {
-                    m_idCache = new ExpiringCache<ulong, DateTime>();
-                    m_bannedRegions.Add(pAgentID, m_idCache, TimeSpan.FromSeconds(45));
-                }
+                m_idCache = m_bannedRegions.GetOrAdd(pAgentID, delegate()
+                { 
+                    return new ThreadedClasses.ExpiringCache<ulong, DateTime>(30);
+                }, TimeSpan.FromSeconds(45));
                 m_idCache.Add(pRegionHandle, DateTime.Now + TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
             }
+
             // Remove the agent from the region's banned list
             public void Remove(ulong pRegionHandle, UUID pAgentID)
             {
