@@ -1551,8 +1551,6 @@
       <Reference name="OpenSim.Services.Interfaces"/>
       <Reference name="Ionic.Zip" path="../../../bin/"/>
 
-      <Reference name="GlynnTucker.Cache" path="../../../bin/"/>
-
       <!-- For scripting in funny languages by default -->
       <Reference name="XMLRPC" path="../../../bin/"/>
       <Reference name="OpenSim.Framework.Communications"/>
