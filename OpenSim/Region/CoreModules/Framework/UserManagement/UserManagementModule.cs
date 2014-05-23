@@ -692,11 +692,11 @@ namespace OpenSim.Region.CoreModules.Framework.UserManagement
                 if (parts.Length >= 1)
                 {
                     homeURL = parts[0];
-                    try
+                    if(Uri.IsWellFormedUriString(homeURL, UriKind.Absolute))
                     {
                         AddUser(id, firstname, lastname, homeURL);
                     }
-                    catch (UriFormatException)
+                    else
                     {
                         m_log.DebugFormat("[SCENE]: Unable to parse Uri {0} for CreatorID {1}", parts[0], creatorData);
 
