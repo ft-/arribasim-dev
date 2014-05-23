@@ -81,7 +81,7 @@ namespace OpenSim.Region.CoreModules.Scripting.DynamicTexture
         /// <remarks>
         /// Key is string.Format("{0}{1}", data
         /// </remarks>
-        private Cache m_reuseableDynamicTextures;
+        private ThreadedClasses.ExpiringCache<string, UUID> m_reuseableDynamicTextures;
 
         /// <summary>
         /// This constructor is only here because of the Unit Tests...
@@ -89,8 +89,7 @@ namespace OpenSim.Region.CoreModules.Scripting.DynamicTexture
         /// </summary>
         public DynamicTextureModule()
         {
-            m_reuseableDynamicTextures = new Cache(CacheMedium.Memory, CacheStrategy.Conservative);
-            m_reuseableDynamicTextures.DefaultTTL = new TimeSpan(24, 0, 0);
+            m_reuseableDynamicTextures = new ThreadedClasses.ExpiringCache<string, UUID>(new TimeSpan(24, 0, 0));
         }
 
         #region IDynamicTextureManager Members
@@ -128,8 +127,7 @@ namespace OpenSim.Region.CoreModules.Scripting.DynamicTexture
                         && texture.IsReuseable
                         && (ReuseLowDataTextures || IsDataSizeReuseable(texture)))
                     {
-                        m_reuseableDynamicTextures.Store(
-                            GenerateReusableTextureKey(texture.InputCommands, texture.InputParams), newTextureID);
+                        m_reuseableDynamicTextures[GenerateReusableTextureKey(texture.InputCommands, texture.InputParams)] = newTextureID;
                     }
                 }
             }
@@ -258,27 +256,26 @@ namespace OpenSim.Region.CoreModules.Scripting.DynamicTexture
             updater.Url = "Local image";
             updater.Disp = disp;
 
-            object objReusableTextureUUID = null;
+            UUID objReusableTextureUUID = UUID.Zero;
 
             if (ReuseTextures && !updater.BlendWithOldTexture)
             {
                 string reuseableTextureKey = GenerateReusableTextureKey(data, extraParams);
-                objReusableTextureUUID = m_reuseableDynamicTextures.Get(reuseableTextureKey);
 
-                if (objReusableTextureUUID != null)
+                if (m_reuseableDynamicTextures.TryGetValue(reuseableTextureKey, out objReusableTextureUUID))
                 {
                     // If something else has removed this temporary asset from the cache, detect and invalidate
                     // our cached uuid.
                     if (scene.AssetService.GetMetadata(objReusableTextureUUID.ToString()) == null)
                     {
-                        m_reuseableDynamicTextures.Invalidate(reuseableTextureKey);
-                        objReusableTextureUUID = null;
+                        m_reuseableDynamicTextures.Remove(reuseableTextureKey);
+                        objReusableTextureUUID = UUID.Zero;
                     }
                 }
             }
 
             // We cannot reuse a dynamic texture if the data is going to be blended with something already there.
-            if (objReusableTextureUUID == null)
+            if (objReusableTextureUUID == UUID.Zero)
             {
                 Updaters.AddIfNotExists(updater.UpdaterID, delegate() { return updater; });
 
@@ -332,8 +329,7 @@ namespace OpenSim.Region.CoreModules.Scripting.DynamicTexture
 
                 if (ReuseTextures)
                 {
-                    m_reuseableDynamicTextures = new Cache(CacheMedium.Memory, CacheStrategy.Conservative);
-                    m_reuseableDynamicTextures.DefaultTTL = new TimeSpan(24, 0, 0);
+                    m_reuseableDynamicTextures = new ThreadedClasses.ExpiringCache<string, UUID>(new TimeSpan(24, 0, 0));
                 }
             }
         }

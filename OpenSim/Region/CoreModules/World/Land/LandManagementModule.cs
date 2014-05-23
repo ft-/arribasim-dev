@@ -95,7 +95,7 @@ namespace OpenSim.Region.CoreModules.World.Land
         private bool m_allowedForcefulBans = true;
 
         // caches ExtendedLandData
-        private Cache parcelInfoCache;
+        private ThreadedClasses.ExpiringCache<string, ExtendedLandData> parcelInfoCache;
 
         /// <summary>
         /// Record positions that avatar's are currently being forced to move to due to parcel entry restrictions.
@@ -119,9 +119,7 @@ namespace OpenSim.Region.CoreModules.World.Land
             m_landIDList = new int[m_scene.RegionInfo.RegionSizeX / LandUnit, m_scene.RegionInfo.RegionSizeY / LandUnit];
             landChannel = new LandChannel(scene, this);
 
-            parcelInfoCache = new Cache();
-            parcelInfoCache.Size = 30; // the number of different parcel requests in this region to cache
-            parcelInfoCache.DefaultTTL = new TimeSpan(0, 5, 0);
+            parcelInfoCache = new ThreadedClasses.ExpiringCache<string, ExtendedLandData>(new TimeSpan(0, 5, 0));
 
             m_scene.EventManager.OnParcelPrimCountAdd += EventManagerOnParcelPrimCountAdd;
             m_scene.EventManager.OnParcelPrimCountUpdate += EventManagerOnParcelPrimCountUpdate;
@@ -1949,11 +1947,11 @@ namespace OpenSim.Region.CoreModules.World.Land
             if (parcelID == UUID.Zero)
                 return;
 
-            ExtendedLandData data = (ExtendedLandData)parcelInfoCache.Get(parcelID.ToString(),
-                    delegate(string id)
+            ExtendedLandData data = parcelInfoCache.GetOrAdd(parcelID.ToString(),
+                    delegate()
                     {
                         UUID parcel = UUID.Zero;
-                        UUID.TryParse(id, out parcel);
+                        UUID.TryParse(parcelID.ToString(), out parcel);
                         // assume we've got the parcelID we just computed in RemoteParcelRequest
                         ExtendedLandData extLandData = new ExtendedLandData();
                         Util.ParseFakeParcelID(parcel, out extLandData.RegionHandle,
@@ -1982,7 +1980,7 @@ namespace OpenSim.Region.CoreModules.World.Land
                             }
                         }
                         return extLandData;
-                    });
+                    }, new TimeSpan(0, 5, 0));
 
             if (data != null)  // if we found some data, send it
             {
