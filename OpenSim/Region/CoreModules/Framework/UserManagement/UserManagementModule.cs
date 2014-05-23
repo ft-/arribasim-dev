@@ -585,8 +585,9 @@ namespace OpenSim.Region.CoreModules.Framework.UserManagement
             {
                 UserData newUser = new UserData();
                 newUser.Id = uuid;
-                newUser.FirstName = first + " " + last;
-                newUser.LastName = "@"+homeURL;
+                newUser.FirstName = (first + " " + last).Replace(' ', '.');
+                Uri uri = new Uri(homeURL);
+                newUser.LastName = "@"+uri.Authority;
                 newUser.HomeURL = homeURL;
                 newUser.IsUnknownUser = false;
                 newUser.HasGridUserTried = false;
@@ -653,26 +654,36 @@ namespace OpenSim.Region.CoreModules.Framework.UserManagement
             else
             { 
                 string homeURL;
-                string name;
+                string firstname = string.Empty;
+                string lastname = string.Empty;
 
                 //creatorData = <endpoint>;<name>
 
                 string[] parts = creatorData.Split(';');
                 if(parts.Length > 1)
                 {
-                    name = parts[1].Replace(' ', '.');
+                    string[] nameparts = parts[1].Split(' ');
+                    firstname = nameparts[0];
+                    for(int xi = 1; xi < nameparts.Length; ++xi)
+                    {
+                        if(xi != 1)
+                        {
+                            lastname += " ";
+                        }
+                        lastname += nameparts[xi];
+                    }
                 }
                 else
                 {
-                    name = "Unknown.UserUMMAU5";
+                    firstname = "Unknown";
+                    lastname = "UserUMMAU5";
                 }
                 if (parts.Length >= 1)
                 {
                     homeURL = parts[0];
                     try
                     {
-                        Uri uri = new Uri(parts[0]);
-                        AddUser(id, name, "@" + homeURL, homeURL);
+                        AddUser(id, firstname, lastname, homeURL);
                     }
                     catch (UriFormatException)
                     {
@@ -680,7 +691,7 @@ namespace OpenSim.Region.CoreModules.Framework.UserManagement
 
                         UserData newUser = new UserData();
                         newUser.Id = id;
-                        newUser.FirstName = name;
+                        newUser.FirstName = firstname + "." + lastname.Replace(' ', '.');
                         newUser.LastName = "@unknown";
                         newUser.HomeURL = string.Empty;
                         newUser.HasGridUserTried = false;
