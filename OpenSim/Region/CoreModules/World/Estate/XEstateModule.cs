@@ -45,16 +45,9 @@ namespace OpenSim.Region.CoreModules.World.Estate
     {
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
-        protected List<Scene> m_Scenes = new List<Scene>();
-        protected bool m_InInfoUpdate = false;
+        protected ThreadedClasses.RwLockedList<Scene> m_Scenes = new ThreadedClasses.RwLockedList<Scene>();
 
-        public bool InInfoUpdate
-        {
-            get { return m_InInfoUpdate; }
-            set { m_InInfoUpdate = value; }
-        }
-
-        public List<Scene> Scenes
+        public ThreadedClasses.RwLockedList<Scene> Scenes
         {
             get { return m_Scenes; }
         }
@@ -88,8 +81,7 @@ namespace OpenSim.Region.CoreModules.World.Estate
 
         public void AddRegion(Scene scene)
         {
-            lock (m_Scenes)
-                m_Scenes.Add(scene);
+            m_Scenes.Add(scene);
 
             scene.EventManager.OnNewClient += OnNewClient;
         }
@@ -107,8 +99,7 @@ namespace OpenSim.Region.CoreModules.World.Estate
         {
             scene.EventManager.OnNewClient -= OnNewClient;
 
-            lock (m_Scenes)
-                m_Scenes.Remove(scene);
+            m_Scenes.Remove(scene);
         }
 
         public string Name
@@ -138,8 +129,7 @@ namespace OpenSim.Region.CoreModules.World.Estate
             if (s == null)
                 return;
 
-            if (!m_InInfoUpdate)
-                m_EstateConnector.SendUpdateCovenant(s.RegionInfo.EstateSettings.EstateID, s.RegionInfo.RegionSettings.Covenant);
+            m_EstateConnector.SendUpdateCovenant(s.RegionInfo.EstateSettings.EstateID, s.RegionInfo.RegionSettings.Covenant);
         }
 
         private void OnEstateInfoChange(UUID RegionID)
@@ -148,8 +138,7 @@ namespace OpenSim.Region.CoreModules.World.Estate
             if (s == null)
                 return;
 
-            if (!m_InInfoUpdate)
-                m_EstateConnector.SendUpdateEstate(s.RegionInfo.EstateSettings.EstateID);
+            m_EstateConnector.SendUpdateEstate(s.RegionInfo.EstateSettings.EstateID);
         }
 
         private void OnEstateMessage(UUID RegionID, UUID FromID, string FromName, string Message)
@@ -173,8 +162,7 @@ namespace OpenSim.Region.CoreModules.World.Estate
                     }
                 }
             }
-            if (!m_InInfoUpdate)
-                m_EstateConnector.SendEstateMessage(estateID, FromID, FromName, Message);
+            m_EstateConnector.SendEstateMessage(estateID, FromID, FromName, Message);
         }
 
         private void OnNewClient(IClientAPI client)

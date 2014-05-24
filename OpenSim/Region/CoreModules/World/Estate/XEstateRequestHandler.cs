@@ -44,7 +44,6 @@ namespace OpenSim.Region.CoreModules.World.Estate
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         protected XEstateModule m_EstateModule;
-        protected Object m_RequestLock = new Object();
 
         public EstateRequestHandler(XEstateModule fmodule)
                 : base("POST", "/estate")
@@ -64,39 +63,27 @@ namespace OpenSim.Region.CoreModules.World.Estate
 
             try
             {
-                lock (m_RequestLock)
+                Dictionary<string, object> request =
+                        ServerUtils.ParseQueryString(body);
+
+                if (!request.ContainsKey("METHOD"))
+                    return FailureResult();
+
+                string method = request["METHOD"].ToString();
+                request.Remove("METHOD");
+
+                switch (method)
                 {
-                    Dictionary<string, object> request =
-                            ServerUtils.ParseQueryString(body);
-
-                    if (!request.ContainsKey("METHOD"))
-                        return FailureResult();
-
-                    string method = request["METHOD"].ToString();
-                    request.Remove("METHOD");
-
-                    try
-                    {
-                        m_EstateModule.InInfoUpdate = false;
-
-                        switch (method)
-                        {
-                            case "update_covenant":
-                                return UpdateCovenant(request);
-                            case "update_estate":
-                                return UpdateEstate(request);
-                            case "estate_message":
-                                return EstateMessage(request);
-                            case "teleport_home_one_user":
-                                return TeleportHomeOneUser(request);
-                            case "teleport_home_all_users":
-                                return TeleportHomeAllUsers(request);
-                        }
-                    }
-                    finally
-                    {
-                        m_EstateModule.InInfoUpdate = false;
-                    }
+                    case "update_covenant":
+                        return UpdateCovenant(request);
+                    case "update_estate":
+                        return UpdateEstate(request);
+                    case "estate_message":
+                        return EstateMessage(request);
+                    case "teleport_home_one_user":
+                        return TeleportHomeOneUser(request);
+                    case "teleport_home_all_users":
+                        return TeleportHomeAllUsers(request);
                 }
             }
             catch (Exception e)
