@@ -347,7 +347,7 @@ namespace OpenSim.Region.Framework.Scenes
         private readonly Timer m_restartTimer = new Timer(15000); // Wait before firing
         private volatile bool m_backingup;
         private Dictionary<UUID, ReturnInfo> m_returns = new Dictionary<UUID, ReturnInfo>();
-        private Dictionary<UUID, SceneObjectGroup> m_groupsWithTargets = new Dictionary<UUID, SceneObjectGroup>();
+        private ThreadedClasses.RwLockedDictionary<UUID, SceneObjectGroup> m_groupsWithTargets = new ThreadedClasses.RwLockedDictionary<UUID, SceneObjectGroup>();
 
         private string m_defaultScriptEngine;
 
@@ -1633,27 +1633,21 @@ namespace OpenSim.Region.Framework.Scenes
 
         public void AddGroupTarget(SceneObjectGroup grp)
         {
-            lock (m_groupsWithTargets)
-                m_groupsWithTargets[grp.UUID] = grp;
+            m_groupsWithTargets[grp.UUID] = grp;
         }
 
         public void RemoveGroupTarget(SceneObjectGroup grp)
         {
-            lock (m_groupsWithTargets)
-                m_groupsWithTargets.Remove(grp.UUID);
+            m_groupsWithTargets.Remove(grp.UUID);
         }
 
         private void CheckAtTargets()
         {
             List<SceneObjectGroup> objs = null;
 
-            lock (m_groupsWithTargets)
-            {
-                if (m_groupsWithTargets.Count != 0)
-                    objs = new List<SceneObjectGroup>(m_groupsWithTargets.Values);
-            }
+            objs = new List<SceneObjectGroup>(m_groupsWithTargets.Values);
 
-            if (objs != null)
+            if (objs.Count != 0)
             {
                 foreach (SceneObjectGroup entry in objs)
                     entry.checkAtTargets();
