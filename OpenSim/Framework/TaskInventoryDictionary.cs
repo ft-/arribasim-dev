@@ -54,9 +54,9 @@ namespace OpenSim.Framework
         {
             TaskInventoryDictionary clone = new TaskInventoryDictionary();
 
-            foreach (UUID uuid in Keys)
+            foreach (KeyValuePair<UUID, TaskInventoryItem> kvp in this)
             {
-                clone.Add(uuid, (TaskInventoryItem) this[uuid].Clone());
+                clone.Add(kvp.Key, kvp.Value);
             }
             
             return clone;
