@@ -39,8 +39,8 @@ namespace OpenSim.Region.Framework.Scenes
 {
     public class KeyframeTimer
     {
-        private static Dictionary<Scene, KeyframeTimer> m_timers =
-                new Dictionary<Scene, KeyframeTimer>();
+        private static ThreadedClasses.RwLockedDictionary<Scene, KeyframeTimer> m_timers =
+                new ThreadedClasses.RwLockedDictionary<Scene, KeyframeTimer>();
 
         private Timer m_timer;
         private ThreadedClasses.RwLockedDictionary<KeyframeMotion, object> m_motions = new ThreadedClasses.RwLockedDictionary<KeyframeMotion, object>();
@@ -105,33 +105,30 @@ namespace OpenSim.Region.Framework.Scenes
             if (motion.Scene == null)
                 return;
 
-            lock (m_timers)
+            timer = m_timers.GetOrAddIfNotExists(motion.Scene, delegate()
             {
-                if (!m_timers.TryGetValue(motion.Scene, out timer))
-                {
-                    timer = new KeyframeTimer(motion.Scene);
-                    m_timers[motion.Scene] = timer;
+                timer = new KeyframeTimer(motion.Scene);
 
-                    if (!SceneManager.Instance.AllRegionsReady)
+                if (!SceneManager.Instance.AllRegionsReady)
+                {
+                    // Start the timers only once all the regions are ready. This is required
+                    // when using megaregions, because the megaregion is correctly configured
+                    // only after all the regions have been loaded. (If we don't do this then
+                    // when the prim moves it might think that it crossed into a region.)
+                    SceneManager.Instance.OnRegionsReadyStatusChange += delegate(SceneManager sm)
                     {
-                        // Start the timers only once all the regions are ready. This is required
-                        // when using megaregions, because the megaregion is correctly configured
-                        // only after all the regions have been loaded. (If we don't do this then
-                        // when the prim moves it might think that it crossed into a region.)
-                        SceneManager.Instance.OnRegionsReadyStatusChange += delegate(SceneManager sm)
-                        {
-                            if (sm.AllRegionsReady)
-                                timer.Start();
-                        };
-                    }
-                    
-                    // Check again, in case the regions were started while we were adding the event handler
-                    if (SceneManager.Instance.AllRegionsReady)
-                    {
-                        timer.Start();
-                    }
+                        if (sm.AllRegionsReady)
+                            timer.Start();
+                    };
                 }
-            }
+
+                // Check again, in case the regions were started while we were adding the event handler
+                if (SceneManager.Instance.AllRegionsReady)
+                {
+                    timer.Start();
+                }
+                return timer;
+            });
 
             timer.m_motions[motion] = null;
         }
@@ -143,15 +140,10 @@ namespace OpenSim.Region.Framework.Scenes
             if (motion.Scene == null)
                 return;
 
-            lock (m_timers)
+            if (m_timers.TryGetValue(motion.Scene, out timer))
             {
-                if (!m_timers.TryGetValue(motion.Scene, out timer))
-                {
-                    return;
-                }
+                timer.m_motions.Remove(motion);
             }
-
-            timer.m_motions.Remove(motion);
         }
     }
 
