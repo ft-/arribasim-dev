@@ -47,7 +47,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Animations
     {
 //        private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
-        private List<Scene> m_scenes = new List<Scene>();
+        private ThreadedClasses.RwLockedList<Scene> m_scenes = new ThreadedClasses.RwLockedList<Scene>();
 
         public string Name { get { return "Animations Command Module"; } }
         
@@ -77,16 +77,14 @@ namespace OpenSim.Region.OptionalModules.Avatar.Animations
         {
 //            m_log.DebugFormat("[ATTACHMENTS COMMAND MODULE]: REGION {0} REMOVED", scene.RegionInfo.RegionName);
             
-            lock (m_scenes)
-                m_scenes.Remove(scene);
+            m_scenes.Remove(scene);
         }        
         
         public void RegionLoaded(Scene scene)
         {
 //            m_log.DebugFormat("[ANIMATIONS COMMAND MODULE]: REGION {0} LOADED", scene.RegionInfo.RegionName);
             
-            lock (m_scenes)
-                m_scenes.Add(scene);
+            m_scenes.Add(scene);
 
             scene.AddCommand(
                 "Users", this, "show animations",
@@ -119,20 +117,17 @@ namespace OpenSim.Region.OptionalModules.Avatar.Animations
 
             StringBuilder sb = new StringBuilder();
 
-            lock (m_scenes)
+            foreach (Scene scene in m_scenes)
             {
-                foreach (Scene scene in m_scenes)
+                if (targetNameSupplied)
                 {
-                    if (targetNameSupplied)
-                    {
-                        ScenePresence sp = scene.GetScenePresence(optionalTargetFirstName, optionalTargetLastName);
-                        if (sp != null && !sp.IsChildAgent)
-                            GetAttachmentsReport(sp, sb);
-                    }
-                    else
-                    {
-                        scene.ForEachRootScenePresence(sp => GetAttachmentsReport(sp, sb));
-                    }
+                    ScenePresence sp = scene.GetScenePresence(optionalTargetFirstName, optionalTargetLastName);
+                    if (sp != null && !sp.IsChildAgent)
+                        GetAttachmentsReport(sp, sb);
+                }
+                else
+                {
+                    scene.ForEachRootScenePresence(sp => GetAttachmentsReport(sp, sb));
                 }
             }
 

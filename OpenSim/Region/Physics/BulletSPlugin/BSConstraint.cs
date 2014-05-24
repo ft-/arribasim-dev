@@ -66,7 +66,7 @@ public abstract class BSConstraint : IDisposable
                                     m_body1.ID, m_body1.AddrString,
                                     m_body2.ID, m_body2.AddrString,
                                     success);
-                m_constraint.Clear();
+                lock (this) m_constraint.Clear();
             }
         }
     }
@@ -77,7 +77,7 @@ public abstract class BSConstraint : IDisposable
         if (m_enabled)
         {
             m_world.physicsScene.DetailLog("{0},BSConstraint.SetLinearLimits,taint,low={1},high={2}", m_body1.ID, low, high);
-            ret = PhysicsScene.PE.SetLinearLimits(m_constraint, low, high);
+            lock (this) ret = PhysicsScene.PE.SetLinearLimits(m_constraint, low, high);
         }
         return ret;
     }
@@ -88,7 +88,7 @@ public abstract class BSConstraint : IDisposable
         if (m_enabled)
         {
             m_world.physicsScene.DetailLog("{0},BSConstraint.SetAngularLimits,taint,low={1},high={2}", m_body1.ID, low, high);
-            ret = PhysicsScene.PE.SetAngularLimits(m_constraint, low, high);
+            lock (this) ret = PhysicsScene.PE.SetAngularLimits(m_constraint, low, high);
         }
         return ret;
     }
@@ -98,7 +98,7 @@ public abstract class BSConstraint : IDisposable
         bool ret = false;
         if (m_enabled)
         {
-            PhysicsScene.PE.SetConstraintNumSolverIterations(m_constraint, cnt);
+            lock (this) PhysicsScene.PE.SetConstraintNumSolverIterations(m_constraint, cnt);
             ret = true;
         }
         return ret;
@@ -110,7 +110,7 @@ public abstract class BSConstraint : IDisposable
         if (m_enabled)
         {
             // Recompute the internal transforms
-            PhysicsScene.PE.CalculateTransforms(m_constraint);
+            lock(this) PhysicsScene.PE.CalculateTransforms(m_constraint);
             ret = true;
         }
         return ret;
@@ -129,7 +129,7 @@ public abstract class BSConstraint : IDisposable
                 // Setting an object's mass to zero (making it static like when it's selected)
                 //     automatically disables the constraints.
                 // If the link is enabled, be sure to set the constraint itself to enabled.
-                PhysicsScene.PE.SetConstraintEnable(m_constraint, BSParam.NumericBool(true));
+                lock (this) PhysicsScene.PE.SetConstraintEnable(m_constraint, BSParam.NumericBool(true));
             }
             else
             {

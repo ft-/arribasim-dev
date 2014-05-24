@@ -132,18 +132,15 @@ namespace OpenSim.Region.CoreModules.World.Estate
 
             // Handle local regions locally
             //
-            lock (m_EstateModule.Scenes)
+            foreach (Scene s in m_EstateModule.Scenes)
             {
-                foreach (Scene s in m_EstateModule.Scenes)
+                if (regions.Contains(s.RegionInfo.RegionID))
                 {
-                    if (regions.Contains(s.RegionInfo.RegionID))
-                    {
-                        // All regions in one estate are in the same scope.
-                        // Use that scope.
-                        //
-                        ScopeID = s.RegionInfo.ScopeID;
-                        regions.Remove(s.RegionInfo.RegionID);
-                    }
+                    // All regions in one estate are in the same scope.
+                    // Use that scope.
+                    //
+                    ScopeID = s.RegionInfo.ScopeID;
+                    regions.Remove(s.RegionInfo.RegionID);
                 }
             }
 

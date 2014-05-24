@@ -46,14 +46,14 @@ namespace OpenSim.Region.CoreModules.Avatar.Lure
         private static readonly ILog m_log = LogManager.GetLogger(
                 MethodBase.GetCurrentMethod().DeclaringType);
 
-        private readonly List<Scene> m_scenes = new List<Scene>();
+        private readonly ThreadedClasses.RwLockedList<Scene> m_scenes = new ThreadedClasses.RwLockedList<Scene>();
 
         private IMessageTransferModule m_TransferModule = null;
         private bool m_Enabled = false;
 
         private string m_ThisGridURL;
 
-        private ExpiringCache<UUID, GridInstantMessage> m_PendingLures = new ExpiringCache<UUID, GridInstantMessage>();
+        private ThreadedClasses.ExpiringCache<UUID, GridInstantMessage> m_PendingLures = new ThreadedClasses.ExpiringCache<UUID, GridInstantMessage>(30);
 
         public void Initialise(IConfigSource config)
         {
@@ -77,12 +77,9 @@ namespace OpenSim.Region.CoreModules.Avatar.Lure
             if (!m_Enabled)
                 return;
 
-            lock (m_scenes)
-            {
-                m_scenes.Add(scene);
-                scene.EventManager.OnIncomingInstantMessage += OnIncomingInstantMessage;
-                scene.EventManager.OnNewClient += OnNewClient;
-            }
+            m_scenes.Add(scene);
+            scene.EventManager.OnIncomingInstantMessage += OnIncomingInstantMessage;
+            scene.EventManager.OnNewClient += OnNewClient;
         }
 
         public void RegionLoaded(Scene scene)
@@ -113,12 +110,9 @@ namespace OpenSim.Region.CoreModules.Avatar.Lure
             if (!m_Enabled)
                 return;
 
-            lock (m_scenes)
-            {
-                m_scenes.Remove(scene);
-                scene.EventManager.OnNewClient -= OnNewClient;
-                scene.EventManager.OnIncomingInstantMessage -= OnIncomingInstantMessage;
-            }
+            m_scenes.Remove(scene);
+            scene.EventManager.OnNewClient -= OnNewClient;
+            scene.EventManager.OnIncomingInstantMessage -= OnIncomingInstantMessage;
         }
 
         void OnNewClient(IClientAPI client)
@@ -157,10 +151,14 @@ namespace OpenSim.Region.CoreModules.Avatar.Lure
             {
                 UUID sessionID = new UUID(im.imSessionID);
 
-                if (!m_PendingLures.Contains(sessionID))
-                {
-                    m_log.DebugFormat("[HG LURE MODULE]: RequestTeleport sessionID={0}, regionID={1}, message={2}", im.imSessionID, im.RegionID, im.message);
+                try
+                { 
                     m_PendingLures.Add(sessionID, im, 7200); // 2 hours
+                    m_log.DebugFormat("[HG LURE MODULE]: RequestTeleport sessionID={0}, regionID={1}, message={2}", im.imSessionID, im.RegionID, im.message);
+                }
+                catch(ArgumentException)
+                {
+
                 }
 
                 // Forward. We do this, because the IM module explicitly rejects

@@ -76,12 +76,14 @@ namespace OpenSim.Groups
         /// until caches have updated.
         /// Therefore, we set the cache expiry to just 20 seconds.
         /// </remarks>
-        private ExpiringCache<UUID, PresenceInfo[]> m_usersOnlineCache;
+        private ThreadedClasses.ExpiringCache<UUID, PresenceInfo[]> m_usersOnlineCache;
 
         private int m_usersOnlineCacheExpirySeconds = 20;
 
-        private Dictionary<UUID, List<string>> m_groupsAgentsDroppedFromChatSession = new Dictionary<UUID, List<string>>();
-        private Dictionary<UUID, List<string>> m_groupsAgentsInvitedToChatSession = new Dictionary<UUID, List<string>>();
+        private ThreadedClasses.RwLockedDictionary<UUID, ThreadedClasses.RwLockedList<string>> m_groupsAgentsDroppedFromChatSession =
+            new ThreadedClasses.RwLockedDictionary<UUID, ThreadedClasses.RwLockedList<string>>();
+        private ThreadedClasses.RwLockedDictionary<UUID, ThreadedClasses.RwLockedList<string>> m_groupsAgentsInvitedToChatSession = 
+            new ThreadedClasses.RwLockedDictionary<UUID, ThreadedClasses.RwLockedList<string>>();
 
         #region Region Module interfaceBase Members
 
@@ -111,7 +113,7 @@ namespace OpenSim.Groups
 
             if (m_messageOnlineAgentsOnly)
             {
-                m_usersOnlineCache = new ExpiringCache<UUID, PresenceInfo[]>();
+                m_usersOnlineCache = new ThreadedClasses.ExpiringCache<UUID, PresenceInfo[]>(30);
             }
             else
             {
@@ -748,11 +750,15 @@ namespace OpenSim.Groups
 
         public void ResetAgentGroupChatSessions(string agentID)
         {
-            foreach (List<string> agentList in m_groupsAgentsDroppedFromChatSession.Values)
-                agentList.Remove(agentID);
+            m_groupsAgentsDroppedFromChatSession.ForEach(delegate(KeyValuePair<UUID, ThreadedClasses.RwLockedList<string>> kvp)
+            {
+                kvp.Value.Remove(agentID);
+            });
 
-            foreach (List<string> agentList in m_groupsAgentsInvitedToChatSession.Values)
-                agentList.Remove(agentID);
+            m_groupsAgentsInvitedToChatSession.ForEach(delegate(KeyValuePair<UUID, ThreadedClasses.RwLockedList<string>> kvp)
+            {
+                kvp.Value.Remove(agentID);
+            });
         }
 
         public bool hasAgentBeenInvitedToGroupChatSession(string agentID, UUID groupID)
@@ -802,8 +808,8 @@ namespace OpenSim.Groups
         {
             if (!m_groupsAgentsDroppedFromChatSession.ContainsKey(groupID))
             {
-                m_groupsAgentsDroppedFromChatSession.Add(groupID, new List<string>());
-                m_groupsAgentsInvitedToChatSession.Add(groupID, new List<string>());
+                m_groupsAgentsDroppedFromChatSession.Add(groupID, new ThreadedClasses.RwLockedList<string>());
+                m_groupsAgentsInvitedToChatSession.Add(groupID, new ThreadedClasses.RwLockedList<string>());
             }
 
         }

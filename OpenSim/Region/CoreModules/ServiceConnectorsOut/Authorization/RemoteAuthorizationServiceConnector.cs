@@ -49,8 +49,7 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Authorization
                 MethodBase.GetCurrentMethod().DeclaringType);
 
         private bool m_Enabled = false;
-        private List<Scene> m_scenes = new List<Scene>();
-        private ReaderWriterLock m_scenesRwLock = new ReaderWriterLock();
+        private ThreadedClasses.RwLockedList<Scene> m_scenes = new ThreadedClasses.RwLockedList<Scene>();
 
         public Type ReplaceableInterface 
         {
@@ -99,32 +98,13 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Authorization
             if (!m_Enabled)
                 return;
 
-            m_scenesRwLock.AcquireWriterLock(-1);
-            try
-            {
-                if (!m_scenes.Contains(scene))
-                {
-                    m_scenes.Add(scene);
-                    scene.RegisterModuleInterface<IAuthorizationService>(this);
-                }
-            }
-            finally
-            {
-                m_scenesRwLock.ReleaseWriterLock();
-            }
+            m_scenes.Add(scene);
+            scene.RegisterModuleInterface<IAuthorizationService>(this);
         }
 
         public void RemoveRegion(Scene scene)
         {
-            m_scenesRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_scenes.Remove(scene);
-            }
-            finally
-            {
-                m_scenesRwLock.ReleaseWriterLock();
-            }
+            m_scenes.Remove(scene);
         }
 
         public void RegionLoaded(Scene scene)
@@ -147,20 +127,19 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Authorization
             
             // get the scene this call is being made for
             Scene scene = null;
-            m_scenesRwLock.AcquireReaderLock(-1);
             try
             {
-                foreach (Scene nextScene in m_scenes)
+                m_scenes.ForEach(delegate(Scene nextScene)
                 {
                     if (nextScene.RegionInfo.RegionID.ToString() == regionID)
                     {
-                        scene = nextScene;
+                        throw new ThreadedClasses.ReturnValueException<Scene>(nextScene);
                     }
-                }
+                });
             }
-            finally
+            catch(ThreadedClasses.ReturnValueException<Scene> e)
             {
-                m_scenesRwLock.ReleaseReaderLock();
+                scene = e.Value;
             }
             
             if (scene != null)

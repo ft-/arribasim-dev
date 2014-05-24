@@ -303,8 +303,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
         private static string LogHeader = "[LLCLIENTVIEW]";
-        private static Dictionary<PacketType, PacketMethod> PacketHandlers = new Dictionary<PacketType, PacketMethod>(); //Global/static handlers for all clients
-        private static ReaderWriterLock PacketHandlersRwLock = new ReaderWriterLock();
+        private static ThreadedClasses.RwLockedDictionary<PacketType, PacketMethod> GlobalPacketHandlers = new ThreadedClasses.RwLockedDictionary<PacketType, PacketMethod>(); //Global/static handlers for all clients
 
         /// <summary>
         /// Handles UDP texture download.
@@ -326,12 +325,6 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         private Prioritizer m_prioritizer;
         private bool m_disableFacelights = false;
         private volatile bool m_justEditedTerrain = false;
-        /// <value>
-        /// List used in construction of data blocks for an object update packet.  This is to stop us having to
-        /// continually recreate it.
-        /// </value>
-        protected List<ObjectUpdatePacket.ObjectDataBlock> m_fullUpdateDataBlocksBuilder;
-
         /// <value>
         /// Maintain a record of all the objects killed.  This allows us to stop an update being sent from the
         /// thread servicing the m_primFullUpdates queue after a kill.  If this happens the object persists as an
@@ -358,11 +351,9 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         /// </remarks>
         private AgentUpdateArgs m_thisAgentUpdateArgs = new AgentUpdateArgs();
 
-        private Dictionary<PacketType, PacketProcessor> m_packetHandlers = new Dictionary<PacketType, PacketProcessor>();
-        private ReaderWriterLock m_packetHandlersRwLock = new ReaderWriterLock();
+        private ThreadedClasses.RwLockedDictionary<PacketType, PacketProcessor> m_localPacketHandlers = new ThreadedClasses.RwLockedDictionary<PacketType, PacketProcessor>();
 
-        private Dictionary<string, GenericMessage> m_genericPacketHandlers = new Dictionary<string, GenericMessage>(); //PauPaw:Local Generic Message handlers
-        private ReaderWriterLock m_genericPacketHandlersRwLock = new ReaderWriterLock();
+        private ThreadedClasses.RwLockedDictionary<string, GenericMessage> m_genericPacketHandlers = new ThreadedClasses.RwLockedDictionary<string, GenericMessage>(); //PauPaw:Local Generic Message handlers
         protected Scene m_scene;
         protected string m_firstName;
         protected string m_lastName;
@@ -371,8 +362,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         protected UUID m_activeGroupID;
         protected string m_activeGroupName = String.Empty;
         protected ulong m_activeGroupPowers;
-        private Dictionary<UUID, ulong> m_groupPowers = new Dictionary<UUID, ulong>();
-        private ReaderWriterLock m_groupPowersRwLock = new ReaderWriterLock();
+        private ThreadedClasses.RwLockedDictionary<UUID, ulong> m_groupPowers = new ThreadedClasses.RwLockedDictionary<UUID, ulong>();
         protected int m_terrainCheckerCount;
         protected uint m_agentFOVCounter;
 
@@ -401,15 +391,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         public ulong ActiveGroupPowers { get { return m_activeGroupPowers; } private set { m_activeGroupPowers = value; } }
         public bool IsGroupMember(UUID groupID)
         {
-            m_groupPowersRwLock.AcquireReaderLock(-1);
-            try
-            {
-                return m_groupPowers.ContainsKey(groupID);
-            }
-            finally
-            {
-                m_groupPowersRwLock.ReleaseReaderLock();
-            }
+            return m_groupPowers.ContainsKey(groupID);
         }
 
         /// <summary>
@@ -458,11 +440,6 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
         #endregion Properties
 
-//        ~LLClientView()
-//        {
-//            m_log.DebugFormat("{0} Destructor called for {1}, circuit code {2}", LogHeader, Name, CircuitCode);
-//        }
-
         /// <summary>
         /// Constructor
         /// </summary>
@@ -480,9 +457,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             m_scene = scene;
             m_entityUpdates = new PriorityQueue(m_scene.Entities.Count);
             m_entityProps = new PriorityQueue(m_scene.Entities.Count);
-            m_fullUpdateDataBlocksBuilder = new List<ObjectUpdatePacket.ObjectDataBlock>();
             m_killRecord = new HashSet<uint>();
-//            m_attachmentsSent = new HashSet<uint>();
 
             m_assetService = m_scene.RequestModuleInterface<IAssetService>();
             m_GroupsModule = scene.RequestModuleInterface<IGroupsModule>();
@@ -615,21 +590,16 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
         public static bool AddPacketHandler(PacketType packetType, PacketMethod handler)
         {
-            bool result = false;
-            PacketHandlersRwLock.AcquireWriterLock(-1);
             try
             {
-                if (!PacketHandlers.ContainsKey(packetType))
-                {
-                    PacketHandlers.Add(packetType, handler);
-                    result = true;
-                }
+                GlobalPacketHandlers.AddIfNotExists(packetType, delegate() { return handler; });
+                return true;
             }
-            finally
+            catch(ThreadedClasses.RwLockedDictionary<PacketType, PacketMethod>.KeyAlreadyExistsException)
             {
-                PacketHandlersRwLock.ReleaseWriterLock();
+
             }
-            return result;
+            return false;
         }
 
         /// <summary>
@@ -660,43 +630,30 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         /// <returns>true if the handler was added.  This is currently always the case.</returns>
         public bool AddLocalPacketHandler(PacketType packetType, PacketMethod handler, bool doAsync)
         {
-            bool result = false;
-            m_packetHandlersRwLock.AcquireWriterLock(-1);
             try
             {
-                if (!m_packetHandlers.ContainsKey(packetType))
-                {
-                    m_packetHandlers.Add(packetType, new PacketProcessor() { method = handler, Async = doAsync });
-                    result = true;
-                }
+                m_localPacketHandlers.AddIfNotExists(packetType, delegate() { return new PacketProcessor() { method = handler, Async = doAsync }; });
+                return true;
             }
-            finally
+            catch(ThreadedClasses.RwLockedDictionary<PacketType, PacketProcessor>.KeyAlreadyExistsException)
             {
-                m_packetHandlersRwLock.ReleaseWriterLock();
-            }
 
-            return result;
+            }
+            return false;
         }
 
         public bool AddGenericPacketHandler(string MethodName, GenericMessage handler)
         {
-            MethodName = MethodName.ToLower().Trim();
-
-            bool result = false;
-            m_genericPacketHandlersRwLock.AcquireWriterLock(-1);
             try
             {
-                if (!m_genericPacketHandlers.ContainsKey(MethodName))
-                {
-                    m_genericPacketHandlers.Add(MethodName, handler);
-                    result = true;
-                }
+                m_genericPacketHandlers.AddIfNotExists(MethodName.ToLower().Trim(), delegate() { return handler; });
+                return true;
             }
-            finally
+            catch(ThreadedClasses.RwLockedDictionary<string, GenericMessage>.KeyAlreadyExistsException)
             {
-                m_genericPacketHandlersRwLock.ReleaseWriterLock();
+
             }
-            return result;
+            return false;
         }
 
         /// <summary>
@@ -706,19 +663,10 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         /// <returns>True if a handler was found which successfully processed the packet.</returns>
         protected virtual bool ProcessPacketMethod(Packet packet)
         {
-            bool result = false;
             PacketProcessor pprocessor;
-            m_packetHandlersRwLock.AcquireReaderLock(-1);
-            try
-            { 
-                result = m_packetHandlers.TryGetValue(packet.Type, out pprocessor);
-            }
-            finally
-            {
-                m_packetHandlersRwLock.ReleaseReaderLock();
-            }
+            bool result = false;
 
-            if(result)
+            if (m_localPacketHandlers.TryGetValue(packet.Type, out pprocessor))
             {
                 //there is a local handler for this packet type
                 if (pprocessor.Async)
@@ -746,17 +694,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             {
                 //there is not a local handler so see if there is a Global handler
                 PacketMethod method = null;
-                bool found;
-                PacketHandlersRwLock.AcquireReaderLock(-1);
-                try
-                {
-                    found = PacketHandlers.TryGetValue(packet.Type, out method);
-                }
-                finally
-                {
-                    PacketHandlersRwLock.ReleaseReaderLock();
-                }
-                if (found)
+                if (GlobalPacketHandlers.TryGetValue(packet.Type, out method))
                 {
                     ClientInfo cinfo = UDPClient.GetClientInfo();
                     if (!cinfo.GenericRequests.ContainsKey(packet.Type.ToString()))
@@ -2694,29 +2632,13 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
         public void SendGroupMembership(GroupMembershipData[] GroupMembership)
         {
-            m_groupPowersRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_groupPowers.Clear();
-            }
-            finally
-            {
-                m_groupPowersRwLock.ReleaseWriterLock();
-            }
+            m_groupPowers.Clear();
 
             AgentGroupDataUpdatePacket Groupupdate = new AgentGroupDataUpdatePacket();
             AgentGroupDataUpdatePacket.GroupDataBlock[] Groups = new AgentGroupDataUpdatePacket.GroupDataBlock[GroupMembership.Length];
             for (int i = 0; i < GroupMembership.Length; i++)
             {
-                m_groupPowersRwLock.AcquireWriterLock(-1);
-                try
-                {
-                    m_groupPowers[GroupMembership[i].GroupID] = GroupMembership[i].GroupPowers;
-                }
-                finally
-                {
-                    m_groupPowersRwLock.ReleaseWriterLock();
-                }
+                m_groupPowers[GroupMembership[i].GroupID] = GroupMembership[i].GroupPowers;
 
                 AgentGroupDataUpdatePacket.GroupDataBlock Group = new AgentGroupDataUpdatePacket.GroupDataBlock();
                 Group.AcceptNotices = GroupMembership[i].AcceptNotices;
@@ -3861,37 +3783,17 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                 ResendPrimUpdate(update);
         }
 
-//        OpenSim.Framework.Lazy<List<ObjectUpdatePacket.ObjectDataBlock>> objectUpdateBlocks = new OpenSim.Framework.Lazy<List<ObjectUpdatePacket.ObjectDataBlock>>();
-//        OpenSim.Framework.Lazy<List<ObjectUpdateCompressedPacket.ObjectDataBlock>> compressedUpdateBlocks = new OpenSim.Framework.Lazy<List<ObjectUpdateCompressedPacket.ObjectDataBlock>>();
-//        OpenSim.Framework.Lazy<List<ImprovedTerseObjectUpdatePacket.ObjectDataBlock>> terseUpdateBlocks = new OpenSim.Framework.Lazy<List<ImprovedTerseObjectUpdatePacket.ObjectDataBlock>>();
-//        OpenSim.Framework.Lazy<List<ImprovedTerseObjectUpdatePacket.ObjectDataBlock>> terseAgentUpdateBlocks = new OpenSim.Framework.Lazy<List<ImprovedTerseObjectUpdatePacket.ObjectDataBlock>>();
-//
-//        OpenSim.Framework.Lazy<List<EntityUpdate>> objectUpdates = new OpenSim.Framework.Lazy<List<EntityUpdate>>();
-//        OpenSim.Framework.Lazy<List<EntityUpdate>> compressedUpdates = new OpenSim.Framework.Lazy<List<EntityUpdate>>();
-//        OpenSim.Framework.Lazy<List<EntityUpdate>> terseUpdates = new OpenSim.Framework.Lazy<List<EntityUpdate>>();
-//        OpenSim.Framework.Lazy<List<EntityUpdate>> terseAgentUpdates = new OpenSim.Framework.Lazy<List<EntityUpdate>>();
-
-
         private void ProcessEntityUpdates(int maxUpdates)
         {
-            OpenSim.Framework.Lazy<List<ObjectUpdatePacket.ObjectDataBlock>> objectUpdateBlocks = new OpenSim.Framework.Lazy<List<ObjectUpdatePacket.ObjectDataBlock>>();
-            OpenSim.Framework.Lazy<List<ObjectUpdateCompressedPacket.ObjectDataBlock>> compressedUpdateBlocks = new OpenSim.Framework.Lazy<List<ObjectUpdateCompressedPacket.ObjectDataBlock>>();
-            OpenSim.Framework.Lazy<List<ImprovedTerseObjectUpdatePacket.ObjectDataBlock>> terseUpdateBlocks = new OpenSim.Framework.Lazy<List<ImprovedTerseObjectUpdatePacket.ObjectDataBlock>>();
-            OpenSim.Framework.Lazy<List<ImprovedTerseObjectUpdatePacket.ObjectDataBlock>> terseAgentUpdateBlocks = new OpenSim.Framework.Lazy<List<ImprovedTerseObjectUpdatePacket.ObjectDataBlock>>();
+            List<ObjectUpdatePacket.ObjectDataBlock> objectUpdateBlocks = new List<ObjectUpdatePacket.ObjectDataBlock>();
+            List<ObjectUpdateCompressedPacket.ObjectDataBlock> compressedUpdateBlocks = new List<ObjectUpdateCompressedPacket.ObjectDataBlock>();
+            List<ImprovedTerseObjectUpdatePacket.ObjectDataBlock> terseUpdateBlocks = new List<ImprovedTerseObjectUpdatePacket.ObjectDataBlock>();
+            List<ImprovedTerseObjectUpdatePacket.ObjectDataBlock> terseAgentUpdateBlocks = new List<ImprovedTerseObjectUpdatePacket.ObjectDataBlock>();
 
-            OpenSim.Framework.Lazy<List<EntityUpdate>> objectUpdates = new OpenSim.Framework.Lazy<List<EntityUpdate>>();
-            OpenSim.Framework.Lazy<List<EntityUpdate>> compressedUpdates = new OpenSim.Framework.Lazy<List<EntityUpdate>>();
-            OpenSim.Framework.Lazy<List<EntityUpdate>> terseUpdates = new OpenSim.Framework.Lazy<List<EntityUpdate>>();
-            OpenSim.Framework.Lazy<List<EntityUpdate>> terseAgentUpdates = new OpenSim.Framework.Lazy<List<EntityUpdate>>();
-
-//            objectUpdateBlocks.Value.Clear();
-//            compressedUpdateBlocks.Value.Clear();
-//            terseUpdateBlocks.Value.Clear();
-//            terseAgentUpdateBlocks.Value.Clear();
-//            objectUpdates.Value.Clear();
-//            compressedUpdates.Value.Clear();
-//            terseUpdates.Value.Clear();
-//            terseAgentUpdates.Value.Clear();
+            List<EntityUpdate> objectUpdates = new List<EntityUpdate>();
+            List<EntityUpdate> compressedUpdates = new List<EntityUpdate>();
+            List<EntityUpdate> terseUpdates = new List<EntityUpdate>();
+            List<EntityUpdate> terseAgentUpdates = new List<EntityUpdate>();
 
             // Check to see if this is a flush
             if (maxUpdates <= 0)
@@ -4044,8 +3946,8 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                                 continue;
                         }
 
-                        objectUpdateBlocks.Value.Add(updateBlock);
-                        objectUpdates.Value.Add(update);
+                        objectUpdateBlocks.Add(updateBlock);
+                        objectUpdates.Add(update);
                     }
                     else if (!canUseImproved)
                     {
@@ -4062,16 +3964,16 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                         if (part.ParentGroup.IsDeleted)
                             continue;
 
-                        compressedUpdateBlocks.Value.Add(compressedBlock);
-                        compressedUpdates.Value.Add(update);
+                        compressedUpdateBlocks.Add(compressedBlock);
+                        compressedUpdates.Add(update);
                     }
                     else
                     {
                         if (update.Entity is ScenePresence && ((ScenePresence)update.Entity).UUID == AgentId)
                         {
                             // Self updates go into a special list
-                            terseAgentUpdateBlocks.Value.Add(CreateImprovedTerseBlock(update.Entity, updateFlags.HasFlag(PrimUpdateFlags.Textures)));
-                            terseAgentUpdates.Value.Add(update);
+                            terseAgentUpdateBlocks.Add(CreateImprovedTerseBlock(update.Entity, updateFlags.HasFlag(PrimUpdateFlags.Textures)));
+                            terseAgentUpdates.Add(update);
                         }
                         else
                         {
@@ -4100,8 +4002,8 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                                     continue;
                             }
 
-                            terseUpdateBlocks.Value.Add(terseUpdateBlock);
-                            terseUpdates.Value.Add(update);
+                            terseUpdateBlocks.Add(terseUpdateBlock);
+                            terseUpdates.Add(update);
                         }
                     }
 
@@ -4113,9 +4015,9 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                 #region Packet Sending
                 ushort timeDilation = Utils.FloatToUInt16(avgTimeDilation, 0.0f, 1.0f);
 
-                if (terseAgentUpdateBlocks.IsValueCreated)
+                if (terseAgentUpdateBlocks.Count!=0)
                 {
-                    List<ImprovedTerseObjectUpdatePacket.ObjectDataBlock> blocks = terseAgentUpdateBlocks.Value;
+                    List<ImprovedTerseObjectUpdatePacket.ObjectDataBlock> blocks = terseAgentUpdateBlocks;
 
                     ImprovedTerseObjectUpdatePacket packet
                         = (ImprovedTerseObjectUpdatePacket)PacketPool.Instance.GetPacket(PacketType.ImprovedTerseObjectUpdate);
@@ -4127,12 +4029,12 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                     for (int i = 0; i < blocks.Count; i++)
                         packet.ObjectData[i] = blocks[i];
                     // If any of the packets created from this call go unacknowledged, all of the updates will be resent
-                    OutPacket(packet, ThrottleOutPacketType.Unknown, true, delegate(OutgoingPacket oPacket) { ResendPrimUpdates(terseAgentUpdates.Value, oPacket); });
+                    OutPacket(packet, ThrottleOutPacketType.Unknown, true, delegate(OutgoingPacket oPacket) { ResendPrimUpdates(terseAgentUpdates, oPacket); });
                 }
 
-                if (objectUpdateBlocks.IsValueCreated)
+                if (objectUpdateBlocks.Count!=0)
                 {
-                    List<ObjectUpdatePacket.ObjectDataBlock> blocks = objectUpdateBlocks.Value;
+                    List<ObjectUpdatePacket.ObjectDataBlock> blocks = objectUpdateBlocks;
         
                     ObjectUpdatePacket packet = (ObjectUpdatePacket)PacketPool.Instance.GetPacket(PacketType.ObjectUpdate);
                     packet.RegionData.RegionHandle = m_scene.RegionInfo.RegionHandle;
@@ -4142,12 +4044,12 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                     for (int i = 0; i < blocks.Count; i++)
                         packet.ObjectData[i] = blocks[i];
                     // If any of the packets created from this call go unacknowledged, all of the updates will be resent
-                    OutPacket(packet, ThrottleOutPacketType.Task, true, delegate(OutgoingPacket oPacket) { ResendPrimUpdates(objectUpdates.Value, oPacket); });
+                    OutPacket(packet, ThrottleOutPacketType.Task, true, delegate(OutgoingPacket oPacket) { ResendPrimUpdates(objectUpdates, oPacket); });
                 }
         
-                if (compressedUpdateBlocks.IsValueCreated)
+                if (compressedUpdateBlocks.Count!=0)
                 {
-                    List<ObjectUpdateCompressedPacket.ObjectDataBlock> blocks = compressedUpdateBlocks.Value;
+                    List<ObjectUpdateCompressedPacket.ObjectDataBlock> blocks = compressedUpdateBlocks;
         
                     ObjectUpdateCompressedPacket packet = (ObjectUpdateCompressedPacket)PacketPool.Instance.GetPacket(PacketType.ObjectUpdateCompressed);
                     packet.RegionData.RegionHandle = m_scene.RegionInfo.RegionHandle;
@@ -4157,12 +4059,12 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                     for (int i = 0; i < blocks.Count; i++)
                         packet.ObjectData[i] = blocks[i];
                     // If any of the packets created from this call go unacknowledged, all of the updates will be resent
-                    OutPacket(packet, ThrottleOutPacketType.Task, true, delegate(OutgoingPacket oPacket) { ResendPrimUpdates(compressedUpdates.Value, oPacket); });
+                    OutPacket(packet, ThrottleOutPacketType.Task, true, delegate(OutgoingPacket oPacket) { ResendPrimUpdates(compressedUpdates, oPacket); });
                 }
 
-                if (terseUpdateBlocks.IsValueCreated)
+                if (terseUpdateBlocks.Count!=0)
                 {
-                    List<ImprovedTerseObjectUpdatePacket.ObjectDataBlock> blocks = terseUpdateBlocks.Value;
+                    List<ImprovedTerseObjectUpdatePacket.ObjectDataBlock> blocks = terseUpdateBlocks;
         
                     ImprovedTerseObjectUpdatePacket packet
                         = (ImprovedTerseObjectUpdatePacket)PacketPool.Instance.GetPacket(
@@ -4175,7 +4077,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                     for (int i = 0; i < blocks.Count; i++)
                         packet.ObjectData[i] = blocks[i];
                     // If any of the packets created from this call go unacknowledged, all of the updates will be resent
-                    OutPacket(packet, ThrottleOutPacketType.Task, true, delegate(OutgoingPacket oPacket) { ResendPrimUpdates(terseUpdates.Value, oPacket); });
+                    OutPacket(packet, ThrottleOutPacketType.Task, true, delegate(OutgoingPacket oPacket) { ResendPrimUpdates(terseUpdates, oPacket); });
                 }
             }
 
@@ -4434,17 +4336,17 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
         private void ProcessEntityPropertyRequests(int maxUpdates)
         {
-            OpenSim.Framework.Lazy<List<ObjectPropertiesFamilyPacket.ObjectDataBlock>> objectFamilyBlocks =
-                new OpenSim.Framework.Lazy<List<ObjectPropertiesFamilyPacket.ObjectDataBlock>>();
+            List<ObjectPropertiesFamilyPacket.ObjectDataBlock> objectFamilyBlocks =
+                new List<ObjectPropertiesFamilyPacket.ObjectDataBlock>();
 
-            OpenSim.Framework.Lazy<List<ObjectPropertiesPacket.ObjectDataBlock>> objectPropertiesBlocks =
-                new OpenSim.Framework.Lazy<List<ObjectPropertiesPacket.ObjectDataBlock>>();
+            List<ObjectPropertiesPacket.ObjectDataBlock> objectPropertiesBlocks =
+                new List<ObjectPropertiesPacket.ObjectDataBlock>();
 
-            OpenSim.Framework.Lazy<List<ObjectPropertyUpdate>> familyUpdates =
-                new OpenSim.Framework.Lazy<List<ObjectPropertyUpdate>>();
+            List<ObjectPropertyUpdate> familyUpdates =
+                new List<ObjectPropertyUpdate>();
 
-            OpenSim.Framework.Lazy<List<ObjectPropertyUpdate>> propertyUpdates =
-                new OpenSim.Framework.Lazy<List<ObjectPropertyUpdate>>();
+            List<ObjectPropertyUpdate> propertyUpdates =
+                new List<ObjectPropertyUpdate>();
             
             IEntityUpdate iupdate;
             Int32 timeinqueue; // this is just debugging code & can be dropped later
@@ -4463,8 +4365,8 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                     {
                         SceneObjectPart sop = (SceneObjectPart)update.Entity;
                         ObjectPropertiesFamilyPacket.ObjectDataBlock objPropDB = CreateObjectPropertiesFamilyBlock(sop,update.Flags);
-                        objectFamilyBlocks.Value.Add(objPropDB);
-                        familyUpdates.Value.Add(update);
+                        objectFamilyBlocks.Add(objPropDB);
+                        familyUpdates.Add(update);
                     }
                 }
 
@@ -4474,8 +4376,8 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                     {
                         SceneObjectPart sop = (SceneObjectPart)update.Entity;
                         ObjectPropertiesPacket.ObjectDataBlock objPropDB = CreateObjectPropertiesBlock(sop);
-                        objectPropertiesBlocks.Value.Add(objPropDB);
-                        propertyUpdates.Value.Add(update);
+                        objectPropertiesBlocks.Add(objPropDB);
+                        propertyUpdates.Add(update);
                     }
                 }
 
@@ -4486,15 +4388,12 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             // Int32 ppcnt = 0;
             // Int32 pbcnt = 0;
             
-            if (objectPropertiesBlocks.IsValueCreated)
+            if (objectPropertiesBlocks.Count != 0)
             {
-                List<ObjectPropertiesPacket.ObjectDataBlock> blocks = objectPropertiesBlocks.Value;
-                List<ObjectPropertyUpdate> updates = propertyUpdates.Value;
-
                 ObjectPropertiesPacket packet = (ObjectPropertiesPacket)PacketPool.Instance.GetPacket(PacketType.ObjectProperties);
-                packet.ObjectData = new ObjectPropertiesPacket.ObjectDataBlock[blocks.Count];
-                for (int i = 0; i < blocks.Count; i++)
-                    packet.ObjectData[i] = blocks[i];
+                packet.ObjectData = new ObjectPropertiesPacket.ObjectDataBlock[objectPropertiesBlocks.Count];
+                for (int i = 0; i < objectPropertiesBlocks.Count; i++)
+                    packet.ObjectData[i] = objectPropertiesBlocks[i];
 
                 packet.Header.Zerocoded = true;
 
@@ -4503,7 +4402,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                 OutPacket(packet, ThrottleOutPacketType.Task, true,
                           delegate(OutgoingPacket oPacket)
                           {
-                              ResendPropertyUpdates(updates, oPacket);
+                              ResendPropertyUpdates(propertyUpdates, oPacket);
                           });
 
                 // pbcnt += blocks.Count;
@@ -4513,23 +4412,21 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             // Int32 fpcnt = 0;
             // Int32 fbcnt = 0;
             
-            if (objectFamilyBlocks.IsValueCreated)
+            if (objectFamilyBlocks.Count != 0)
             {
-                List<ObjectPropertiesFamilyPacket.ObjectDataBlock> blocks = objectFamilyBlocks.Value;
-                
                 // one packet per object block... uggh...
-                for (int i = 0; i < blocks.Count; i++)
+                for (int i = 0; i < objectFamilyBlocks.Count; i++)
                 {
                     ObjectPropertiesFamilyPacket packet =
                         (ObjectPropertiesFamilyPacket)PacketPool.Instance.GetPacket(PacketType.ObjectPropertiesFamily);
 
-                    packet.ObjectData = blocks[i];
+                    packet.ObjectData = objectFamilyBlocks[i];
                     packet.Header.Zerocoded = true;
 
                     // Pass in the delegate so that if this packet needs to be resent, we send the current properties
                     // of the object rather than the properties when the packet was created
                     List<ObjectPropertyUpdate> updates = new List<ObjectPropertyUpdate>();
-                    updates.Add(familyUpdates.Value[i]);
+                    updates.Add(familyUpdates[i]);
                     OutPacket(packet, ThrottleOutPacketType.Task, true,
                               delegate(OutgoingPacket oPacket)
                               {
@@ -5488,18 +5385,12 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             if (groupID == ActiveGroupId)
                 return ActiveGroupPowers;
 
-            m_groupPowersRwLock.AcquireReaderLock(-1);
-            try
+            ulong value = 0;
+            if(m_groupPowers.TryGetValue(groupID, out value))
             {
-                if (m_groupPowers.ContainsKey(groupID))
-                    return m_groupPowers[groupID];
-
-                return 0;
+                return value;
             }
-            finally
-            {
-                m_groupPowersRwLock.ReleaseReaderLock();
-            }
+            return 0;
         }
 
         #endregion
@@ -12591,8 +12482,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
         #region IClientCore
 
-        private readonly Dictionary<Type, object> m_clientInterfaces = new Dictionary<Type, object>();
-        private ReaderWriterLock m_clientInterfacesRwLock = new ReaderWriterLock();
+        private readonly ThreadedClasses.RwLockedDictionary<Type, object> m_clientInterfaces = new ThreadedClasses.RwLockedDictionary<Type, object>();
 
         /// <summary>
         /// Register an interface on this client, should only be called in the constructor.
@@ -12601,37 +12491,26 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         /// <param name="iface"></param>
         protected void RegisterInterface<T>(T iface)
         {
-            m_clientInterfacesRwLock.AcquireWriterLock(-1);
             try
             {
-                if (!m_clientInterfaces.ContainsKey(typeof(T)))
-                {
-                    m_clientInterfaces.Add(typeof(T), iface);
-                }
+                m_clientInterfaces.AddIfNotExists(typeof(T), delegate() { return iface; });
             }
-            finally
+            catch(ThreadedClasses.RwLockedDictionary<Type, object>.KeyAlreadyExistsException)
             {
-                m_clientInterfacesRwLock.ReleaseWriterLock();
+
             }
         }
 
         public bool TryGet<T>(out T iface)
         {
-            m_clientInterfacesRwLock.AcquireReaderLock(-1);
-            try
+            object o;
+            if(m_clientInterfaces.TryGetValue(typeof(T), out o))
             {
-                if (m_clientInterfaces.ContainsKey(typeof(T)))
-                {
-                    iface = (T)m_clientInterfaces[typeof(T)];
-                    return true;
-                }
-                iface = default(T);
-                return false;
+                iface = (T)o;
+                return true;
             }
-            finally
-            {
-                m_clientInterfacesRwLock.ReleaseReaderLock();
-            }
+            iface = default(T);
+            return false;
         }
 
         public T Get<T>()
@@ -12660,22 +12539,18 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                 GroupMembershipData[] GroupMembership =
                         m_GroupsModule.GetMembershipData(AgentId);
 
-                m_groupPowersRwLock.AcquireWriterLock(-1);
-                try
+                if(GroupMembership != null)
+                {
+                    Dictionary<UUID, ulong> newGroupPowers = new Dictionary<UUID, ulong>();
+                    for (int i = 0; i < GroupMembership.Length; i++)
+                    {
+                        newGroupPowers[GroupMembership[i].GroupID] = GroupMembership[i].GroupPowers;
+                    }
+                    m_groupPowers.Replace(newGroupPowers);
+                }
+                else
                 {
                     m_groupPowers.Clear();
-
-                    if (GroupMembership != null)
-                    {
-                        for (int i = 0; i < GroupMembership.Length; i++)
-                        {
-                            m_groupPowers[GroupMembership[i].GroupID] = GroupMembership[i].GroupPowers;
-                        }
-                    }
-                }
-                finally
-                {
-                    m_groupPowersRwLock.ReleaseWriterLock();
                 }
             }
         }

@@ -60,8 +60,9 @@ namespace OpenSim.Framework
         protected byte[] m_visualparams;
         protected Primitive.TextureEntry m_texture;
         protected AvatarWearable[] m_wearables;
-        private Dictionary<int, List<AvatarAttachment>> m_attachments;
-        private ReaderWriterLock m_attachmentsRwLock = new ReaderWriterLock();
+        private ThreadedClasses.RwLockedDictionaryAutoAdd<int, ThreadedClasses.RwLockedList<AvatarAttachment>> m_attachments =
+            new ThreadedClasses.RwLockedDictionaryAutoAdd<int, ThreadedClasses.RwLockedList<AvatarAttachment>>(
+                delegate() { return new ThreadedClasses.RwLockedList<AvatarAttachment>(); });
         protected float m_avatarHeight = 0;
         protected Vector3 m_avatarSize = new Vector3(0.45f, 0.6f, 1.9f); // sl Z cloud value
         protected Vector3 m_avatarBoxSize = new Vector3(0.45f, 0.6f, 1.9f);
@@ -141,7 +142,6 @@ namespace OpenSim.Framework
             SetDefaultParams();
 //            SetHeight();
             SetSize(new Vector3(0.45f,0.6f,1.9f));
-            m_attachments = new Dictionary<int, List<AvatarAttachment>>();
         }
 
         public AvatarAppearance(OSDMap map)
@@ -176,8 +176,6 @@ namespace OpenSim.Framework
 //            SetHeight();
             if(m_avatarHeight == 0)
                 SetSize(new Vector3(0.45f,0.6f,1.9f));
-
-            m_attachments = new Dictionary<int, List<AvatarAttachment>>();
         }
 
         public AvatarAppearance(AvatarAppearance appearance) : this(appearance, true)
@@ -196,8 +194,6 @@ namespace OpenSim.Framework
                 SetDefaultParams();
 //                SetHeight();
                 SetSize(new Vector3(0.45f, 0.6f, 1.9f));
-                m_attachments = new Dictionary<int, List<AvatarAttachment>>();
-
                 return;
             }
 
@@ -228,7 +224,6 @@ namespace OpenSim.Framework
             SetSize(appearance.AvatarSize);
 
             // Copy the attachment, force append mode since that ensures consistency
-            m_attachments = new Dictionary<int, List<AvatarAttachment>>();
             foreach (AvatarAttachment attachment in appearance.GetAttachments())
                 AppendAttachment(new AvatarAttachment(attachment));
         }
@@ -498,21 +493,15 @@ namespace OpenSim.Framework
         /// </remarks>
         public List<AvatarAttachment> GetAttachments()
         {
-            m_attachmentsRwLock.AcquireReaderLock(-1);
-            try
+            List<AvatarAttachment> alist = new List<AvatarAttachment>();
+            m_attachments.ForEach(delegate(KeyValuePair<int, ThreadedClasses.RwLockedList<AvatarAttachment>> kvp)
             {
-				List<AvatarAttachment> alist = new List<AvatarAttachment>();
-                foreach (KeyValuePair<int, List<AvatarAttachment>> kvp in m_attachments)
+                kvp.Value.ForEach(delegate(AvatarAttachment attach)
                 {
-                    foreach (AvatarAttachment attach in kvp.Value)
-                        alist.Add(new AvatarAttachment(attach));
-                }
-				return alist;
-			}
-            finally
-            {
-                m_attachmentsRwLock.ReleaseReaderLock();
-            }
+                    alist.Add(new AvatarAttachment(attach));
+                });
+            });
+			return alist;
         }
 
         internal void AppendAttachment(AvatarAttachment attach)
@@ -521,18 +510,7 @@ namespace OpenSim.Framework
 //                "[AVATAR APPEARNCE]: Appending itemID={0}, assetID={1} at {2}",
 //                attach.ItemID, attach.AssetID, attach.AttachPoint);
 
-            m_attachmentsRwLock.AcquireWriterLock(-1);
-            try
-            {
-                if (!m_attachments.ContainsKey(attach.AttachPoint))
-                    m_attachments[attach.AttachPoint] = new List<AvatarAttachment>();
-    
-                m_attachments[attach.AttachPoint].Add(attach);
-            }
-            finally
-            {
-                m_attachmentsRwLock.ReleaseWriterLock();
-            }
+            m_attachments[attach.AttachPoint].Add(attach);
         }
 
         internal void ReplaceAttachment(AvatarAttachment attach)
@@ -541,16 +519,9 @@ namespace OpenSim.Framework
 //                "[AVATAR APPEARANCE]: Replacing itemID={0}, assetID={1} at {2}",
 //                attach.ItemID, attach.AssetID, attach.AttachPoint);
 
-            m_attachmentsRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_attachments[attach.AttachPoint] = new List<AvatarAttachment>();
-                m_attachments[attach.AttachPoint].Add(attach);
-            }
-            finally
-            {
-                m_attachmentsRwLock.ReleaseWriterLock();
-            }
+            ThreadedClasses.RwLockedList<AvatarAttachment> newList = new ThreadedClasses.RwLockedList<AvatarAttachment>();
+            newList.Add(attach);
+            m_attachments[attach.AttachPoint] = newList;
         }
 
         /// <summary>
@@ -579,20 +550,7 @@ namespace OpenSim.Framework
 
             if (item == UUID.Zero)
             {
-                m_attachmentsRwLock.AcquireWriterLock(-1);
-                try
-                {
-                    if (m_attachments.ContainsKey(attachpoint))
-                    {
-                        m_attachments.Remove(attachpoint);
-                        return true;
-                    }
-                }
-                finally
-                {
-                    m_attachmentsRwLock.ReleaseWriterLock();
-                }
-
+                m_attachments.Remove(attachpoint);
                 return false;
             }
 
@@ -647,19 +605,22 @@ namespace OpenSim.Framework
         /// <returns>Returns null if this item is not attached.</returns>
         public AvatarAttachment GetAttachmentForItem(UUID itemID)
         {
-            m_attachmentsRwLock.AcquireReaderLock(-1);
             try
             {
-                foreach (KeyValuePair<int, List<AvatarAttachment>> kvp in m_attachments)
+                m_attachments.ForEach(delegate(KeyValuePair<int, ThreadedClasses.RwLockedList<AvatarAttachment>> kvp)
                 {
-                    int index = kvp.Value.FindIndex(delegate(AvatarAttachment a) { return a.ItemID == itemID; });
-                    if (index >= 0)
-                        return kvp.Value[index];
-                }
+                    kvp.Value.ForEach(delegate(AvatarAttachment a)
+                    {
+                        if (a.ItemID == itemID)
+                        {
+                            throw new ThreadedClasses.ReturnValueException<AvatarAttachment>(a);
+                        }
+                    });
+                });
             }
-            finally
+            catch(ThreadedClasses.ReturnValueException<AvatarAttachment> e)
             {
-                m_attachmentsRwLock.ReleaseReaderLock();
+                return e.Value;
             }
 
             return null;
@@ -667,51 +628,46 @@ namespace OpenSim.Framework
 
         public int GetAttachpoint(UUID itemID)
         {
-            m_attachmentsRwLock.AcquireReaderLock(-1);
             try
             {
-                foreach (KeyValuePair<int, List<AvatarAttachment>> kvp in m_attachments)
+                m_attachments.ForEach(delegate(KeyValuePair<int, ThreadedClasses.RwLockedList<AvatarAttachment>> kvp)
                 {
-                    int index = kvp.Value.FindIndex(delegate(AvatarAttachment a) { return a.ItemID == itemID; });
-                    if (index >= 0)
-                        return kvp.Key;
-                }
+                    kvp.Value.ForEach(delegate(AvatarAttachment a)
+                    {
+                        if (a.ItemID == itemID)
+                        {
+                            throw new ThreadedClasses.ReturnValueException<int>(kvp.Key);
+                        }
+                    });
+                });
             }
-            finally
+            catch (ThreadedClasses.ReturnValueException<int> e)
             {
-                m_attachmentsRwLock.ReleaseReaderLock();
+                return e.Value;
             }
             return 0;
         }
 
         public bool DetachAttachment(UUID itemID)
         {
-            m_attachmentsRwLock.AcquireWriterLock(-1);
             try
             {
-                foreach (KeyValuePair<int, List<AvatarAttachment>> kvp in m_attachments)
+                m_attachments.ForEach(delegate(KeyValuePair<int, ThreadedClasses.RwLockedList<AvatarAttachment>> kvp)
                 {
-                    int index = kvp.Value.FindIndex(delegate(AvatarAttachment a) { return a.ItemID == itemID; });
-                    if (index >= 0)
+                    kvp.Value.ForEach(delegate(AvatarAttachment a)
                     {
-//                        m_log.DebugFormat(
-//                            "[AVATAR APPEARANCE]: Detaching attachment {0}, index {1}, point {2}", 
-//                            m_attachments[kvp.Key][index].ItemID, index, m_attachments[kvp.Key][index].AttachPoint);
-
-                        // Remove it from the list of attachments at that attach point
-                        m_attachments[kvp.Key].RemoveAt(index);
-    
-                        // And remove the list if there are no more attachments here
-                        if (m_attachments[kvp.Key].Count == 0)
-                            m_attachments.Remove(kvp.Key);
-    
-                        return true;
-                    }
-                }
+                        if(a.ItemID == itemID)
+                        {
+                            throw new ThreadedClasses.ReturnValueException<KeyValuePair<int, AvatarAttachment>>(new KeyValuePair<int, AvatarAttachment>(kvp.Key, a));
+                        }
+                    });
+                });
             }
-            finally
+            catch(ThreadedClasses.ReturnValueException<KeyValuePair<int, AvatarAttachment>> e)
             {
-                m_attachmentsRwLock.ReleaseWriterLock();
+                m_attachments[e.Value.Key].Remove(e.Value.Value);
+                m_attachments.RemoveIf(e.Value.Key, delegate(ThreadedClasses.RwLockedList<AvatarAttachment> list) { return list.Count == 0; });
+                return true;
             }
 
             return false;
@@ -719,15 +675,7 @@ namespace OpenSim.Framework
 
         public void ClearAttachments()
         {
-            m_attachmentsRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_attachments.Clear();
-            }
-            finally
-            {
-                m_attachmentsRwLock.ReleaseWriterLock();
-            }
+            m_attachments.Clear();
         }
 
         #region Packing Functions
@@ -763,19 +711,11 @@ namespace OpenSim.Framework
             OSDBinary visualparams = new OSDBinary(m_visualparams);
             data["visualparams"] = visualparams;
 
-            m_attachmentsRwLock.AcquireReaderLock(-1);
-            try
-            {
-                // Attachments
-                OSDArray attachs = new OSDArray(m_attachments.Count);
-                foreach (AvatarAttachment attach in GetAttachments())
-                    attachs.Add(attach.Pack());
-                data["attachments"] = attachs;
-            }
-            finally
-            {
-                m_attachmentsRwLock.ReleaseReaderLock();
-            }
+            // Attachments
+            OSDArray attachs = new OSDArray(m_attachments.Count);
+            foreach (AvatarAttachment attach in GetAttachments())
+                attachs.Add(attach.Pack());
+            data["attachments"] = attachs;
 
             return data;
         }
@@ -838,7 +778,7 @@ namespace OpenSim.Framework
                 }
 
                 // Attachments
-                m_attachments = new Dictionary<int, List<AvatarAttachment>>();
+                m_attachments.Clear();
                 if ((data != null) && (data["attachments"] != null) && (data["attachments"]).Type == OSDType.Array)
                 {
                     OSDArray attachs = (OSDArray)(data["attachments"]);

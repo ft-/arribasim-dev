@@ -78,33 +78,26 @@ namespace OpenSim.Data.Null
 
         #region Environment Settings
 
-        private Dictionary<UUID, string> EnvironmentSettings = new Dictionary<UUID, string>();
+        private ThreadedClasses.RwLockedDictionary<UUID, string> EnvironmentSettings = new ThreadedClasses.RwLockedDictionary<UUID, string>();
 
         public string LoadRegionEnvironmentSettings(UUID regionUUID)
         {
-            lock (EnvironmentSettings)
+            string val;
+            if (EnvironmentSettings.TryGetValue(regionUUID, out val))
             {
-                if (EnvironmentSettings.ContainsKey(regionUUID))
-                    return EnvironmentSettings[regionUUID];
+                return val;
             }
             return string.Empty;
         }
 
         public void StoreRegionEnvironmentSettings(UUID regionUUID, string settings)
         {
-            lock (EnvironmentSettings)
-            {
-                EnvironmentSettings[regionUUID] = settings;
-            }
+            EnvironmentSettings[regionUUID] = settings;
         }
 
         public void RemoveRegionEnvironmentSettings(UUID regionUUID)
         {
-            lock (EnvironmentSettings)
-            {
-                if (EnvironmentSettings.ContainsKey(regionUUID))
-                    EnvironmentSettings.Remove(regionUUID);
-            }
+            EnvironmentSettings.Remove(regionUUID);
         }
         #endregion
 
@@ -132,12 +125,10 @@ namespace OpenSim.Data.Null
             return new List<SceneObjectGroup>();
         }
 
-        Dictionary<UUID, TerrainData> m_terrains = new Dictionary<UUID, TerrainData>();
+        ThreadedClasses.RwLockedDictionary<UUID, TerrainData> m_terrains = new ThreadedClasses.RwLockedDictionary<UUID, TerrainData>();
         public void StoreTerrain(TerrainData ter, UUID regionID)
         {
-            if (m_terrains.ContainsKey(regionID))
-                m_terrains.Remove(regionID);
-            m_terrains.Add(regionID, ter);
+            m_terrains[regionID] = ter;
         }
 
         // Legacy. Just don't do this.
@@ -151,18 +142,20 @@ namespace OpenSim.Data.Null
         // Returns 'null' if region not found
         public double[,] LoadTerrain(UUID regionID)
         {
-            if (m_terrains.ContainsKey(regionID))
+            TerrainData data;
+            if (m_terrains.TryGetValue(regionID, out data))
             {
-                return m_terrains[regionID].GetDoubles();
+                return data.GetDoubles();
             }
             return null;
         }
 
         public TerrainData LoadTerrain(UUID regionID, int pSizeX, int pSizeY, int pSizeZ)
         {
-            if (m_terrains.ContainsKey(regionID))
+            TerrainData val;
+            if (m_terrains.TryGetValue(regionID, out val))
             {
-                return m_terrains[regionID];
+                return val;
             }
             return null;
         }

@@ -48,8 +48,8 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
         /// Is this module enabled?
         /// </value>
         private bool m_enabled = false;
-        
-        private readonly List<Scene> m_scenes = new List<Scene>();
+
+        private readonly ThreadedClasses.RwLockedList<Scene> m_scenes = new ThreadedClasses.RwLockedList<Scene>();
 
         #region Region Module interface
 
@@ -73,15 +73,9 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
             if (!m_enabled)
                 return;
 
-            lock (m_scenes)
-            {
-                if (!m_scenes.Contains(scene))
-                {
-                    m_scenes.Add(scene);
-                    scene.EventManager.OnClientConnect += OnClientConnect;
-                    scene.EventManager.OnIncomingInstantMessage += OnGridInstantMessage;
-                }
-            }
+            m_scenes.Add(scene);
+            scene.EventManager.OnClientConnect += OnClientConnect;
+            scene.EventManager.OnIncomingInstantMessage += OnGridInstantMessage;
         }
 
         public void RegionLoaded(Scene scene)
@@ -111,10 +105,7 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
             if (!m_enabled)
                 return;
 
-            lock (m_scenes)
-            {
-                m_scenes.Remove(scene);
-            }
+            m_scenes.Remove(scene);
         }
 
         void OnClientConnect(IClientCore client)

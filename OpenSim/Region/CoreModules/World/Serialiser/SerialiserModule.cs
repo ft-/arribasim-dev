@@ -46,9 +46,9 @@ namespace OpenSim.Region.CoreModules.World.Serialiser
             LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
 //        private Commander m_commander = new Commander("export");
-        private List<Scene> m_regions = new List<Scene>();
+        private ThreadedClasses.RwLockedList<Scene> m_regions = new ThreadedClasses.RwLockedList<Scene>();
         private string m_savedir = "exports";
-        private List<IFileSerialiser> m_serialisers = new List<IFileSerialiser>();
+        private ThreadedClasses.RwLockedList<IFileSerialiser> m_serialisers = new ThreadedClasses.RwLockedList<IFileSerialiser>();
 
         #region ISharedRegionModule Members
 
@@ -70,11 +70,8 @@ namespace OpenSim.Region.CoreModules.World.Serialiser
 
         public void PostInitialise()
         {
-            lock (m_serialisers)
-            {
-                m_serialisers.Add(new SerialiseTerrain());
-                m_serialisers.Add(new SerialiseObjects());
-            }
+            m_serialisers.Add(new SerialiseTerrain());
+            m_serialisers.Add(new SerialiseObjects());
 
 //            LoadCommanderCommands();
         }
@@ -85,10 +82,7 @@ namespace OpenSim.Region.CoreModules.World.Serialiser
 //            scene.EventManager.OnPluginConsole += EventManager_OnPluginConsole;
             scene.RegisterModuleInterface<IRegionSerialiserModule>(this);
 
-            lock (m_regions)
-            {
-                m_regions.Add(scene);
-            }
+            m_regions.Add(scene);
         }
 
         public void RegionLoaded(Scene scene)
@@ -97,10 +91,7 @@ namespace OpenSim.Region.CoreModules.World.Serialiser
 
         public void RemoveRegion(Scene scene)
         {
-            lock (m_regions)
-            {
-                m_regions.Remove(scene);
-            }
+            m_regions.Remove(scene);
         }
 
         public void Close()
@@ -182,12 +173,9 @@ namespace OpenSim.Region.CoreModules.World.Serialiser
                 Directory.CreateDirectory(saveDir);
             }
 
-            lock (m_serialisers)
+            foreach (IFileSerialiser serialiser in m_serialisers)
             {
-                foreach (IFileSerialiser serialiser in m_serialisers)
-                {
-                    results.Add(serialiser.WriteToFile(scene, saveDir));
-                }
+                results.Add(serialiser.WriteToFile(scene, saveDir));
             }
 
             TextWriter regionInfoWriter = new StreamWriter(Path.Combine(saveDir, "README.TXT"));

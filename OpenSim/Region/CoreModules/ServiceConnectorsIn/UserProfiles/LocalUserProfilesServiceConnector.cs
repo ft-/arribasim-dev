@@ -50,7 +50,7 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Profile
             LogManager.GetLogger(
                 MethodBase.GetCurrentMethod().DeclaringType);
 
-        private Dictionary<UUID, Scene> regions = new Dictionary<UUID, Scene>();
+        private ThreadedClasses.RwLockedDictionary<UUID, Scene> regions = new ThreadedClasses.RwLockedDictionary<UUID, Scene>();
 
         public IUserProfilesService ServiceModule
         {
@@ -194,12 +194,13 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Profile
             if (!Enabled)
                 return;
             
-            lock (regions)
+            try
             {
-                if (regions.ContainsKey(scene.RegionInfo.RegionID))
-                    m_log.ErrorFormat("[LOCAL USERPROFILES SERVICE CONNECTOR]: simulator seems to have more than one region with the same UUID. Please correct this!");
-                else
-                    regions.Add(scene.RegionInfo.RegionID, scene);
+                regions.Add(scene.RegionInfo.RegionID, scene);
+            }
+            catch
+            {
+                m_log.ErrorFormat("[LOCAL USERPROFILES SERVICE CONNECTOR]: simulator seems to have more than one region with the same UUID. Please correct this!");
             }
         }
 
@@ -208,11 +209,7 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Profile
             if (!Enabled)
                 return; 
 
-            lock (regions)
-            {
-                if (regions.ContainsKey(scene.RegionInfo.RegionID))
-                    regions.Remove(scene.RegionInfo.RegionID);
-            }
+            regions.Remove(scene.RegionInfo.RegionID);
         }
 
         void IRegionModuleBase.RegionLoaded(Scene scene)

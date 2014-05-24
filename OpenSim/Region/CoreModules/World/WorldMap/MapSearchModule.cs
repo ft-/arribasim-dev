@@ -45,8 +45,8 @@ namespace OpenSim.Region.CoreModules.World.WorldMap
             LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         Scene m_scene = null; // only need one for communication with GridService
-        List<Scene> m_scenes = new List<Scene>();
-        List<UUID> m_Clients;
+        ThreadedClasses.RwLockedList<Scene> m_scenes = new ThreadedClasses.RwLockedList<Scene>();
+        ThreadedClasses.RwLockedList<UUID> m_Clients;
 
         #region ISharedRegionModule Members
         public void Initialise(IConfigSource source)
@@ -62,7 +62,7 @@ namespace OpenSim.Region.CoreModules.World.WorldMap
 
             m_scenes.Add(scene);
             scene.EventManager.OnNewClient += OnNewClient;
-            m_Clients = new List<UUID>();
+            m_Clients = new ThreadedClasses.RwLockedList<UUID>();
         }
 
         public void RemoveRegion(Scene scene)
@@ -106,12 +106,13 @@ namespace OpenSim.Region.CoreModules.World.WorldMap
 
         private void OnMapNameRequestHandler(IClientAPI remoteClient, string mapName, uint flags)
         {
-            lock (m_Clients)
+            try
             {
-                if (m_Clients.Contains(remoteClient.AgentId))
-                    return;
-
                 m_Clients.Add(remoteClient.AgentId);
+            }
+            catch
+            {
+                return;
             }
 
             try
@@ -120,8 +121,7 @@ namespace OpenSim.Region.CoreModules.World.WorldMap
             }
             finally
             {
-                lock (m_Clients)
-                    m_Clients.Remove(remoteClient.AgentId);
+                m_Clients.Remove(remoteClient.AgentId);
             }
         }
 

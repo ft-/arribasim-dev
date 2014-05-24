@@ -51,8 +51,7 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Grid
         private static string LogHeader = "[LOCAL GRID SERVICE CONNECTOR]";
 
         private IGridService m_GridService;
-        private Dictionary<UUID, RegionCache> m_LocalCache = new Dictionary<UUID, RegionCache>();
-        private ReaderWriterLock m_LocalCacheRwLock = new ReaderWriterLock();
+        private ThreadedClasses.RwLockedDictionary<UUID, RegionCache> m_LocalCache = new ThreadedClasses.RwLockedDictionary<UUID, RegionCache>();
 
         private bool m_Enabled;
 
@@ -145,17 +144,13 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Grid
 
             scene.RegisterModuleInterface<IGridService>(this);
 
-            m_LocalCacheRwLock.AcquireWriterLock(-1);
             try
             {
-                if (m_LocalCache.ContainsKey(scene.RegionInfo.RegionID))
-                    m_log.ErrorFormat("[LOCAL GRID SERVICE CONNECTOR]: simulator seems to have more than one region with the same UUID. Please correct this!");
-                else
-                    m_LocalCache.Add(scene.RegionInfo.RegionID, new RegionCache(scene));
+                m_LocalCache.AddIfNotExists(scene.RegionInfo.RegionID, delegate() { return new RegionCache(scene); });
             }
-            finally
+            catch(ThreadedClasses.RwLockedDictionary<UUID, RegionCache>.KeyAlreadyExistsException)
             {
-                m_LocalCacheRwLock.ReleaseWriterLock();
+                m_log.ErrorFormat("[LOCAL GRID SERVICE CONNECTOR]: simulator seems to have more than one region with the same UUID. Please correct this!");
             }
         }
 
@@ -164,16 +159,8 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Grid
             if (!m_Enabled)
                 return;
 
-            m_LocalCacheRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_LocalCache[scene.RegionInfo.RegionID].Clear();
-                m_LocalCache.Remove(scene.RegionInfo.RegionID);
-            }
-            finally
-            {
-                m_LocalCacheRwLock.ReleaseWriterLock();
-            }
+            m_LocalCache[scene.RegionInfo.RegionID].Clear();
+            m_LocalCache.Remove(scene.RegionInfo.RegionID);
         }
 
         public void RegionLoaded(Scene scene)
@@ -214,23 +201,22 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Grid
             // First see if it's a neighbour, even if it isn't on this sim.
             // Neighbour data is cached in memory, so this is fast
 
-            m_LocalCacheRwLock.AcquireReaderLock(-1);
             try
             {
-                foreach (RegionCache rcache in m_LocalCache.Values)
+                m_LocalCache.ForEach(delegate(RegionCache rcache)
                 {
                     region = rcache.GetRegionByPosition(x, y);
                     if (region != null)
                     {
                         // m_log.DebugFormat("{0} GetRegionByPosition. Found region {1} in cache. Pos=<{2},{3}>",
                         //                 LogHeader, region.RegionName, x, y);
-                        break;
+                        throw new ThreadedClasses.ReturnValueException<GridRegion>(region);
                     }
-                }
+                });
             }
-            finally
+            catch(ThreadedClasses.ReturnValueException<GridRegion> e)
             {
-                m_LocalCacheRwLock.ReleaseReaderLock();
+                region = e.Value;
             }
 
             // Then try on this sim (may be a lookup in DB if this is using MySql).
@@ -293,21 +279,13 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Grid
         {
             System.Text.StringBuilder caps = new System.Text.StringBuilder();
 
-            m_LocalCacheRwLock.AcquireReaderLock(-1);
-            try
+            m_LocalCache.ForEach(delegate(KeyValuePair<UUID, RegionCache> kvp)
             {
-                foreach (KeyValuePair<UUID, RegionCache> kvp in m_LocalCache)
-                {
-                    caps.AppendFormat("*** Neighbours of {0} ({1}) ***\n", kvp.Value.RegionName, kvp.Key);
-                    List<GridRegion> regions = kvp.Value.GetNeighbours();
-                    foreach (GridRegion r in regions)
-                        caps.AppendFormat("    {0} @ {1}-{2}\n", r.RegionName, Util.WorldToRegionLoc((uint)r.RegionLocX), Util.WorldToRegionLoc((uint)r.RegionLocY));
-                }
-            }
-            finally
-            {
-                m_LocalCacheRwLock.ReleaseReaderLock();
-            }
+                caps.AppendFormat("*** Neighbours of {0} ({1}) ***\n", kvp.Value.RegionName, kvp.Key);
+                List<GridRegion> regions = kvp.Value.GetNeighbours();
+                foreach (GridRegion r in regions)
+                    caps.AppendFormat("    {0} @ {1}-{2}\n", r.RegionName, Util.WorldToRegionLoc((uint)r.RegionLocX), Util.WorldToRegionLoc((uint)r.RegionLocY));
+            });
 
             MainConsole.Instance.Output(caps.ToString());
         }

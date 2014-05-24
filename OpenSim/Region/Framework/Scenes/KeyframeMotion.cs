@@ -39,12 +39,11 @@ namespace OpenSim.Region.Framework.Scenes
 {
     public class KeyframeTimer
     {
-        private static Dictionary<Scene, KeyframeTimer> m_timers =
-                new Dictionary<Scene, KeyframeTimer>();
+        private static ThreadedClasses.RwLockedDictionary<Scene, KeyframeTimer> m_timers =
+                new ThreadedClasses.RwLockedDictionary<Scene, KeyframeTimer>();
 
         private Timer m_timer;
-        private Dictionary<KeyframeMotion, object> m_motions = new Dictionary<KeyframeMotion, object>();
-        private ReaderWriterLock m_lockObject = new ReaderWriterLock();
+        private ThreadedClasses.RwLockedDictionary<KeyframeMotion, object> m_motions = new ThreadedClasses.RwLockedDictionary<KeyframeMotion, object>();
         private object m_timerLock = new object();
         private const double m_tickDuration = 50.0;
 
@@ -77,19 +76,7 @@ namespace OpenSim.Region.Framework.Scenes
 
             try
             {
-                List<KeyframeMotion> motions;
-
-                m_lockObject.AcquireReaderLock(-1);
-                try
-                {
-                    motions = new List<KeyframeMotion>(m_motions.Keys);
-                }
-                finally
-                {
-                    m_lockObject.ReleaseReaderLock();
-                }
-
-                foreach (KeyframeMotion m in motions)
+                foreach (KeyframeMotion m in m_motions.Keys)
                 {
                     try
                     {
@@ -118,43 +105,32 @@ namespace OpenSim.Region.Framework.Scenes
             if (motion.Scene == null)
                 return;
 
-            lock (m_timers)
+            timer = m_timers.GetOrAddIfNotExists(motion.Scene, delegate()
             {
-                if (!m_timers.TryGetValue(motion.Scene, out timer))
+                timer = new KeyframeTimer(motion.Scene);
+
+                if (!SceneManager.Instance.AllRegionsReady)
                 {
-                    timer = new KeyframeTimer(motion.Scene);
-                    m_timers[motion.Scene] = timer;
-
-                    if (!SceneManager.Instance.AllRegionsReady)
+                    // Start the timers only once all the regions are ready. This is required
+                    // when using megaregions, because the megaregion is correctly configured
+                    // only after all the regions have been loaded. (If we don't do this then
+                    // when the prim moves it might think that it crossed into a region.)
+                    SceneManager.Instance.OnRegionsReadyStatusChange += delegate(SceneManager sm)
                     {
-                        // Start the timers only once all the regions are ready. This is required
-                        // when using megaregions, because the megaregion is correctly configured
-                        // only after all the regions have been loaded. (If we don't do this then
-                        // when the prim moves it might think that it crossed into a region.)
-                        SceneManager.Instance.OnRegionsReadyStatusChange += delegate(SceneManager sm)
-                        {
-                            if (sm.AllRegionsReady)
-                                timer.Start();
-                        };
-                    }
-                    
-                    // Check again, in case the regions were started while we were adding the event handler
-                    if (SceneManager.Instance.AllRegionsReady)
-                    {
-                        timer.Start();
-                    }
+                        if (sm.AllRegionsReady)
+                            timer.Start();
+                    };
                 }
-            }
 
-            timer.m_lockObject.AcquireWriterLock(-1);
-            try
-            {
-                timer.m_motions[motion] = null;
-            }
-            finally
-            {
-                timer.m_lockObject.ReleaseWriterLock();
-            }
+                // Check again, in case the regions were started while we were adding the event handler
+                if (SceneManager.Instance.AllRegionsReady)
+                {
+                    timer.Start();
+                }
+                return timer;
+            });
+
+            timer.m_motions[motion] = null;
         }
 
         public static void Remove(KeyframeMotion motion)
@@ -164,22 +140,9 @@ namespace OpenSim.Region.Framework.Scenes
             if (motion.Scene == null)
                 return;
 
-            lock (m_timers)
-            {
-                if (!m_timers.TryGetValue(motion.Scene, out timer))
-                {
-                    return;
-                }
-            }
-
-            timer.m_lockObject.AcquireWriterLock(-1);
-            try
+            if (m_timers.TryGetValue(motion.Scene, out timer))
             {
                 timer.m_motions.Remove(motion);
-            }
-            finally
-            {
-                timer.m_lockObject.ReleaseWriterLock();
             }
         }
     }

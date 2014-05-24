@@ -49,15 +49,7 @@ namespace OpenSim.Region.Framework.Scenes
         {
             get
             {
-                m_memberObjectsRwLock.AcquireReaderLock(-1);
-                try
-                {
-                    return m_memberObjects.Count;
-                }
-                finally
-                {
-                    m_memberObjectsRwLock.ReleaseReaderLock();
-                }
+                return m_memberObjects.Count;
             }
         }
         
@@ -73,15 +65,7 @@ namespace OpenSim.Region.Framework.Scenes
         {
             get
             {
-                m_memberObjectsRwLock.AcquireReaderLock(-1);
-                try
-                {
-                    return new List<SceneObjectGroup>(m_memberObjects);
-                }
-                finally
-                {
-                    m_memberObjectsRwLock.ReleaseReaderLock();
-                }
+                return new List<SceneObjectGroup>(m_memberObjects);
             }
         }               
         
@@ -92,17 +76,13 @@ namespace OpenSim.Region.Framework.Scenes
         { 
             get
             {
-                m_memberObjectsRwLock.AcquireReaderLock(-1);
                 try
                 {
-                    if (!HasObjects)
-                        return null;
-                    else
-                        return Objects[0].Scene;
+                    return Objects[0].Scene;
                 }
-                finally
+                catch
                 {
-                    m_memberObjectsRwLock.ReleaseReaderLock();
+                    return null;
                 }
             }
         }
@@ -111,8 +91,7 @@ namespace OpenSim.Region.Framework.Scenes
         /// At this point, we need to preserve the order of objects added to the coalescence, since the first
         /// one will end up matching the item name when rerezzed.
         /// </summary>
-        protected List<SceneObjectGroup> m_memberObjects = new List<SceneObjectGroup>();
-        private ReaderWriterLock m_memberObjectsRwLock = new ReaderWriterLock();
+        protected ThreadedClasses.RwLockedList<SceneObjectGroup> m_memberObjects = new ThreadedClasses.RwLockedList<SceneObjectGroup>();
         
         public CoalescedSceneObjects(UUID creatorId) 
         {
@@ -132,15 +111,7 @@ namespace OpenSim.Region.Framework.Scenes
         /// <param name="offset">The offset of the object within the group</param>
         public void Add(SceneObjectGroup obj)
         {
-            m_memberObjectsRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_memberObjects.Add(obj);
-            }
-            finally
-            {
-                m_memberObjectsRwLock.ReleaseWriterLock();
-            }
+            m_memberObjects.Add(obj);
         }
         
         /// <summary>
@@ -150,15 +121,7 @@ namespace OpenSim.Region.Framework.Scenes
         /// <returns>true if the object was there to be removed, false if not.</returns>
         public bool Remove(SceneObjectGroup obj)
         {
-            m_memberObjectsRwLock.AcquireWriterLock(-1);
-            try
-            {
-                return m_memberObjects.Remove(obj);
-            }
-            finally
-            {
-                m_memberObjectsRwLock.ReleaseWriterLock();
-            }
+            return m_memberObjects.Remove(obj);
         }
         
         /// <summary>

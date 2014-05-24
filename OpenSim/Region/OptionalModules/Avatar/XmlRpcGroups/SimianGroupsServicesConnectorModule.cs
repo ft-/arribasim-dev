@@ -161,8 +161,8 @@ namespace OpenSim.Region.OptionalModules.Avatar.XmlRpcGroups
         private bool m_debugEnabled = false;
 
         private Dictionary<string, bool> m_pendingRequests = new Dictionary<string,bool>();
-        
-        private ExpiringCache<string, OSDMap> m_memoryCache;
+
+        private ThreadedClasses.ExpiringCache<string, OSDMap> m_memoryCache;
         private int m_cacheTimeout = 30;
 
         // private IUserAccountService m_accountService = null;
@@ -222,9 +222,9 @@ namespace OpenSim.Region.OptionalModules.Avatar.XmlRpcGroups
                     m_log.InfoFormat("[SIMIAN-GROUPS-CONNECTOR] Groups Cache Timeout set to {0}.", m_cacheTimeout);
                 }
 
-                
 
-                m_memoryCache = new ExpiringCache<string,OSDMap>();
+
+                m_memoryCache = new ThreadedClasses.ExpiringCache<string, OSDMap>(30);
                 
 
                 // If we got all the config options we need, lets start'er'up

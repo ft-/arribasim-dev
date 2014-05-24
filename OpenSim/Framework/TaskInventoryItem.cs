@@ -373,11 +373,14 @@ namespace OpenSim.Framework
         /// <param name="partID">The new part ID to which this item belongs</param>
         public void ResetIDs(UUID partID)
         {
-            LoadedItemID = OldItemID;
-            OldItemID = ItemID;
-            ItemID = UUID.Random();
-            ParentPartID = partID;
-            ParentID = partID;
+            lock (this)
+            {
+                LoadedItemID = OldItemID;
+                OldItemID = ItemID;
+                ItemID = UUID.Random();
+                ParentPartID = partID;
+                ParentID = partID;
+            }
         }
 
         public TaskInventoryItem()

@@ -49,11 +49,9 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         protected bool m_Enabled = false;
-        private List<Scene> m_Scenes = new List<Scene>();
-        private ReaderWriterLock m_ScenesRwLock = new ReaderWriterLock();
+        private ThreadedClasses.RwLockedList<Scene> m_Scenes = new ThreadedClasses.RwLockedList<Scene>();
 
         protected IInstantMessage m_IMService;
-        protected Dictionary<UUID, object> m_UserLocationMap = new Dictionary<UUID, object>();
 
         public event UndeliveredMessage OnUndeliveredMessage;
 
@@ -88,17 +86,9 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
             if (!m_Enabled)
                 return;
 
-            m_ScenesRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_log.DebugFormat("[HG MESSAGE TRANSFER]: Message transfer module {0} active", Name);
-                scene.RegisterModuleInterface<IMessageTransferModule>(this);
-                m_Scenes.Add(scene);
-            }
-            finally
-            {
-                m_ScenesRwLock.ReleaseWriterLock();
-            }
+            m_log.DebugFormat("[HG MESSAGE TRANSFER]: Message transfer module {0} active", Name);
+            scene.RegisterModuleInterface<IMessageTransferModule>(this);
+            m_Scenes.Add(scene);
         }
 
         public virtual void PostInitialise()
@@ -117,15 +107,7 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
             if (!m_Enabled)
                 return;
 
-            m_ScenesRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_Scenes.Remove(scene);
-            }
-            finally
-            {
-                m_ScenesRwLock.ReleaseWriterLock();
-            }
+            m_Scenes.Remove(scene);
         }
 
         public virtual void Close()
@@ -146,11 +128,10 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
         {
             UUID toAgentID = new UUID(im.toAgentID);
 
-            // Try root avatar only first
-            m_ScenesRwLock.AcquireReaderLock(-1);
             try
             {
-                foreach (Scene scene in m_Scenes)
+                // Try root avatar only first
+                m_Scenes.ForEach(delegate(Scene scene)
                 {
                     //                m_log.DebugFormat(
                     //                    "[HG INSTANT MESSAGE]: Looking for root agent {0} in {1}", 
@@ -164,12 +145,12 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
 
                         // Message sent
                         result(true);
-                        return;
+                        throw new ThreadedClasses.ReturnValueException<bool>(true);
                     }
-                }
+                });
 
                 // try child avatar second
-                foreach (Scene scene in m_Scenes)
+                m_Scenes.ForEach(delegate(Scene scene)
                 {
                     //                m_log.DebugFormat(
                     //                    "[HG INSTANT MESSAGE]: Looking for child of {0} in {1}", 
@@ -183,13 +164,13 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
 
                         // Message sent
                         result(true);
-                        return;
+                        throw new ThreadedClasses.ReturnValueException<bool>(true);
                     }
-                }
+                });
             }
-            finally
+            catch(ThreadedClasses.ReturnValueException<bool>)
             {
-                m_ScenesRwLock.ReleaseReaderLock();
+                return;
             }
 
 //            m_log.DebugFormat("[HG INSTANT MESSAGE]: Delivering IM to {0} via XMLRPC", im.toAgentID);
@@ -234,38 +215,33 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
 
         protected bool SendIMToScene(GridInstantMessage gim, UUID toAgentID)
         {
-            bool successful = false;
-            m_ScenesRwLock.AcquireReaderLock(-1);
             try
             {
-                foreach (Scene scene in m_Scenes)
+                m_Scenes.ForEach(delegate(Scene scene)
                 {
                     ScenePresence sp = scene.GetScenePresence(toAgentID);
                     if (sp != null && !sp.IsChildAgent)
                     {
                         scene.EventManager.TriggerIncomingInstantMessage(gim);
-                        successful = true;
+                        throw new ThreadedClasses.ReturnValueException<bool>(true);
                     }
-                }
+                });
             }
-            finally
+            catch(ThreadedClasses.ReturnValueException<bool>)
             {
-                m_ScenesRwLock.ReleaseReaderLock();
+                return true;
             }
 
-            if (!successful)
-            {
-                // If the message can't be delivered to an agent, it
-                // is likely to be a group IM. On a group IM, the
-                // imSessionID = toAgentID = group id. Raise the
-                // unhandled IM event to give the groups module
-                // a chance to pick it up. We raise that in a random
-                // scene, since the groups module is shared.
-                //
-                m_Scenes[0].EventManager.TriggerUnhandledInstantMessage(gim);
-            }
+            // If the message can't be delivered to an agent, it
+            // is likely to be a group IM. On a group IM, the
+            // imSessionID = toAgentID = group id. Raise the
+            // unhandled IM event to give the groups module
+            // a chance to pick it up. We raise that in a random
+            // scene, since the groups module is shared.
+            //
+            m_Scenes[0].EventManager.TriggerUnhandledInstantMessage(gim);
 
-            return successful;
+            return false;
         }
 
         protected void HandleUndeliveredMessage(GridInstantMessage im, MessageResultNotification result)
@@ -327,19 +303,18 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
         /// </summary>
         public IClientAPI LocateClientObject(UUID agentID)
         {
-            m_ScenesRwLock.AcquireReaderLock(-1);
             try
             {
-                foreach (Scene scene in m_Scenes)
+                m_Scenes.ForEach(delegate(Scene scene)
                 {
                     ScenePresence presence = scene.GetScenePresence(agentID);
                     if (presence != null && !presence.IsChildAgent)
-                        return presence.ControllingClient;
-                }
+                        throw new ThreadedClasses.ReturnValueException<IClientAPI>(presence.ControllingClient);
+                });
             }
-            finally
+            catch(ThreadedClasses.ReturnValueException<IClientAPI> e)
             {
-                m_ScenesRwLock.ReleaseReaderLock();
+                return e.Value;
             }
 
             return null;

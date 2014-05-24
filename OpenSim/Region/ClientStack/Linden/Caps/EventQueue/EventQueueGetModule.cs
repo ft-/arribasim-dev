@@ -71,16 +71,12 @@ namespace OpenSim.Region.ClientStack.Linden
         private const int SERVER_EQ_TIME_NO_EVENTS = VIEWER_TIMEOUT - (10 * 1000);
 
         protected Scene m_scene;
-        
-        private Dictionary<UUID, int> m_ids = new Dictionary<UUID, int>();
-        private ReaderWriterLock m_idsRwLock = new ReaderWriterLock();
 
-        private Dictionary<UUID, Queue<OSD>> queues = new Dictionary<UUID, Queue<OSD>>();
-        private ReaderWriterLock queuesRwLock = new ReaderWriterLock();
-        private Dictionary<UUID, UUID> m_QueueUUIDAvatarMapping = new Dictionary<UUID, UUID>();
-        private ReaderWriterLock m_QueueUUIDAvatarMappingRwLock = new ReaderWriterLock();
-        private Dictionary<UUID, UUID> m_AvatarQueueUUIDMapping = new Dictionary<UUID, UUID>();
-        private ReaderWriterLock m_AvatarQueueUUIDMappingRwLock = new ReaderWriterLock();
+        private ThreadedClasses.RwLockedDictionary<UUID, int> m_ids = new ThreadedClasses.RwLockedDictionary<UUID, int>();
+
+        private ThreadedClasses.RwLockedDictionary<UUID, ThreadedClasses.BlockingQueue<OSD>> queues = new ThreadedClasses.RwLockedDictionary<UUID, ThreadedClasses.BlockingQueue<OSD>>();
+        private ThreadedClasses.RwLockedDictionary<UUID, UUID> m_QueueUUIDAvatarMapping = new ThreadedClasses.RwLockedDictionary<UUID, UUID>();
+        private ThreadedClasses.RwLockedDictionary<UUID, UUID> m_AvatarQueueUUIDMapping = new ThreadedClasses.RwLockedDictionary<UUID, UUID>();
             
         #region INonSharedRegionModule methods
         public virtual void Initialise(IConfigSource config)
@@ -167,20 +163,12 @@ namespace OpenSim.Region.ClientStack.Linden
         {
             MainConsole.Instance.OutputFormat("For scene {0}", m_scene.Name);
 
-            queuesRwLock.AcquireReaderLock(-1);
-            try
+            queues.ForEach(delegate(KeyValuePair<UUID, ThreadedClasses.BlockingQueue<OSD>> kvp)
             {
-                foreach (KeyValuePair<UUID, Queue<OSD>> kvp in queues)
-                {
-                    MainConsole.Instance.OutputFormat(
-                        "For agent {0} there are {1} messages queued for send.", 
-                        kvp.Key, kvp.Value.Count);
-                }
-            }
-            finally
-            {
-                queuesRwLock.ReleaseReaderLock();
-            }
+                MainConsole.Instance.OutputFormat(
+                    "For agent {0} there are {1} messages queued for send.",
+                    kvp.Key, kvp.Value.Count);
+            });
         }
 
         /// <summary>
@@ -188,37 +176,15 @@ namespace OpenSim.Region.ClientStack.Linden
         /// </summary>
         /// <param name="agentId"></param>
         /// <returns></returns>
-        private Queue<OSD> TryGetQueue(UUID agentId)
+        private ThreadedClasses.BlockingQueue<OSD> TryGetQueue(UUID agentId)
         {
-            queuesRwLock.AcquireReaderLock(-1);
-            try
+            return queues.GetOrAddIfNotExists(agentId, delegate()
             {
-                if (!queues.ContainsKey(agentId))
-                {
-                    m_log.DebugFormat(
-                        "[EVENTQUEUE]: Adding new queue for agent {0} in region {1}", 
-                        agentId, m_scene.RegionInfo.RegionName);
-                    LockCookie lc = queuesRwLock.UpgradeToWriterLock(-1);
-                    try
-                    {
-                        /* recheck due to multi-threading nature */
-                        if (!queues.ContainsKey(agentId))
-                        {
-                            queues[agentId] = new Queue<OSD>();
-                        }
-                    }
-                    finally
-                    {
-                        queuesRwLock.DowngradeFromWriterLock(ref lc);
-                    }
-                }
-
-                return queues[agentId];
-            }
-            finally
-            {
-                queuesRwLock.ReleaseReaderLock();
-            }
+                m_log.DebugFormat(
+                    "[EVENTQUEUE]: Adding new queue for agent {0} in region {1}",
+                    agentId, m_scene.RegionInfo.RegionName);
+                return new ThreadedClasses.BlockingQueue<OSD>(); 
+            });
         }
 
         /// <summary>
@@ -226,22 +192,14 @@ namespace OpenSim.Region.ClientStack.Linden
         /// </summary>
         /// <param name="agentId"></param>
         /// <returns></returns>
-        private Queue<OSD> GetQueue(UUID agentId)
+        private ThreadedClasses.BlockingQueue<OSD> GetQueue(UUID agentId)
         {
-            queuesRwLock.AcquireReaderLock(-1);
-            try
+            ThreadedClasses.BlockingQueue<OSD> queue = null;
+            if (queues.TryGetValue(agentId, out queue))
             {
-                if (queues.ContainsKey(agentId))
-                {
-                    return queues[agentId];
-                }
-                else
-                    return null;
+                return queue;
             }
-            finally
-            {
-                queuesRwLock.ReleaseReaderLock();
-            }
+            return null;
         }
 
         #region IEventQueue Members
@@ -251,18 +209,10 @@ namespace OpenSim.Region.ClientStack.Linden
             //m_log.DebugFormat("[EVENTQUEUE]: Enqueuing event for {0} in region {1}", avatarID, m_scene.RegionInfo.RegionName);
             try
             {
-                Queue<OSD> queue = GetQueue(avatarID);
+                ThreadedClasses.BlockingQueue<OSD> queue = GetQueue(avatarID);
                 if (queue != null)
                 {
-                    queuesRwLock.AcquireReaderLock(-1);
-                    try
-                    {
-                        queue.Enqueue(ev);
-                    }
-                    finally
-                    {
-                        queuesRwLock.ReleaseReaderLock();
-                    }
+                    queue.Enqueue(ev);
                 }
                 else if (DebugLevel > 0)
                 {
@@ -293,58 +243,28 @@ namespace OpenSim.Region.ClientStack.Linden
         {
             //m_log.DebugFormat("[EVENTQUEUE]: Closed client {0} in region {1}", agentID, m_scene.RegionInfo.RegionName);
 
-            queuesRwLock.AcquireWriterLock(-1);
-            try
-            {
-                queues.Remove(agentID);
-            }
-            finally
-            {
-                queuesRwLock.ReleaseWriterLock();
-            }
+            queues.Remove(agentID);
 
             List<UUID> removeitems = new List<UUID>();
-            m_AvatarQueueUUIDMappingRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_AvatarQueueUUIDMapping.Remove(agentID);
-            }
-            finally
-            {
-                m_AvatarQueueUUIDMappingRwLock.ReleaseWriterLock();
-            }
+            m_AvatarQueueUUIDMapping.Remove(agentID);
 
             UUID searchval = UUID.Zero;
 
             removeitems.Clear();
 
-            m_QueueUUIDAvatarMappingRwLock.AcquireReaderLock(-1);
-            try
+            m_QueueUUIDAvatarMapping.ForEach(delegate(KeyValuePair<UUID, UUID> kvp)
             {
-                foreach (UUID ky in m_QueueUUIDAvatarMapping.Keys)
-                {
-                    searchval = m_QueueUUIDAvatarMapping[ky];
+                searchval = m_QueueUUIDAvatarMapping[kvp.Key];
 
-                    if (searchval == agentID)
-                    {
-                        removeitems.Add(ky);
-                    }
+                if (searchval == agentID)
+                {
+                    removeitems.Add(kvp.Key);
                 }
+            });
 
-                LockCookie lc = m_QueueUUIDAvatarMappingRwLock.UpgradeToWriterLock(-1);
-                try
-                {
-                    foreach (UUID ky in removeitems)
-                        m_QueueUUIDAvatarMapping.Remove(ky);
-                }
-                finally
-                {
-                    m_QueueUUIDAvatarMappingRwLock.DowngradeFromWriterLock(ref lc);
-                }
-            }
-            finally
+            foreach (UUID ky in removeitems)
             {
-                m_QueueUUIDAvatarMappingRwLock.ReleaseReaderLock();
+                m_QueueUUIDAvatarMapping.Remove(ky);
             }
 
             // m_log.DebugFormat("[EVENTQUEUE]: Deleted queues for {0} in region {1}", agentID, m_scene.RegionInfo.RegionName);
@@ -373,77 +293,34 @@ namespace OpenSim.Region.ClientStack.Linden
 
             UUID eventQueueGetUUID;
 
-            m_AvatarQueueUUIDMappingRwLock.AcquireReaderLock(-1);
-            try
-            {
-                // Reuse open queues.  The client does!
-                if (m_AvatarQueueUUIDMapping.ContainsKey(agentID))
-                {
-                    //m_log.DebugFormat("[EVENTQUEUE]: Found Existing UUID!");
-                    eventQueueGetUUID = m_AvatarQueueUUIDMapping[agentID];
-                }
-                else
-                {
-                    eventQueueGetUUID = UUID.Random();
-                    //m_log.DebugFormat("[EVENTQUEUE]: Using random UUID!");
-                }
-            }
-            finally
-            {
-                m_AvatarQueueUUIDMappingRwLock.ReleaseReaderLock();
-            }
+            eventQueueGetUUID = m_AvatarQueueUUIDMapping.GetOrAddIfNotExists(agentID, delegate() { return UUID.Random(); });
 
-            m_QueueUUIDAvatarMappingRwLock.AcquireWriterLock(-1);
-            try
-            {
-                if (!m_QueueUUIDAvatarMapping.ContainsKey(eventQueueGetUUID))
-                    m_QueueUUIDAvatarMapping.Add(eventQueueGetUUID, agentID);
-            }
-            finally
-            {
-                m_QueueUUIDAvatarMappingRwLock.ReleaseWriterLock();
-            }
-
-            m_AvatarQueueUUIDMappingRwLock.AcquireWriterLock(-1);
-            try
-            {
-                if (!m_AvatarQueueUUIDMapping.ContainsKey(agentID))
-                    m_AvatarQueueUUIDMapping.Add(agentID, eventQueueGetUUID);
-            }
-            finally
-            {
-                m_AvatarQueueUUIDMappingRwLock.ReleaseWriterLock();
-            }
+            m_QueueUUIDAvatarMapping[eventQueueGetUUID] = agentID;
+            m_AvatarQueueUUIDMapping[agentID] = eventQueueGetUUID;
 
             caps.RegisterPollHandler(
                 "EventQueueGet",
                 new PollServiceEventArgs(null, GenerateEqgCapPath(eventQueueGetUUID), HasEvents, GetEvents, NoEvents, agentID, SERVER_EQ_TIME_NO_EVENTS));
 
             Random rnd = new Random(Environment.TickCount);
-            m_idsRwLock.AcquireWriterLock(-1);
             try
             {
-                if (!m_ids.ContainsKey(agentID))
-                    m_ids.Add(agentID, rnd.Next(30000000));
+                m_ids.AddIfNotExists(agentID, delegate() { return rnd.Next(30000000); });
             }
-            finally
+            catch(ThreadedClasses.RwLockedDictionary<UUID, int>.KeyAlreadyExistsException)
             {
-                m_idsRwLock.ReleaseWriterLock();
+
             }
         }
 
         public bool HasEvents(UUID requestID, UUID agentID)
         {
-            // Don't use this, because of race conditions at agent closing time
-            //Queue<OSD> queue = TryGetQueue(agentID);
-
-            Queue<OSD> queue = GetQueue(agentID);
+            ThreadedClasses.BlockingQueue<OSD> queue = GetQueue(agentID);
             if (queue != null)
-                lock (queue)
-                {
-                    //m_log.WarnFormat("POLLED FOR EVENTS BY {0} in {1} -- {2}", agentID, m_scene.RegionInfo.RegionName, queue.Count);
-                    return queue.Count > 0;
-                }
+            {
+                //m_log.WarnFormat("POLLED FOR EVENTS BY {0} in {1} -- {2}", agentID, m_scene.RegionInfo.RegionName, queue.Count);
+                return queue.Count > 0;
+            }
 
             return false;
         }
@@ -468,30 +345,23 @@ namespace OpenSim.Region.ClientStack.Linden
             if (DebugLevel >= 2)
                 m_log.WarnFormat("POLLED FOR EQ MESSAGES BY {0} in {1}", pAgentId, m_scene.Name);
 
-            Queue<OSD> queue = GetQueue(pAgentId);
+            ThreadedClasses.BlockingQueue<OSD> queue = GetQueue(pAgentId);
             if (queue == null)
             {
                 return NoEvents(requestID, pAgentId);
             }
 
             OSD element;
-            lock (queue)
-            {
-                if (queue.Count == 0)
-                    return NoEvents(requestID, pAgentId);
-                element = queue.Dequeue(); // 15s timeout
-            }
-
-            int thisID = 0;
-            m_idsRwLock.AcquireReaderLock(-1);
             try
             {
-                thisID = m_ids[pAgentId];
+                element = queue.Dequeue(15000);
             }
-            finally
+            catch
             {
-                m_idsRwLock.ReleaseReaderLock();
+                return NoEvents(requestID, pAgentId);
             }
+
+            int thisID = m_ids[pAgentId];
 
             OSDArray array = new OSDArray();
             if (element == null) // didn't have an event in 15s
@@ -507,7 +377,7 @@ namespace OpenSim.Region.ClientStack.Linden
 
                 array.Add(element);
 
-                lock (queue)
+                lock (queue) /* we use this here to get the inner code race condition safe, NonblockingQueue tolerates this */
                 {
                     while (queue.Count > 0)
                     {
@@ -526,15 +396,7 @@ namespace OpenSim.Region.ClientStack.Linden
             events.Add("events", array);
 
             events.Add("id", new OSDInteger(thisID));
-            m_idsRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_ids[pAgentId] = thisID + 1;
-            }
-            finally
-            {
-                m_idsRwLock.ReleaseWriterLock();
-            }
+            m_ids[pAgentId] = thisID + 1;
             Hashtable responsedata = new Hashtable();
             responsedata["int_response_code"] = 200;
             responsedata["content_type"] = "application/xml";
@@ -556,293 +418,6 @@ namespace OpenSim.Region.ClientStack.Linden
             responsedata["error_status_text"] = "Upstream error:";
             responsedata["http_protocol_version"] = "HTTP/1.0";
             return responsedata;
-        }
-
-//        public Hashtable ProcessQueue(Hashtable request, UUID agentID, Caps caps)
-//        {
-//            // TODO: this has to be redone to not busy-wait (and block the thread),
-//            // TODO: as soon as we have a non-blocking way to handle HTTP-requests.
-//
-////            if (m_log.IsDebugEnabled)
-////            {
-////                String debug = "[EVENTQUEUE]: Got request for agent {0} in region {1} from thread {2}: [  ";
-////                foreach (object key in request.Keys)
-////                {
-////                    debug += key.ToString() + "=" + request[key].ToString() + "  ";
-////                }
-////                m_log.DebugFormat(debug + "  ]", agentID, m_scene.RegionInfo.RegionName, System.Threading.Thread.CurrentThread.Name);
-////            }
-//
-//            Queue<OSD> queue = TryGetQueue(agentID);
-//            OSD element;
-//
-//            lock (queue)
-//                element = queue.Dequeue(); // 15s timeout
-//
-//            Hashtable responsedata = new Hashtable();
-//
-//            int thisID = 0;
-//            m_idsRwLock.AcquireReaderLock(-1);
-//            try
-//            {
-//                thisID = m_ids[agentID];
-//            }
-//            finally
-//            {
-//                m_idsRwLock.ReleaseReaderLock();
-//            }
-//
-//            if (element == null)
-//            {
-//                //m_log.ErrorFormat("[EVENTQUEUE]: Nothing to process in " + m_scene.RegionInfo.RegionName);
-//                if (thisID == -1) // close-request
-//                {
-//                    m_log.ErrorFormat("[EVENTQUEUE]: 404 in " + m_scene.RegionInfo.RegionName);
-//                    responsedata["int_response_code"] = 404; //501; //410; //404;
-//                    responsedata["content_type"] = "text/plain";
-//                    responsedata["keepalive"] = false;
-//                    responsedata["str_response_string"] = "Closed EQG";
-//                    return responsedata;
-//                }
-//                responsedata["int_response_code"] = 502;
-//                responsedata["content_type"] = "text/plain";
-//                responsedata["keepalive"] = false;
-//                responsedata["str_response_string"] = "Upstream error: ";
-//                responsedata["error_status_text"] = "Upstream error:";
-//                responsedata["http_protocol_version"] = "HTTP/1.0";
-//                return responsedata;
-//            }
-//
-//            OSDArray array = new OSDArray();
-//            if (element == null) // didn't have an event in 15s
-//            {
-//                // Send it a fake event to keep the client polling!   It doesn't like 502s like the proxys say!
-//                array.Add(EventQueueHelper.KeepAliveEvent());
-//                //m_log.DebugFormat("[EVENTQUEUE]: adding fake event for {0} in region {1}", agentID, m_scene.RegionInfo.RegionName);
-//            }
-//            else
-//            {
-//                array.Add(element);
-//
-//                if (element is OSDMap)
-//                {
-//                    OSDMap ev = (OSDMap)element;
-//                    m_log.DebugFormat(
-//                        "[EVENT QUEUE GET MODULE]: Eq OUT {0} to {1}",
-//                        ev["message"], m_scene.GetScenePresence(agentID).Name);
-//                }
-//
-//                lock (queue)
-//                {
-//                    while (queue.Count > 0)
-//                    {
-//                        element = queue.Dequeue();
-//
-//                        if (element is OSDMap)
-//                        {
-//                            OSDMap ev = (OSDMap)element;
-//                            m_log.DebugFormat(
-//                                "[EVENT QUEUE GET MODULE]: Eq OUT {0} to {1}",
-//                                ev["message"], m_scene.GetScenePresence(agentID).Name);
-//                        }
-//
-//                        array.Add(element);
-//                        thisID++;
-//                    }
-//                }
-//            }
-//
-//            OSDMap events = new OSDMap();
-//            events.Add("events", array);
-//
-//            events.Add("id", new OSDInteger(thisID));
-//            m_idsRwLock.AcquireWriterLock(-1);
-//            try
-//            {
-//                m_ids[agentID] = thisID + 1;
-//            }
-//            finally
-//            {
-//                m_idsRwLock.ReleaseWriterLock();
-//            }
-//
-//            responsedata["int_response_code"] = 200;
-//            responsedata["content_type"] = "application/xml";
-//            responsedata["keepalive"] = false;
-//            responsedata["str_response_string"] = OSDParser.SerializeLLSDXmlString(events);
-//
-//            m_log.DebugFormat("[EVENTQUEUE]: sending response for {0} in region {1}: {2}", agentID, m_scene.RegionInfo.RegionName, responsedata["str_response_string"]);
-//
-//            return responsedata;
-//        }
-
-//        public Hashtable EventQueuePath2(Hashtable request)
-//        {
-//            string capuuid = (string)request["uri"]; //path.Replace("/CAPS/EQG/","");
-//            // pull off the last "/" in the path.
-//            Hashtable responsedata = new Hashtable();
-//            capuuid = capuuid.Substring(0, capuuid.Length - 1);
-//            capuuid = capuuid.Replace("/CAPS/EQG/", "");
-//            UUID AvatarID = UUID.Zero;
-//            UUID capUUID = UUID.Zero;
-//
-//            // parse the path and search for the avatar with it registered
-//            if (UUID.TryParse(capuuid, out capUUID))
-//            {
-//                m_QueueUUIDAvatarMapping.AcquireReaderLock(-1);
-//                try
-//                {
-//                    if (m_QueueUUIDAvatarMapping.ContainsKey(capUUID))
-//                    {
-//                        AvatarID = m_QueueUUIDAvatarMapping[capUUID];
-//                    }
-//                }
-//                finally
-//                {
-//                    m_QueueUUIDAvatarMapping.ReleaseReaderLock();
-//                }
-//                
-//                if (AvatarID != UUID.Zero)
-//                {
-//                    return ProcessQueue(request, AvatarID, m_scene.CapsModule.GetCapsForUser(AvatarID));
-//                }
-//                else
-//                {
-//                    responsedata["int_response_code"] = 404;
-//                    responsedata["content_type"] = "text/plain";
-//                    responsedata["keepalive"] = false;
-//                    responsedata["str_response_string"] = "Not Found";
-//                    responsedata["error_status_text"] = "Not Found";
-//                    responsedata["http_protocol_version"] = "HTTP/1.0";
-//                    return responsedata;
-//                    // return 404
-//                }
-//            }
-//            else
-//            {
-//                responsedata["int_response_code"] = 404;
-//                responsedata["content_type"] = "text/plain";
-//                responsedata["keepalive"] = false;
-//                responsedata["str_response_string"] = "Not Found";
-//                responsedata["error_status_text"] = "Not Found";
-//                responsedata["http_protocol_version"] = "HTTP/1.0";
-//                return responsedata;
-//                // return 404
-//            }
-//        }
-
-        public OSD EventQueueFallBack(string path, OSD request, string endpoint)
-        {
-            // This is a fallback element to keep the client from loosing EventQueueGet
-            // Why does CAPS fail sometimes!?
-            m_log.Warn("[EVENTQUEUE]: In the Fallback handler!   We lost the Queue in the rest handler!");
-            string capuuid = path.Replace("/CAPS/EQG/","");
-            capuuid = capuuid.Substring(0, capuuid.Length - 1);
-
-//            UUID AvatarID = UUID.Zero;
-            UUID capUUID = UUID.Zero;
-            if (UUID.TryParse(capuuid, out capUUID))
-            {
-                /* Don't remove this yet code cleaners!
-                 * Still testing this!
-                 * 
-                                m_QueueUUIDAvatarMapping.AcquireReaderLock(-1);
-                                try
-                                {
-                                    if (m_QueueUUIDAvatarMapping.ContainsKey(capUUID))
-                                    {
-                                        AvatarID = m_QueueUUIDAvatarMapping[capUUID];
-                                    }
-                                }
-                                finally
-                                {
-                                    m_QueueUUIDAvatarMapping.ReleaseReaderLock();
-                                }
-                
-                 
-                                if (AvatarID != UUID.Zero)
-                                {
-                                    // Repair the CAP!
-                                    //OpenSim.Framework.Capabilities.Caps caps = m_scene.GetCapsHandlerForUser(AvatarID);
-                                    //string capsBase = "/CAPS/EQG/";
-                                    //caps.RegisterHandler("EventQueueGet",
-                                                //new RestHTTPHandler("POST", capsBase + capUUID.ToString() + "/",
-                                                                      //delegate(Hashtable m_dhttpMethod)
-                                                                      //{
-                                                                      //    return ProcessQueue(m_dhttpMethod, AvatarID, caps);
-                                                                      //}));
-                                    // start new ID sequence.
-                                    Random rnd = new Random(System.Environment.TickCount);
-                                    m_idsRwLock.AcquireWriterLock(-1);
-                                    try
-                                    {
-                                        if (!m_ids.ContainsKey(AvatarID))
-                                            m_ids.Add(AvatarID, rnd.Next(30000000));
-                                    }
-                                    finally
-                                    {
-                                        m_idsRwLock.ReleaseWriterLock();
-                                    }
-
-
-                                    int thisID = 0;
-                                    m_idsRwLock.AcquireReaderLock(-1);
-                                    try
-                                    {
-                                        thisID = m_ids[AvatarID];
-                                    }
-                                    finally
-                                    {
-                                        m_idsRwLock.ReleaseReaderLock();
-                                    }
-
-                                    BlockingLLSDQueue queue = GetQueue(AvatarID);
-                                    OSDArray array = new OSDArray();
-                                    LLSD element = queue.Dequeue(15000); // 15s timeout
-                                    if (element == null)
-                                    {
-                        
-                                        array.Add(EventQueueHelper.KeepAliveEvent());
-                                    }
-                                    else
-                                    {
-                                        array.Add(element);
-                                        while (queue.Count() > 0)
-                                        {
-                                            array.Add(queue.Dequeue(1));
-                                            thisID++;
-                                        }
-                                    }
-                                    OSDMap events = new OSDMap();
-                                    events.Add("events", array);
-
-                                    events.Add("id", new LLSDInteger(thisID));
-                    
-                                    m_ids.AcquireWriterLock(-1);
-                                    try
-                                    {
-                                        m_ids[AvatarID] = thisID + 1;
-                                    }
-                                    finally
-                                    {
-                                        m_ids.ReleaseWriterLock();
-                                    }
-                    
-                                    return events;
-                                }
-                                else
-                                {
-                                    return new LLSD();
-                                }
-                * 
-                */
-            }
-            else
-            {
-                //return new LLSD();
-            }
-            
-            return new OSDString("shutdown404!");
         }
 
         public void DisableSimulator(ulong handle, UUID avatarID)

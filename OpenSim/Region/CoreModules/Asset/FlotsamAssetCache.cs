@@ -25,8 +25,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// Uncomment to make asset Get requests for existing 
-// #define WAIT_ON_INPROGRESS_REQUESTS
 
 using log4net;
 using Mono.Addins;
@@ -42,6 +40,7 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Timers;
+using System.Threading;
 
 
 //[assembly: Addin("FlotsamAssetCache", "1.1")]
@@ -72,16 +71,12 @@ namespace OpenSim.Region.CoreModules.Asset
         private static ulong m_DiskHits;
         private static ulong m_MemoryHits;
 
-#if WAIT_ON_INPROGRESS_REQUESTS
-        private Dictionary<string, ManualResetEvent> m_CurrentlyWriting = new Dictionary<string, ManualResetEvent>();
-        private int m_WaitOnInprogressTimeout = 3000;
-#else
         private HashSet<string> m_CurrentlyWriting = new HashSet<string>();
-#endif
+        private ReaderWriterLock m_CurrentlyWritingRwLock = new ReaderWriterLock();
 
         private bool m_FileCacheEnabled = true;
 
-        private ExpiringCache<string, AssetBase> m_MemoryCache;
+        private ThreadedClasses.ExpiringCache<string, AssetBase> m_MemoryCache;
         private bool m_MemoryCacheEnabled = false;
 
         // Expiration is expressed in hours.
@@ -98,7 +93,7 @@ namespace OpenSim.Region.CoreModules.Asset
         private System.Timers.Timer m_CacheCleanTimer;
 
         private IAssetService m_AssetService;
-        private List<Scene> m_Scenes = new List<Scene>();
+        private ThreadedClasses.RwLockedList<Scene> m_Scenes = new ThreadedClasses.RwLockedList<Scene>();
 
         public FlotsamAssetCache()
         {
@@ -126,7 +121,7 @@ namespace OpenSim.Region.CoreModules.Asset
 
                 if (name == Name)
                 {
-                    m_MemoryCache = new ExpiringCache<string, AssetBase>();
+                    m_MemoryCache = new ThreadedClasses.ExpiringCache<string, AssetBase>(30);
                     m_Enabled = true;
 
                     m_log.InfoFormat("[FLOTSAM ASSET CACHE]: {0} enabled", this.Name);
@@ -144,10 +139,6 @@ namespace OpenSim.Region.CoreModules.Asset
 
                         m_MemoryCacheEnabled = assetConfig.GetBoolean("MemoryCacheEnabled", m_MemoryCacheEnabled);
                         m_MemoryExpiration = TimeSpan.FromHours(assetConfig.GetDouble("MemoryCacheTimeout", m_DefaultMemoryExpiration));
-    
-    #if WAIT_ON_INPROGRESS_REQUESTS
-                        m_WaitOnInprogressTimeout = assetConfig.GetInt("WaitOnInprogressTimeout", 3000);
-    #endif
     
                         m_LogLevel = assetConfig.GetInt("LogLevel", m_LogLevel);
                         m_HitRateDisplay = (ulong)assetConfig.GetLong("HitRateDisplay", (long)m_HitRateDisplay);
@@ -170,8 +161,7 @@ namespace OpenSim.Region.CoreModules.Asset
                         m_CacheCleanTimer = new System.Timers.Timer(m_FileExpirationCleanupTimer.TotalMilliseconds);
                         m_CacheCleanTimer.AutoReset = true;
                         m_CacheCleanTimer.Elapsed += CleanupExpiredFiles;
-                        lock (m_CacheCleanTimer)
-                            m_CacheCleanTimer.Start();
+                        m_CacheCleanTimer.Start();
                     }
 
                     if (m_CacheDirectoryTiers < 1)
@@ -256,10 +246,15 @@ namespace OpenSim.Region.CoreModules.Asset
                     // the other thread has updated the time for us.
                     try
                     {
-                        lock (m_CurrentlyWriting)
+                        m_CurrentlyWritingRwLock.AcquireReaderLock(-1);
+                        try
                         {
                             if (!m_CurrentlyWriting.Contains(filename))
                                 File.SetLastAccessTime(filename, DateTime.Now);
+                        }
+                        finally
+                        {
+                            m_CurrentlyWritingRwLock.ReleaseReaderLock();
                         }
                     }
                     catch
@@ -271,29 +266,31 @@ namespace OpenSim.Region.CoreModules.Asset
                     // Once we start writing, make sure we flag that we're writing
                     // that object to the cache so that we don't try to write the 
                     // same file multiple times.
-                    lock (m_CurrentlyWriting)
+                    m_CurrentlyWritingRwLock.AcquireReaderLock(-1);
+                    try
                     {
-#if WAIT_ON_INPROGRESS_REQUESTS
-                        if (m_CurrentlyWriting.ContainsKey(filename))
-                        {
-                            return;
-                        }
-                        else
-                        {
-                            m_CurrentlyWriting.Add(filename, new ManualResetEvent(false));
-                        }
-
-#else
                         if (m_CurrentlyWriting.Contains(filename))
                         {
                             return;
                         }
-                        else
+                        LockCookie lc = m_CurrentlyWritingRwLock.UpgradeToWriterLock(-1);
+                        try
                         {
+                            /* recheck since we were in a reader lock before */
+                            if (m_CurrentlyWriting.Contains(filename))
+                            {
+                                return;
+                            }
                             m_CurrentlyWriting.Add(filename);
                         }
-#endif
-
+                        finally
+                        {
+                            m_CurrentlyWritingRwLock.DowngradeFromWriterLock(ref lc);
+                        }
+                    }
+                    finally
+                    {
+                        m_CurrentlyWritingRwLock.ReleaseReaderLock();
                     }
 
                     Util.FireAndForget(
@@ -340,7 +337,7 @@ namespace OpenSim.Region.CoreModules.Asset
 
         private bool CheckFromMemoryCache(string id)
         {
-            return m_MemoryCache.Contains(id);
+            return m_MemoryCache.ContainsKey(id);
         }
 
         /// <summary>
@@ -352,29 +349,21 @@ namespace OpenSim.Region.CoreModules.Asset
         {          
             string filename = GetFileName(id);
 
-#if WAIT_ON_INPROGRESS_REQUESTS
-            // Check if we're already downloading this asset.  If so, try to wait for it to
-            // download.
-            if (m_WaitOnInprogressTimeout > 0)
-            {
-                m_RequestsForInprogress++;
-
-                ManualResetEvent waitEvent;
-                if (m_CurrentlyWriting.TryGetValue(filename, out waitEvent))
-                {
-                    waitEvent.WaitOne(m_WaitOnInprogressTimeout);
-                    return Get(id);
-                }
-            }
-#else
             // Track how often we have the problem that an asset is requested while
             // it is still being downloaded by a previous request.
-            if (m_CurrentlyWriting.Contains(filename))
+            m_CurrentlyWritingRwLock.AcquireReaderLock(-1);
+            try
             {
-                m_RequestsForInprogress++;
-                return null;
+                if (m_CurrentlyWriting.Contains(filename))
+                {
+                    m_RequestsForInprogress++;
+                    return null;
+                }
             }
-#endif
+            finally
+            {
+                m_CurrentlyWritingRwLock.ReleaseReaderLock();
+            }
 
             AssetBase asset = null;
 
@@ -689,18 +678,14 @@ namespace OpenSim.Region.CoreModules.Asset
                 // Even if the write fails with an exception, we need to make sure
                 // that we release the lock on that file, otherwise it'll never get
                 // cached
-                lock (m_CurrentlyWriting)
+                m_CurrentlyWritingRwLock.AcquireWriterLock(-1);
+                try
                 {
-#if WAIT_ON_INPROGRESS_REQUESTS
-                    ManualResetEvent waitEvent;
-                    if (m_CurrentlyWriting.TryGetValue(filename, out waitEvent))
-                    {
-                        m_CurrentlyWriting.Remove(filename);
-                        waitEvent.Set();
-                    }
-#else
                     m_CurrentlyWriting.Remove(filename);
-#endif
+                }
+                finally
+                {
+                    m_CurrentlyWritingRwLock.ReleaseWriterLock();
                 }
             }
         }
@@ -769,12 +754,12 @@ namespace OpenSim.Region.CoreModules.Asset
             HashSet<UUID> uniqueUuids = new HashSet<UUID>();
             Dictionary<UUID, sbyte> assets = new Dictionary<UUID, sbyte>();
 
-            foreach (Scene s in m_Scenes)
+            m_Scenes.ForEach(delegate(Scene s)
             {
                 StampRegionStatusFile(s.RegionInfo.RegionID);
 
                 s.ForEachSOG(delegate(SceneObjectGroup e)
-                {                   
+                {
                     gatherer.GatherAssetUuids(e, assets);
 
                     foreach (UUID assetID in assets.Keys)
@@ -799,7 +784,7 @@ namespace OpenSim.Region.CoreModules.Asset
 
                     assets.Clear();
                 });
-            }
+            });
 
 
             return uniqueUuids.Count;

@@ -923,16 +923,13 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                 if (target != null)
                 {
                     UUID animID=UUID.Zero;
-                    lock (m_host.TaskInventory)
+                    foreach (KeyValuePair<UUID, TaskInventoryItem> inv in m_host.TaskInventory)
                     {
-                        foreach (KeyValuePair<UUID, TaskInventoryItem> inv in m_host.TaskInventory)
+                        if (inv.Value.Name == animation)
                         {
-                            if (inv.Value.Name == animation)
-                            {
-                                if (inv.Value.Type == (int)AssetType.Animation)
-                                    animID = inv.Value.AssetID;
-                                continue;
-                            }
+                            if (inv.Value.Type == (int)AssetType.Animation)
+                                animID = inv.Value.AssetID;
+                            continue;
                         }
                     }
                     if (animID == UUID.Zero)
@@ -1860,8 +1857,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                 if (a == null)
                     return UUID.Zero;
 
-                string data = Encoding.UTF8.GetString(a.Data);
-                NotecardCache.Cache(assetID, data);
+                NotecardCache.Cache(assetID, a.Data);
             };
 
             return assetID;
@@ -3183,14 +3179,11 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         {
             m_host.AddScriptLPS(1);
 
-            lock (m_host.TaskInventory)
+            foreach (KeyValuePair<UUID, TaskInventoryItem> inv in m_host.TaskInventory)
             {
-                foreach (KeyValuePair<UUID, TaskInventoryItem> inv in m_host.TaskInventory)
+                if (inv.Value.Name == item)
                 {
-                    if (inv.Value.Name == item)
-                    {
-                        return inv.Value.Description.ToString();
-                    }
+                    return inv.Value.Description.ToString();
                 }
             }
 

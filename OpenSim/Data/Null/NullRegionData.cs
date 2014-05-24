@@ -44,8 +44,7 @@ namespace OpenSim.Data.Null
 
 //        private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
-        private Dictionary<UUID, RegionData> m_regionData = new Dictionary<UUID, RegionData>();
-        private ReaderWriterLock m_regionDataRwLock = new ReaderWriterLock();
+        private ThreadedClasses.RwLockedDictionary<UUID, RegionData> m_regionData = new ThreadedClasses.RwLockedDictionary<UUID, RegionData>();
 
         public NullRegionData(string connectionString, string realm)
         {
@@ -110,20 +109,12 @@ namespace OpenSim.Data.Null
             // Find region data
             List<RegionData> ret = new List<RegionData>();
 
-            m_regionDataRwLock.AcquireReaderLock(-1);
-            try
+            m_regionData.ForEach(delegate(RegionData r)
             {
-                foreach (RegionData r in m_regionData.Values)
-                {
-                    // m_log.DebugFormat("[NULL REGION DATA]: comparing {0} to {1}", cleanName, r.RegionName.ToLower());
-                    if (queryMatch(r.RegionName.ToLower()))
-                        ret.Add(r);
-                }
-            }
-            finally
-            {
-                m_regionDataRwLock.ReleaseReaderLock();
-            }
+                // m_log.DebugFormat("[NULL REGION DATA]: comparing {0} to {1}", cleanName, r.RegionName.ToLower());
+                if (queryMatch(r.RegionName.ToLower()))
+                    ret.Add(r);
+            });
 
             if (ret.Count > 0)
                 return ret;
@@ -138,19 +129,13 @@ namespace OpenSim.Data.Null
 
             List<RegionData> ret = new List<RegionData>();
 
-            m_regionDataRwLock.AcquireReaderLock(-1);
-            try
+            m_regionData.ForEach(delegate(RegionData r)
             {
-                foreach (RegionData r in m_regionData.Values)
+                if (r.posX == posX && r.posY == posY)
                 {
-                    if (r.posX == posX && r.posY == posY)
-                        ret.Add(r);
+                    ret.Add(r);
                 }
-            }
-            finally
-            {
-                m_regionDataRwLock.ReleaseReaderLock();
-            }
+            });
 
             if (ret.Count > 0)
                 return ret[0];
@@ -163,18 +148,14 @@ namespace OpenSim.Data.Null
             if (m_useStaticInstance && Instance != this)
                 return Instance.Get(regionID, scopeID);
 
-            m_regionDataRwLock.AcquireReaderLock(-1);
             try
             {
-                if (m_regionData.ContainsKey(regionID))
-                    return m_regionData[regionID];
+                return m_regionData[regionID];
             }
-            finally
+            catch(KeyNotFoundException)
             {
-                m_regionDataRwLock.ReleaseReaderLock();
+                return null;
             }
-
-            return null;
         }
 
         public List<RegionData> Get(int startX, int startY, int endX, int endY, UUID scopeID)
@@ -184,19 +165,11 @@ namespace OpenSim.Data.Null
 
             List<RegionData> ret = new List<RegionData>();
 
-            m_regionDataRwLock.AcquireReaderLock(-1);
-            try
+            m_regionData.ForEach(delegate(RegionData r)
             {
-                foreach (RegionData r in m_regionData.Values)
-                {
-                    if (r.posX >= startX && r.posX <= endX && r.posY >= startY && r.posY <= endY)
-                        ret.Add(r);
-                }
-            }
-            finally
-            {
-                m_regionDataRwLock.ReleaseReaderLock();
-            }
+                if (r.posX >= startX && r.posX <= endX && r.posY >= startY && r.posY <= endY)
+                    ret.Add(r);
+            });
 
             return ret;
         }
@@ -209,15 +182,7 @@ namespace OpenSim.Data.Null
 //            m_log.DebugFormat(
 //                "[NULL REGION DATA]: Storing region {0} {1}, scope {2}", data.RegionName, data.RegionID, data.ScopeID);
 
-            m_regionDataRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_regionData[data.RegionID] = data;
-            }
-            finally
-            {
-                m_regionDataRwLock.ReleaseWriterLock();
-            }
+            m_regionData[data.RegionID] = data;
 
             return true;
         }
@@ -227,17 +192,13 @@ namespace OpenSim.Data.Null
             if (m_useStaticInstance && Instance != this)
                 return Instance.SetDataItem(regionID, item, value);
 
-            m_regionDataRwLock.AcquireReaderLock(-1);
             try
-            {
-                if (!m_regionData.ContainsKey(regionID))
-                    return false;
-
+            { 
                 m_regionData[regionID].Data[item] = value;
             }
-            finally
+            catch(KeyNotFoundException)
             {
-                m_regionDataRwLock.ReleaseReaderLock();
+                return false;
             }
 
             return true;
@@ -250,18 +211,7 @@ namespace OpenSim.Data.Null
 
 //            m_log.DebugFormat("[NULL REGION DATA]: Deleting region {0}", regionID);
 
-            m_regionDataRwLock.AcquireWriterLock(-1);
-            try
-            {
-                if (!m_regionData.ContainsKey(regionID))
-                    return false;
-
-                m_regionData.Remove(regionID);
-            }
-            finally
-            {
-                m_regionDataRwLock.ReleaseWriterLock();
-            }
+            m_regionData.Remove(regionID);
 
             return true;
         }
@@ -296,19 +246,11 @@ namespace OpenSim.Data.Null
 
             List<RegionData> ret = new List<RegionData>();
 
-            m_regionDataRwLock.AcquireReaderLock(-1);
-            try
+            m_regionData.ForEach(delegate(RegionData r)
             {
-                foreach (RegionData r in m_regionData.Values)
-                {
-                    if ((Convert.ToInt32(r.Data["flags"]) & regionFlags) != 0)
-                        ret.Add(r);
-                }
-            }
-            finally
-            {
-                m_regionDataRwLock.ReleaseReaderLock();
-            }
+                if ((Convert.ToInt32(r.Data["flags"]) & regionFlags) != 0)
+                    ret.Add(r);
+            });
 
             return ret;
         }

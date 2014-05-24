@@ -89,8 +89,9 @@ namespace OpenSim.Framework.Console
         /// <summary>
         /// Commands organized by module
         /// </summary>
-        private Dictionary<string, List<CommandInfo>> m_modulesCommands = new Dictionary<string, List<CommandInfo>>();
-        private ReaderWriterLock m_modulesCommandsRwLock = new ReaderWriterLock();
+        private ThreadedClasses.RwLockedDictionaryAutoAdd<string, ThreadedClasses.RwLockedList<CommandInfo>> m_modulesCommands = 
+            new ThreadedClasses.RwLockedDictionaryAutoAdd<string, ThreadedClasses.RwLockedList<CommandInfo>>(
+                delegate() { return new ThreadedClasses.RwLockedList<CommandInfo>(); });
 
         /// <summary>
         /// Get help for the given help string
@@ -136,19 +137,15 @@ namespace OpenSim.Framework.Console
         {
             List<string> help = new List<string>();
 
-            m_modulesCommandsRwLock.AcquireReaderLock(-1);
-            try
+            m_modulesCommands.ForEach(delegate(ThreadedClasses.RwLockedList<CommandInfo> commands)
             {
-                foreach (List<CommandInfo> commands in m_modulesCommands.Values)
+                List<string> ourHelpText = new List<string>();
+                commands.ForEach(delegate(CommandInfo c)
                 {
-                    var ourHelpText = commands.ConvertAll(c => string.Format("{0} - {1}", c.help_text, c.long_help));
-                    help.AddRange(ourHelpText);
-                }
-            }
-            finally
-            {
-                m_modulesCommandsRwLock.ReleaseReaderLock();
-            }
+                    ourHelpText.Add(string.Format("{0} - {1}", c.help_text, c.long_help));
+                });
+                help.AddRange(ourHelpText);
+            });
 
             help.Sort();
 
@@ -219,66 +216,40 @@ namespace OpenSim.Framework.Console
         /// <returns>true if there was the module existed, false otherwise.</returns>
         private bool TryCollectModuleHelp(string moduleName, List<string> helpText)
         {
-            m_modulesCommandsRwLock.AcquireReaderLock(-1);
             try
             {
-                foreach (string key in m_modulesCommands.Keys)
+                m_modulesCommands.ForEach(delegate(KeyValuePair<string, ThreadedClasses.RwLockedList<CommandInfo>> kvp)
                 {
                     // Allow topic help requests to succeed whether they are upper or lowercase.
-                    if (moduleName.ToLower() == key.ToLower())
+                    if (moduleName.ToLower() == kvp.Key.ToLower())
                     {
-                        List<CommandInfo> commands = m_modulesCommands[key];
-                        var ourHelpText = commands.ConvertAll(c => string.Format("{0} - {1}", c.help_text, c.long_help));
+                        List<string> ourHelpText = new List<string>();
+                        kvp.Value.ForEach(delegate(CommandInfo c)
+                        {
+                            ourHelpText.Add(string.Format("{0} - {1}", c.help_text, c.long_help));
+                        });
                         ourHelpText.Sort();
                         helpText.AddRange(ourHelpText);
 
-                        return true;
+                        throw new ThreadedClasses.ReturnValueException<bool>(true);
                     }
-                }
-
-                return false;
+                });
             }
-            finally
+            catch(ThreadedClasses.ReturnValueException<bool>)
             {
-                m_modulesCommandsRwLock.ReleaseReaderLock();
+                return true;
             }
+
+            return false;
         }
 
         private List<string> CollectModulesHelp(Dictionary<string, object> dict)
         {
-            m_modulesCommandsRwLock.AcquireReaderLock(-1);
-            try
-            {
-                List<string> helpText = new List<string>(m_modulesCommands.Keys);
-                helpText.Sort();
-                return helpText;
-            }
-            finally
-            {
-                m_modulesCommandsRwLock.ReleaseReaderLock();
-            }
+            List<string> helpText = new List<string>(m_modulesCommands.Keys);
+            helpText.Sort();
+            return helpText;
         }
 
-//        private List<string> CollectHelp(Dictionary<string, object> dict)
-//        {
-//            List<string> result = new List<string>();
-//
-//            foreach (KeyValuePair<string, object> kvp in dict)
-//            {
-//                if (kvp.Value is Dictionary<string, Object>)
-//                {
-//                    result.AddRange(CollectHelp((Dictionary<string, Object>)kvp.Value));
-//                }
-//                else
-//                {
-//                    if (((CommandInfo)kvp.Value).long_help != String.Empty)
-//                        result.Add(((CommandInfo)kvp.Value).help_text+" - "+
-//                                ((CommandInfo)kvp.Value).long_help);
-//                }
-//            }
-//            return result;
-//        }
-        
         /// <summary>
         /// Add a command to those which can be invoked from the console.
         /// </summary>
@@ -348,27 +319,8 @@ namespace OpenSim.Framework.Console
             current[String.Empty] = info;
 
             // Now add command to modules dictionary
-            m_modulesCommandsRwLock.AcquireWriterLock(-1);
-            try
-            {
-                List<CommandInfo> commands;
-                if (m_modulesCommands.ContainsKey(module))
-                {
-                    commands = m_modulesCommands[module];
-                }
-                else
-                {
-                    commands = new List<CommandInfo>();
-                    m_modulesCommands[module] = commands;
-                }
-
-//                m_log.DebugFormat("[COMMAND CONSOLE]: Adding to category {0} command {1}", module, command);
-                commands.Add(info);
-            }
-            finally
-            {
-                m_modulesCommandsRwLock.ReleaseWriterLock();
-            }
+            ThreadedClasses.RwLockedList<CommandInfo> commands = m_modulesCommands[module];
+            commands.Add(info);
         }
 
         public string[] FindNextOption(string[] cmd, bool term)

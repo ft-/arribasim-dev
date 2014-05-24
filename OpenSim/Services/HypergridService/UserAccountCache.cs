@@ -11,8 +11,8 @@ namespace OpenSim.Services.HypergridService
 //        private static readonly ILog m_log =
 //                LogManager.GetLogger(
 //                MethodBase.GetCurrentMethod().DeclaringType);
-        
-        private ExpiringCache<UUID, UserAccount> m_UUIDCache;
+
+        private ThreadedClasses.ExpiringCache<UUID, UserAccount> m_UUIDCache;
 
         private IUserAccountService m_UserAccountService;
 
@@ -28,7 +28,7 @@ namespace OpenSim.Services.HypergridService
 
         private UserAccountCache(IUserAccountService u)
         {
-            m_UUIDCache = new ExpiringCache<UUID, UserAccount>();
+            m_UUIDCache = new ThreadedClasses.ExpiringCache<UUID, UserAccount>(30);
             m_UserAccountService = u;
         }
 

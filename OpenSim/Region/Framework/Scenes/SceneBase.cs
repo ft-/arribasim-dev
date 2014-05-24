@@ -85,8 +85,7 @@ namespace OpenSim.Region.Framework.Scenes
         /// <value>
         /// The module commanders available from this scene
         /// </value>
-        private Dictionary<string, ICommander> m_moduleCommanders = new Dictionary<string, ICommander>();
-        private ReaderWriterLock m_moduleCommandersRwLock = new ReaderWriterLock();
+        private ThreadedClasses.RwLockedDictionary<string, ICommander> m_moduleCommanders = new ThreadedClasses.RwLockedDictionary<string, ICommander>();
         
         /// <value>
         /// Registered classes that are capable of creating entities.
@@ -323,15 +322,7 @@ namespace OpenSim.Region.Framework.Scenes
         /// <param name="commander"></param>
         public void RegisterModuleCommander(ICommander commander)
         {
-            m_moduleCommandersRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_moduleCommanders.Add(commander.Name, commander);
-            }
-            finally
-            {
-                m_moduleCommandersRwLock.ReleaseWriterLock();
-            }
+            m_moduleCommanders.Add(commander.Name, commander);
         }
 
         /// <summary>
@@ -340,17 +331,7 @@ namespace OpenSim.Region.Framework.Scenes
         /// <param name="name"></param>
         public void UnregisterModuleCommander(string name)
         {
-            m_moduleCommandersRwLock.AcquireWriterLock(-1);
-            try
-            {
-                ICommander commander;
-                if (m_moduleCommanders.TryGetValue(name, out commander))
-                    m_moduleCommanders.Remove(name);
-            }
-            finally
-            {
-                m_moduleCommandersRwLock.ReleaseWriterLock();
-            }
+            m_moduleCommanders.Remove(name);
         }
 
         /// <summary>
@@ -360,15 +341,10 @@ namespace OpenSim.Region.Framework.Scenes
         /// <returns>The module commander, null if no module commander with that name was found</returns>
         public ICommander GetCommander(string name)
         {
-            m_moduleCommandersRwLock.AcquireReaderLock(-1);
-            try
+            ICommander val;
+            if (m_moduleCommanders.TryGetValue(name, out val))
             {
-                if (m_moduleCommanders.ContainsKey(name))
-                    return m_moduleCommanders[name];
-            }
-            finally
-            {
-                m_moduleCommandersRwLock.ReleaseReaderLock();
+                return val;
             }
             
             return null;
@@ -376,15 +352,7 @@ namespace OpenSim.Region.Framework.Scenes
 
         public Dictionary<string, ICommander> GetCommanders()
         {
-            m_moduleCommandersRwLock.AcquireReaderLock(-1);
-            try
-            {
-                return m_moduleCommanders;
-            }
-            finally
-            {
-                m_moduleCommandersRwLock.ReleaseReaderLock();
-            }
+            return new Dictionary<string, ICommander>(m_moduleCommanders);
         }
 
         /// <summary>

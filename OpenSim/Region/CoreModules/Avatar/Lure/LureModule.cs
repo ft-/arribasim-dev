@@ -44,7 +44,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Lure
         private static readonly ILog m_log = LogManager.GetLogger(
                 MethodBase.GetCurrentMethod().DeclaringType);
 
-        private readonly List<Scene> m_scenes = new List<Scene>();
+        private readonly ThreadedClasses.RwLockedList<Scene> m_scenes = new ThreadedClasses.RwLockedList<Scene>();
 
         private IMessageTransferModule m_TransferModule = null;
         private bool m_Enabled = false;
@@ -68,13 +68,10 @@ namespace OpenSim.Region.CoreModules.Avatar.Lure
             if (!m_Enabled)
                 return;
 
-            lock (m_scenes)
-            {
-                m_scenes.Add(scene);
-                scene.EventManager.OnNewClient += OnNewClient;
-                scene.EventManager.OnIncomingInstantMessage +=
-                        OnGridInstantMessage;
-            }
+            m_scenes.Add(scene);
+            scene.EventManager.OnNewClient += OnNewClient;
+            scene.EventManager.OnIncomingInstantMessage +=
+                    OnGridInstantMessage;
         }
 
         public void RegionLoaded(Scene scene)
@@ -107,13 +104,10 @@ namespace OpenSim.Region.CoreModules.Avatar.Lure
             if (!m_Enabled)
                 return;
 
-            lock (m_scenes)
-            {
-                m_scenes.Remove(scene);
-                scene.EventManager.OnNewClient -= OnNewClient;
-                scene.EventManager.OnIncomingInstantMessage -=
-                        OnGridInstantMessage;
-            }
+            m_scenes.Remove(scene);
+            scene.EventManager.OnNewClient -= OnNewClient;
+            scene.EventManager.OnIncomingInstantMessage -=
+                    OnGridInstantMessage;
         }
 
         void OnNewClient(IClientAPI client)

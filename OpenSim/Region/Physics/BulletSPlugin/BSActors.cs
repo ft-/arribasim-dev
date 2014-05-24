@@ -33,61 +33,31 @@ namespace OpenSim.Region.Physics.BulletSPlugin
 public class BSActorCollection
 {
     private BSScene m_physicsScene { get; set; }
-    private Dictionary<string, BSActor> m_actors;
-    private ReaderWriterLock m_actorsRwLock = new ReaderWriterLock();
+    private ThreadedClasses.RwLockedDictionary<string, BSActor> m_actors;
 
     public BSActorCollection(BSScene physicsScene)
     {
         m_physicsScene = physicsScene;
-        m_actors = new Dictionary<string, BSActor>();
+        m_actors = new ThreadedClasses.RwLockedDictionary<string, BSActor>();
     }
     public void Add(string name, BSActor actor)
     {
-        m_actorsRwLock.AcquireWriterLock(-1);
-        try
-        {
-            if (!m_actors.ContainsKey(name))
-            {
-                m_actors[name] = actor;
-            }
-        }
-        finally
-        {
-            m_actorsRwLock.ReleaseWriterLock();
-        }
+        m_actors[name] = actor;
     }
     public bool RemoveAndRelease(string name)
     {
-        bool ret = false;
-        m_actorsRwLock.AcquireWriterLock(-1);
-        try
+        BSActor beingRemoved;
+        if (m_actors.Remove(name, out beingRemoved))
         {
-            if (m_actors.ContainsKey(name))
-            {
-                BSActor beingRemoved = m_actors[name];
-                m_actors.Remove(name);
-                beingRemoved.Dispose();
-                ret = true;
-            }
+            beingRemoved.Dispose();
+            return true;
         }
-        finally
-        {
-            m_actorsRwLock.ReleaseWriterLock();
-        }
-        return ret;
+        return false;
     }
     public void Clear()
     {
-        m_actorsRwLock.AcquireWriterLock(-1);
-        try
-        {
-            ForEachActor(a => a.Dispose());
-            m_actors.Clear();
-        }
-        finally
-        {
-            m_actorsRwLock.ReleaseWriterLock();
-        }
+        ForEachActor(a => a.Dispose());
+        m_actors.Clear();
     }
     public void Dispose()
     {
@@ -95,40 +65,18 @@ public class BSActorCollection
     }
     public bool HasActor(string name)
     {
-        m_actorsRwLock.AcquireReaderLock(-1);
-        try
-        {
-            return m_actors.ContainsKey(name);
-        }
-        finally
-        {
-            m_actorsRwLock.ReleaseReaderLock();
-        }
+        return m_actors.ContainsKey(name);
     }
     public bool TryGetActor(string actorName, out BSActor theActor)
     {
-        m_actorsRwLock.AcquireReaderLock(-1);
-        try
-        {
-            return m_actors.TryGetValue(actorName, out theActor);
-        }
-        finally
-        {
-            m_actorsRwLock.ReleaseReaderLock();
-        }
+        return m_actors.TryGetValue(actorName, out theActor);
     }
     public void ForEachActor(Action<BSActor> act)
     {
-        m_actorsRwLock.AcquireReaderLock(-1);
-        try
+        m_actors.ForEach(delegate(BSActor val)
         {
-            foreach (KeyValuePair<string, BSActor> kvp in m_actors)
-                act(kvp.Value);
-        }
-        finally
-        {
-            m_actorsRwLock.ReleaseReaderLock();
-        }
+            act(val);
+        });
     }
 
     public void Enable(bool enabl)

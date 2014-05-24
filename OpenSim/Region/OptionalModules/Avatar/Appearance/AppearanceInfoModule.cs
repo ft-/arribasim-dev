@@ -45,7 +45,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Appearance
     {
 //        private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
-        private Dictionary<UUID, Scene> m_scenes = new Dictionary<UUID, Scene>();
+        private ThreadedClasses.RwLockedDictionary<UUID, Scene> m_scenes = new ThreadedClasses.RwLockedDictionary<UUID, Scene>();
 //        private IAvatarFactoryModule m_avatarFactory;
         
         public string Name { get { return "Appearance Information Module"; } }        
@@ -76,16 +76,14 @@ namespace OpenSim.Region.OptionalModules.Avatar.Appearance
         {
 //            m_log.DebugFormat("[APPEARANCE INFO MODULE]: REGION {0} REMOVED", scene.RegionInfo.RegionName);
             
-            lock (m_scenes)
-                m_scenes.Remove(scene.RegionInfo.RegionID);
+            m_scenes.Remove(scene.RegionInfo.RegionID);
         }        
         
         public void RegionLoaded(Scene scene)
         {
 //            m_log.DebugFormat("[APPEARANCE INFO MODULE]: REGION {0} LOADED", scene.RegionInfo.RegionName);
             
-            lock (m_scenes)
-                m_scenes[scene.RegionInfo.RegionID] = scene;
+            m_scenes[scene.RegionInfo.RegionID] = scene;
 
             scene.AddCommand(
                 "Users", this, "show appearance",
@@ -147,14 +145,24 @@ namespace OpenSim.Region.OptionalModules.Avatar.Appearance
                 optionalTargetLastName = cmd[3];
             }
 
-            lock (m_scenes)
+            m_scenes.ForEach(delegate(Scene scene)
             {
-                foreach (Scene scene in m_scenes.Values)
+                if (targetNameSupplied)
                 {
-                    if (targetNameSupplied)
+                    ScenePresence sp = scene.GetScenePresence(optionalTargetFirstName, optionalTargetLastName);
+                    if (sp != null && !sp.IsChildAgent)
                     {
-                        ScenePresence sp = scene.GetScenePresence(optionalTargetFirstName, optionalTargetLastName);
-                        if (sp != null && !sp.IsChildAgent)
+                        MainConsole.Instance.OutputFormat(
+                            "Sending appearance information for {0} to all other avatars in {1}",
+                            sp.Name, scene.RegionInfo.RegionName);
+
+                        scene.AvatarFactory.SendAppearance(sp.UUID);
+                    }
+                }
+                else
+                {
+                    scene.ForEachRootScenePresence(
+                        sp =>
                         {
                             MainConsole.Instance.OutputFormat(
                                 "Sending appearance information for {0} to all other avatars in {1}",
@@ -162,22 +170,9 @@ namespace OpenSim.Region.OptionalModules.Avatar.Appearance
 
                             scene.AvatarFactory.SendAppearance(sp.UUID);
                         }
-                    }
-                    else
-                    {
-                        scene.ForEachRootScenePresence(
-                            sp =>
-                            {
-                                MainConsole.Instance.OutputFormat(
-                                    "Sending appearance information for {0} to all other avatars in {1}",
-                                    sp.Name, scene.RegionInfo.RegionName);
-
-                                scene.AvatarFactory.SendAppearance(sp.UUID);
-                            }
-                        );
-                    }
+                    );
                 }
-            }
+            });
         }
 
         protected void HandleShowAppearanceCommand(string module, string[] cmd)
@@ -199,29 +194,26 @@ namespace OpenSim.Region.OptionalModules.Avatar.Appearance
                 optionalTargetLastName = cmd[3];
             }
 
-            lock (m_scenes)
-            {   
-                foreach (Scene scene in m_scenes.Values)
+            m_scenes.ForEach(delegate(Scene scene)
+            {
+                if (targetNameSupplied)
                 {
-                    if (targetNameSupplied)
-                    {
-                        ScenePresence sp = scene.GetScenePresence(optionalTargetFirstName, optionalTargetLastName);
-                        if (sp != null && !sp.IsChildAgent)
-                            scene.AvatarFactory.WriteBakedTexturesReport(sp, MainConsole.Instance.OutputFormat);
-                    }
-                    else
-                    {
-                        scene.ForEachRootScenePresence(
-                            sp =>
-                            {
-                                bool bakedTextureValid = scene.AvatarFactory.ValidateBakedTextureCache(sp);
-                                MainConsole.Instance.OutputFormat(
-                                    "{0} baked appearance texture is {1}", sp.Name, bakedTextureValid ? "OK" : "incomplete");
-                            }
-                        );
-                    }
+                    ScenePresence sp = scene.GetScenePresence(optionalTargetFirstName, optionalTargetLastName);
+                    if (sp != null && !sp.IsChildAgent)
+                        scene.AvatarFactory.WriteBakedTexturesReport(sp, MainConsole.Instance.OutputFormat);
                 }
-            }
+                else
+                {
+                    scene.ForEachRootScenePresence(
+                        sp =>
+                        {
+                            bool bakedTextureValid = scene.AvatarFactory.ValidateBakedTextureCache(sp);
+                            MainConsole.Instance.OutputFormat(
+                                "{0} baked appearance texture is {1}", sp.Name, bakedTextureValid ? "OK" : "incomplete");
+                        }
+                    );
+                }
+            });
         }
 
         private void HandleRebakeAppearanceCommand(string module, string[] cmd)
@@ -235,26 +227,23 @@ namespace OpenSim.Region.OptionalModules.Avatar.Appearance
             string firstname = cmd[2];
             string lastname = cmd[3];
 
-            lock (m_scenes)
+            m_scenes.ForEach(delegate(Scene scene)
             {
-                foreach (Scene scene in m_scenes.Values)
+                ScenePresence sp = scene.GetScenePresence(firstname, lastname);
+                if (sp != null && !sp.IsChildAgent)
                 {
-                    ScenePresence sp = scene.GetScenePresence(firstname, lastname);
-                    if (sp != null && !sp.IsChildAgent)
-                    {
-                        int rebakesRequested = scene.AvatarFactory.RequestRebake(sp, false);
+                    int rebakesRequested = scene.AvatarFactory.RequestRebake(sp, false);
 
-                        if (rebakesRequested > 0)
-                            MainConsole.Instance.OutputFormat(
-                                "Requesting rebake of {0} uploaded textures for {1} in {2}",
-                                rebakesRequested, sp.Name, scene.RegionInfo.RegionName);
-                        else
-                            MainConsole.Instance.OutputFormat(
-                                "No texture IDs available for rebake request for {0} in {1}",
-                                sp.Name, scene.RegionInfo.RegionName);
-                    }
+                    if (rebakesRequested > 0)
+                        MainConsole.Instance.OutputFormat(
+                            "Requesting rebake of {0} uploaded textures for {1} in {2}",
+                            rebakesRequested, sp.Name, scene.RegionInfo.RegionName);
+                    else
+                        MainConsole.Instance.OutputFormat(
+                            "No texture IDs available for rebake request for {0} in {1}",
+                            sp.Name, scene.RegionInfo.RegionName);
                 }
-            }
+            });
         }
 
         protected void HandleFindAppearanceCommand(string module, string[] cmd)
@@ -269,22 +258,19 @@ namespace OpenSim.Region.OptionalModules.Avatar.Appearance
 
             HashSet<ScenePresence> matchedAvatars = new HashSet<ScenePresence>();
 
-            lock (m_scenes)
+            m_scenes.ForEach(delegate(Scene scene)
             {
-                foreach (Scene scene in m_scenes.Values)
-                {
-                    scene.ForEachRootScenePresence(
-                        sp =>
+                scene.ForEachRootScenePresence(
+                    sp =>
+                    {
+                        Dictionary<BakeType, Primitive.TextureEntryFace> bakedFaces = scene.AvatarFactory.GetBakedTextureFaces(sp.UUID);
+                        foreach (Primitive.TextureEntryFace face in bakedFaces.Values)
                         {
-                            Dictionary<BakeType, Primitive.TextureEntryFace> bakedFaces = scene.AvatarFactory.GetBakedTextureFaces(sp.UUID);
-                            foreach (Primitive.TextureEntryFace face in bakedFaces.Values)
-                            {
-                                if (face != null && face.TextureID.ToString().StartsWith(rawUuid))
-                                    matchedAvatars.Add(sp);
-                            }
-                        });
-                }
-            }
+                            if (face != null && face.TextureID.ToString().StartsWith(rawUuid))
+                                matchedAvatars.Add(sp);
+                        }
+                    });
+            });
 
             if (matchedAvatars.Count == 0)
             {

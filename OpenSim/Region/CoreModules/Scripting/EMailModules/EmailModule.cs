@@ -60,18 +60,27 @@ namespace OpenSim.Region.CoreModules.Scripting.EmailModules
         private string SMTP_SERVER_LOGIN = string.Empty;
         private string SMTP_SERVER_PASSWORD = string.Empty;
 
+        class EmailQueue
+        {
+            public DateTime m_LastCall;
+            public ThreadedClasses.RwLockedList<Email> m_Queue = new ThreadedClasses.RwLockedList<Email>();
+
+            public EmailQueue()
+            {
+                m_LastCall = DateTime.Now;
+            }
+        }
+
         private int m_MaxQueueSize = 50; // maximum size of an object mail queue
-        private Dictionary<UUID, List<Email>> m_MailQueues = new Dictionary<UUID, List<Email>>();
-        private Dictionary<UUID, DateTime> m_LastGetEmailCall = new Dictionary<UUID, DateTime>();
+        private ThreadedClasses.RwLockedDictionary<UUID, EmailQueue> m_MailQueues = new ThreadedClasses.RwLockedDictionary<UUID, EmailQueue>();
         private TimeSpan m_QueueTimeout = new TimeSpan(2, 0, 0); // 2 hours without llGetNextEmail drops the queue
         private string m_InterObjectHostname = "lsl.opensim.local";
 
         private int m_MaxEmailSize = 4096;  // largest email allowed by default, as per lsl docs.
 
         // Scenes by Region Handle
-        private Dictionary<ulong, Scene> m_Scenes =
-            new Dictionary<ulong, Scene>();
-        private ReaderWriterLock m_ScenesRwLock = new ReaderWriterLock();
+        private ThreadedClasses.RwLockedDictionary<ulong, Scene> m_Scenes =
+            new ThreadedClasses.RwLockedDictionary<ulong, Scene>();
 
         private bool m_Enabled = false;
 
@@ -126,35 +135,20 @@ namespace OpenSim.Region.CoreModules.Scripting.EmailModules
             if (!m_Enabled)
                 return;
 
-        // It's a go!
-            m_ScenesRwLock.AcquireWriterLock(-1);
-            try
-            {
-                // Claim the interface slot
-                scene.RegisterModuleInterface<IEmailModule>(this);
+            // It's a go!
 
-                // Add to scene list
-                m_Scenes.Add(scene.RegionInfo.RegionHandle, scene);
-            }
-            finally
-            {
-                m_ScenesRwLock.ReleaseWriterLock();
-            }
+            // Claim the interface slot
+            scene.RegisterModuleInterface<IEmailModule>(this);
+
+            // Add to scene list
+            m_Scenes.Add(scene.RegionInfo.RegionHandle, scene);
 
             m_log.Info("[EMAIL] Activated DefaultEmailModule");
         }
 
         public void RemoveRegion(Scene scene)
         {
-            m_ScenesRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_Scenes.Remove(scene.RegionInfo.RegionHandle);
-            }
-            finally
-            {
-                m_ScenesRwLock.ReleaseWriterLock();
-            }
+            m_Scenes.Remove(scene.RegionInfo.RegionHandle);
         }
 
         public void PostInitialise()
@@ -186,22 +180,17 @@ namespace OpenSim.Region.CoreModules.Scripting.EmailModules
             // It's tempting to create the queue here.  Don't; objects which have
             // not yet called GetNextEmail should have no queue, and emails to them
             // should be silently dropped.
-
-            lock (m_MailQueues)
+            EmailQueue val;
+            if(m_MailQueues.TryGetValue(to, out val))
             {
-                if (m_MailQueues.ContainsKey(to))
+                if (val.m_Queue.Count >= m_MaxQueueSize)
                 {
-                    if (m_MailQueues[to].Count >= m_MaxQueueSize)
-                    {
-                        // fail silently
-                        return;
-                    }
-
-                    lock (m_MailQueues[to])
-                    {
-                        m_MailQueues[to].Add(email);
-                    }
+                    // fail silently
+                    return;
                 }
+
+                val.m_LastCall = DateTime.Now;
+                val.m_Queue.Add(email);
             }
         }
 
@@ -213,25 +202,25 @@ namespace OpenSim.Region.CoreModules.Scripting.EmailModules
 
         private SceneObjectPart findPrim(UUID objectID, out string ObjectRegionName)
         {
-            m_ScenesRwLock.AcquireReaderLock(-1);
             try
             {
-                foreach (Scene s in m_Scenes.Values)
+                m_Scenes.ForEach(delegate(Scene s)
                 {
                     SceneObjectPart part = s.GetSceneObjectPart(objectID);
                     if (part != null)
                     {
-                        ObjectRegionName = s.RegionInfo.RegionName;
+                        string _ObjectRegionName = s.RegionInfo.RegionName;
                         uint localX = s.RegionInfo.WorldLocX;
                         uint localY = s.RegionInfo.WorldLocY;
-                        ObjectRegionName = ObjectRegionName + " (" + localX + ", " + localY + ")";
-                        return part;
+                        _ObjectRegionName = _ObjectRegionName + " (" + localX + ", " + localY + ")";
+                        throw new ThreadedClasses.ReturnValueException<KeyValuePair<string, SceneObjectPart>>(new KeyValuePair<string, SceneObjectPart>(_ObjectRegionName, part));
                     }
-                }
+                });
             }
-            finally
+            catch (ThreadedClasses.ReturnValueException<KeyValuePair<string, SceneObjectPart>> e)
             {
-                m_ScenesRwLock.ReleaseReaderLock();
+                ObjectRegionName = e.Value.Key;
+                return e.Value.Value;
             }
             ObjectRegionName = string.Empty;
             return null;
@@ -377,82 +366,28 @@ namespace OpenSim.Region.CoreModules.Scripting.EmailModules
         /// <returns></returns>
         public Email GetNextEmail(UUID objectID, string sender, string subject)
         {
-            List<Email> queue = null;
+            EmailQueue queue = m_MailQueues.GetOrAddIfNotExists(objectID, delegate() { return new EmailQueue(); });
+            queue.m_LastCall = DateTime.Now;
 
-            lock (m_LastGetEmailCall)
+            // Hopefully this isn't too time consuming.  If it is, we can always push it into a worker thread.
+            DateTime now = DateTime.Now;
+            foreach (UUID uuid in m_MailQueues.Keys)
             {
-                if (m_LastGetEmailCall.ContainsKey(objectID))
+                if (m_MailQueues.TryGetValue(uuid, out queue))
                 {
-                    m_LastGetEmailCall.Remove(objectID);
-                }
-
-                m_LastGetEmailCall.Add(objectID, DateTime.Now);
-
-                // Hopefully this isn't too time consuming.  If it is, we can always push it into a worker thread.
-                DateTime now = DateTime.Now;
-                List<UUID> removal = new List<UUID>();
-                foreach (UUID uuid in m_LastGetEmailCall.Keys)
-                {
-                    if ((now - m_LastGetEmailCall[uuid]) > m_QueueTimeout)
+                    if ((now - queue.m_LastCall) > m_QueueTimeout)
                     {
-                        removal.Add(uuid);
-                    }
-                }
-
-                foreach (UUID remove in removal)
-                {
-                    m_LastGetEmailCall.Remove(remove);
-                    lock (m_MailQueues)
-                    {
-                        m_MailQueues.Remove(remove);
+                        m_MailQueues.Remove(uuid);
                     }
                 }
             }
 
-            lock (m_MailQueues)
+            queue = m_MailQueues.GetOrAddIfNotExists(objectID, delegate() { return new EmailQueue(); });
+            return queue.m_Queue.RemoveMatch(delegate(Email m)
             {
-                if (m_MailQueues.ContainsKey(objectID))
-                {
-                    queue = m_MailQueues[objectID];
-                }
-            }
-
-            if (queue != null)
-            {
-                lock (queue)
-                {
-                    if (queue.Count > 0)
-                    {
-                        int i;
-
-                        for (i = 0; i < queue.Count; i++)
-                        {
-                            if ((sender == null || sender.Equals("") || sender.Equals(queue[i].sender)) &&
-                                (subject == null || subject.Equals("") || subject.Equals(queue[i].subject)))
-                            {
-                                break;
-                            }
-                        }
-
-                        if (i != queue.Count)
-                        {
-                            Email ret = queue[i];
-                            queue.Remove(ret);
-                            ret.numLeft = queue.Count;
-                            return ret;
-                        }
-                    }
-                }
-            }
-            else
-            {
-                lock (m_MailQueues)
-                {
-                    m_MailQueues.Add(objectID, new List<Email>());
-                }
-            }
-
-            return null;
+                return ((sender == null || sender.Equals("") || sender.Equals(m.sender)) &&
+                    (subject == null || subject.Equals("") || subject.Equals(m.subject)));
+            });
         }
     }
 }

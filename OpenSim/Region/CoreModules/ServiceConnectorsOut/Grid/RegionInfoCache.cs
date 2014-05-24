@@ -70,15 +70,15 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Grid
             }
         }
 
-        private ExpiringCache<ScopedRegionUUID, GridRegion> m_UUIDCache;
-        private ExpiringCache<ScopedRegionName, ScopedRegionUUID> m_NameCache;
-        private ExpiringCache<ScopedRegionPosition, GridRegion> m_PositionCache;
+        private ThreadedClasses.ExpiringCache<ScopedRegionUUID, GridRegion> m_UUIDCache;
+        private ThreadedClasses.ExpiringCache<ScopedRegionName, ScopedRegionUUID> m_NameCache;
+        private ThreadedClasses.ExpiringCache<ScopedRegionPosition, GridRegion> m_PositionCache;
 
         public RegionInfoCache()
         {
-            m_UUIDCache = new ExpiringCache<ScopedRegionUUID, GridRegion>();
-            m_NameCache = new ExpiringCache<ScopedRegionName, ScopedRegionUUID>();
-            m_PositionCache = new ExpiringCache<ScopedRegionPosition, GridRegion>();
+            m_UUIDCache = new ThreadedClasses.ExpiringCache<ScopedRegionUUID, GridRegion>(30);
+            m_NameCache = new ThreadedClasses.ExpiringCache<ScopedRegionName, ScopedRegionUUID>(30);
+            m_PositionCache = new ThreadedClasses.ExpiringCache<ScopedRegionPosition, GridRegion>(30);
         }
 
         public void Cache(GridRegion rinfo)

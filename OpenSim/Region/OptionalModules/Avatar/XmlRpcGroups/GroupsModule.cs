@@ -72,7 +72,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.XmlRpcGroups
         private static readonly ILog m_log =
             LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
-        private List<Scene> m_sceneList = new List<Scene>();
+        private ThreadedClasses.RwLockedList<Scene> m_sceneList = new ThreadedClasses.RwLockedList<Scene>();
 
         private IMessageTransferModule m_msgTransferModule;
 
@@ -197,10 +197,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.XmlRpcGroups
                     m_log.Warn("[GROUPS]: Could not get IGroupsMessagingModule");
             }
 
-            lock (m_sceneList)
-            {
-                m_sceneList.Add(scene);
-            }
+            m_sceneList.Add(scene);
 
             scene.EventManager.OnNewClient += OnNewClient;
             scene.EventManager.OnIncomingInstantMessage += OnGridInstantMessage;
@@ -217,10 +214,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.XmlRpcGroups
 
             if (m_debugEnabled) m_log.DebugFormat("[GROUPS]: {0} called", System.Reflection.MethodBase.GetCurrentMethod().Name);
 
-            lock (m_sceneList)
-            {
-                m_sceneList.Remove(scene);
-            }
+            m_sceneList.Remove(scene);
         }
 
         public void Close()
@@ -1380,12 +1374,9 @@ namespace OpenSim.Region.OptionalModules.Avatar.XmlRpcGroups
 
             // TODO: Probably isn't nessesary to update every client in every scene.
             // Need to examine client updates and do only what's nessesary.
-            lock (m_sceneList)
+            foreach (Scene scene in m_sceneList)
             {
-                foreach (Scene scene in m_sceneList)
-                {
-                    scene.ForEachClient(delegate(IClientAPI client) { SendAgentGroupDataUpdate(client, dataForClientID); });
-                }
+                scene.ForEachClient(delegate(IClientAPI client) { SendAgentGroupDataUpdate(client, dataForClientID); });
             }
         }
 

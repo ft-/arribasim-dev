@@ -36,8 +36,8 @@ namespace OpenSim.Region.Framework.Scenes
     {
 //        private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
         
-        private readonly DoubleDictionaryThreadAbortSafe<UUID, uint, EntityBase> m_entities 
-            = new DoubleDictionaryThreadAbortSafe<UUID, uint, EntityBase>();
+        private readonly ThreadedClasses.RwLockedDoubleDictionary<UUID, uint, EntityBase> m_entities
+            = new ThreadedClasses.RwLockedDoubleDictionary<UUID, uint, EntityBase>();
 
         public int Count
         {
@@ -103,7 +103,21 @@ namespace OpenSim.Region.Framework.Scenes
 
         public EntityBase Find(Predicate<EntityBase> predicate)
         {
-            return m_entities.FindValue(predicate);
+            try
+            {
+                m_entities.ForEach(delegate(EntityBase eb)
+                {
+                    if (predicate(eb))
+                    {
+                        throw new ThreadedClasses.ReturnValueException<EntityBase>(eb);
+                    }
+                });
+            }
+            catch(ThreadedClasses.ReturnValueException<EntityBase> e)
+            {
+                return e.Value;
+            }
+            return null;
         }
 
         public EntityBase this[UUID id]

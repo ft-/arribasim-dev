@@ -45,18 +45,16 @@ namespace OpenSim.Region.CoreModules.Avatar.Groups
         private static readonly ILog m_log =
             LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
-        private Dictionary<UUID, GroupMembershipData> m_GroupMap =
-                new Dictionary<UUID, GroupMembershipData>();
-        private ReaderWriterLock m_GroupMapRwLock = new ReaderWriterLock();
+        private ThreadedClasses.RwLockedDictionary<UUID, GroupMembershipData> m_GroupMap =
+                new ThreadedClasses.RwLockedDictionary<UUID, GroupMembershipData>();
 
-        private Dictionary<UUID, IClientAPI> m_ClientMap =
-                new Dictionary<UUID, IClientAPI>();
-        private ReaderWriterLock m_ClientMapRwLock = new ReaderWriterLock();
+        private ThreadedClasses.RwLockedDictionary<UUID, IClientAPI> m_ClientMap =
+                new ThreadedClasses.RwLockedDictionary<UUID, IClientAPI>();
 
         private UUID opensimulatorGroupID =
                 new UUID("00000000-68f9-1111-024e-222222111123");
 
-        private List<Scene> m_SceneList = new List<Scene>();
+        private ThreadedClasses.RwLockedList<Scene> m_SceneList = new ThreadedClasses.RwLockedList<Scene>();
 
         private static GroupMembershipData osGroup =
                 new GroupMembershipData();
@@ -89,6 +87,12 @@ namespace OpenSim.Region.CoreModules.Avatar.Groups
                 }
             }
 
+            osGroup.GroupID = opensimulatorGroupID;
+            osGroup.GroupName = "OpenSimulator Testing";
+            osGroup.GroupPowers =
+                    (uint)(GroupPowers.AllowLandmark |
+                           GroupPowers.AllowSetHome);
+            m_GroupMap[opensimulatorGroupID] = osGroup;
         }
 
         public void AddRegion(Scene scene)
@@ -96,22 +100,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Groups
             if (!m_Enabled)
                 return;
 
-            lock (m_SceneList)
-            {
-                if (!m_SceneList.Contains(scene))
-                {
-                    if (m_SceneList.Count == 0)
-                    {
-                        osGroup.GroupID = opensimulatorGroupID;
-                        osGroup.GroupName = "OpenSimulator Testing";
-                        osGroup.GroupPowers =
-                                (uint)(GroupPowers.AllowLandmark |
-                                       GroupPowers.AllowSetHome);
-                        m_GroupMap[opensimulatorGroupID] = osGroup;
-                    }
-                    m_SceneList.Add(scene);
-                }
-            }
+            m_SceneList.Add(scene);
 
             scene.EventManager.OnNewClient += OnNewClient;
             scene.EventManager.OnClientClosed += OnClientClosed;
@@ -123,11 +112,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Groups
             if (!m_Enabled)
                 return;
 
-            lock (m_SceneList)
-            {
-                if (m_SceneList.Contains(scene))
-                    m_SceneList.Remove(scene);
-            }
+            m_SceneList.Remove(scene);
 
             scene.EventManager.OnNewClient -= OnNewClient;
             scene.EventManager.OnClientClosed -= OnClientClosed;
@@ -148,25 +133,9 @@ namespace OpenSim.Region.CoreModules.Avatar.Groups
 
 //            m_log.Debug("[GROUPS]: Shutting down group module.");
 
-            m_ClientMapRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_ClientMap.Clear();
-            }
-            finally
-            {
-                m_ClientMapRwLock.ReleaseWriterLock();
-            }
+            m_ClientMap.Clear();
 
-            m_GroupMapRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_GroupMap.Clear();
-            }
-            finally
-            {
-                m_GroupMapRwLock.ReleaseWriterLock();
-            }
+            m_GroupMap.Clear();
         }
 
         public string Name
@@ -187,18 +156,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Groups
 //            client.OnInstantMessage += OnInstantMessage;
             client.OnAgentDataUpdateRequest += OnAgentDataUpdateRequest;
             client.OnUUIDGroupNameRequest += HandleUUIDGroupNameRequest;
-            m_ClientMapRwLock.AcquireWriterLock(-1);
-            try
-            {
-                if (!m_ClientMap.ContainsKey(client.AgentId))
-                {
-                    m_ClientMap.Add(client.AgentId, client);
-                }
-            }
-            finally
-            {
-                m_ClientMapRwLock.ReleaseWriterLock();
-            }
+            m_ClientMap[client.AgentId] = client;
 
             GroupMembershipData[] updateGroups = new GroupMembershipData[1];
             updateGroups[0] = osGroup;
@@ -242,46 +200,18 @@ namespace OpenSim.Region.CoreModules.Avatar.Groups
             string groupnamereply = "Unknown";
             UUID groupUUID = UUID.Zero;
 
-            m_GroupMapRwLock.AcquireReaderLock(-1);
-            try
-            {
-                if (m_GroupMap.ContainsKey(id))
-                {
-                    GroupMembershipData grp = m_GroupMap[id];
-                    groupnamereply = grp.GroupName;
-                    groupUUID = grp.GroupID;
-                }
-            }
-            finally
-            {
-                m_GroupMapRwLock.ReleaseReaderLock();
+            GroupMembershipData grp;
+            if(m_GroupMap.TryGetValue(id, out grp))
+            { 
+                groupnamereply = grp.GroupName;
+                groupUUID = grp.GroupID;
             }
             remote_client.SendGroupNameReply(groupUUID, groupnamereply);
         }
 
         private void OnClientClosed(UUID agentID, Scene scene)
         {
-            m_GroupMapRwLock.AcquireWriterLock(-1);
-            try
-            {
-                if (m_ClientMap.ContainsKey(agentID))
-                {
-//                    IClientAPI cli = m_ClientMap[agentID];
-//                    if (cli != null)
-//                    {
-//                        //m_log.Info("[GROUPS]: Removing all reference to groups for " + cli.Name);
-//                    }
-//                    else
-//                    {
-//                        //m_log.Info("[GROUPS]: Removing all reference to groups for " + agentID.ToString());
-//                    }
-                    m_ClientMap.Remove(agentID);
-                }
-            }
-            finally
-            {
-                m_GroupMapRwLock.ReleaseWriterLock();
-            }
+            m_ClientMap.Remove(agentID);
         }
     }
 }
