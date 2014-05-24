@@ -595,29 +595,25 @@ namespace OpenSim.Region.CoreModules.World.Archiver
                 // Fix ownership/creator of inventory items
                 // Not doing so results in inventory items
                 // being no copy/no mod for everyone
-                lock (part.TaskInventory)
+                part.TaskInventory.ForEach(delegate(KeyValuePair<UUID, TaskInventoryItem> kvp)
                 {
-                    TaskInventoryDictionary inv = part.TaskInventory;
-                    foreach (KeyValuePair<UUID, TaskInventoryItem> kvp in inv)
+                    if (!(ResolveUserUuid(scene, kvp.Value.OwnerID) || ResolveGroupUuid(kvp.Value.OwnerID)))
                     {
-                        if (!(ResolveUserUuid(scene, kvp.Value.OwnerID) || ResolveGroupUuid(kvp.Value.OwnerID)))
-                        {
-                            kvp.Value.OwnerID = m_defaultUser;
-                        }
-
-                        if (string.IsNullOrEmpty(kvp.Value.CreatorData))
-                        {
-                            if (!ResolveUserUuid(scene, kvp.Value.CreatorID))
-                                kvp.Value.CreatorID = m_defaultUser;
-                        }
-
-                        if (UserManager != null)
-                            UserManager.AddUser(kvp.Value.CreatorID, kvp.Value.CreatorData);
-
-                        if (!ResolveGroupUuid(kvp.Value.GroupID))
-                            kvp.Value.GroupID = UUID.Zero;
+                        kvp.Value.OwnerID = m_defaultUser;
                     }
-                }
+
+                    if (string.IsNullOrEmpty(kvp.Value.CreatorData))
+                    {
+                        if (!ResolveUserUuid(scene, kvp.Value.CreatorID))
+                            kvp.Value.CreatorID = m_defaultUser;
+                    }
+
+                    if (UserManager != null)
+                        UserManager.AddUser(kvp.Value.CreatorID, kvp.Value.CreatorData);
+
+                    if (!ResolveGroupUuid(kvp.Value.GroupID))
+                        kvp.Value.GroupID = UUID.Zero;
+                });
             }
         }
 
