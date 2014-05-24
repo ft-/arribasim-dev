@@ -35,12 +35,12 @@
     <!-- Core OpenSim Projects -->
 
     <Project frameworkVersion="v4_0" name="OpenSim.Framework" path="OpenSim/Framework" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../bin/</OutputPath>
         </Options>
@@ -73,12 +73,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Services.Interfaces" path="OpenSim/Services/Interfaces" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -103,12 +103,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Framework.Monitoring" path="OpenSim/Framework/Monitoring" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -131,12 +131,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Framework.Servers.HttpServer" path="OpenSim/Framework/Servers/HttpServer" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../../bin/</OutputPath>
         </Options>
@@ -173,12 +173,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Framework.Console" path="OpenSim/Framework/Console" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -201,12 +201,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Framework.Serialization" path="OpenSim/Framework/Serialization" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -231,12 +231,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Data" path="OpenSim/Data" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../bin/</OutputPath>
         </Options>
@@ -263,12 +263,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Framework.AssetLoader.Filesystem" path="OpenSim/Framework/AssetLoader/Filesystem" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../../bin/</OutputPath>
         </Options>
@@ -289,12 +289,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Framework.RegionLoader.Web" path="OpenSim/Framework/RegionLoader/Web" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../../bin/</OutputPath>
         </Options>
@@ -316,12 +316,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Framework.RegionLoader.Filesystem" path="OpenSim/Framework/RegionLoader/Filesystem" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../../bin/</OutputPath>
         </Options>
@@ -343,12 +343,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Framework.Servers" path="OpenSim/Framework/Servers" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -377,12 +377,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Region.Physics.Manager" path="OpenSim/Region/Physics/Manager" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../../bin/</OutputPath>
         </Options>
@@ -405,12 +405,12 @@
 
     <!-- Physics Plug-ins -->
     <Project frameworkVersion="v4_0" name="OpenSim.Region.Physics.BasicPhysicsPlugin" path="OpenSim/Region/Physics/BasicPhysicsPlugin" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../../bin/Physics/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../../bin/Physics/</OutputPath>
         </Options>
@@ -429,12 +429,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Region.Physics.POSPlugin" path="OpenSim/Region/Physics/POSPlugin" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../../bin/Physics/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../../bin/Physics/</OutputPath>
         </Options>
@@ -453,12 +453,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Region.Physics.OdePlugin" path="OpenSim/Region/Physics/OdePlugin" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../../bin/Physics/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../../bin/Physics/</OutputPath>
         </Options>
@@ -484,12 +484,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Region.Physics.Meshing" path="OpenSim/Region/Physics/Meshing" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../../bin/Physics/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../../bin/Physics/</OutputPath>
         </Options>
@@ -515,12 +515,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Capabilities" path="OpenSim/Capabilities" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../bin/</OutputPath>
         </Options>
@@ -551,12 +551,12 @@
 
 
     <Project frameworkVersion="v4_0" name="OpenSim.Framework.Communications" path="OpenSim/Framework/Communications" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -593,12 +593,12 @@
 
 
     <Project frameworkVersion="v4_0" name="OpenSim.Region.Framework" path="OpenSim/Region/Framework" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -647,12 +647,12 @@
 
 
     <Project frameworkVersion="v4_0" name="OpenSim.Server.Base" path="OpenSim/Server/Base" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -683,12 +683,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Services.Base" path="OpenSim/Services/Base" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -711,12 +711,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Services.UserAccountService" path="OpenSim/Services/UserAccountService" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -743,12 +743,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Services.FriendsService" path="OpenSim/Services/Friends" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -775,12 +775,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Services.Connectors" path="OpenSim/Services/Connectors" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -817,12 +817,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Services.AssetService" path="OpenSim/Services/AssetService" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -850,12 +850,12 @@
     </Project>
     
     <Project frameworkVersion="v4_0" name="OpenSim.Services.AuthorizationService" path="OpenSim/Services/AuthorizationService" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -882,12 +882,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Services.FreeswitchService" path="OpenSim/Services/FreeswitchService" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -915,12 +915,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Services.AuthenticationService" path="OpenSim/Services/AuthenticationService" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -948,12 +948,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Services.GridService" path="OpenSim/Services/GridService" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -983,12 +983,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Services.PresenceService" path="OpenSim/Services/PresenceService" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -1015,12 +1015,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Services.AvatarService" path="OpenSim/Services/AvatarService" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -1047,12 +1047,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Services.InventoryService" path="OpenSim/Services/InventoryService" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -1083,12 +1083,12 @@
     
 
     <Project frameworkVersion="v4_0" name="OpenSim.Services.LLLoginService" path="OpenSim/Services/LLLoginService" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -1117,12 +1117,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Services.HypergridService" path="OpenSim/Services/HypergridService" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -1156,12 +1156,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Services.MapImageService" path="OpenSim/Services/MapImageService" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -1187,12 +1187,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Services.UserProfilesService" path="OpenSim/Services/UserProfilesService" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -1224,12 +1224,12 @@
 
 
     <Project frameworkVersion="v4_0" name="OpenSim.Server.Handlers" path="OpenSim/Server/Handlers" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -1265,12 +1265,12 @@
 
 
     <Project frameworkVersion="v4_0" name="OpenSim.Capabilities.Handlers" path="OpenSim/Capabilities/Handlers" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -1307,12 +1307,12 @@
 
 
     <Project frameworkVersion="v4_0" name="Robust" path="OpenSim/Server" type="Exe">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../bin/</OutputPath>
         </Options>
@@ -1344,12 +1344,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.ConsoleClient" path="OpenSim/ConsoleClient" type="Exe">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../bin/</OutputPath>
         </Options>
@@ -1378,12 +1378,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Region.ClientStack" path="OpenSim/Region/ClientStack" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -1414,12 +1414,12 @@
 
     <!-- ClientStack Plugins -->
     <Project frameworkVersion="v4_0" name="OpenSim.Region.ClientStack.LindenUDP" path="OpenSim/Region/ClientStack/Linden/UDP" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../../../bin/</OutputPath>
         </Options>
@@ -1461,12 +1461,12 @@
 
 
     <Project frameworkVersion="v4_0" name="OpenSim.Region.ClientStack.LindenCaps" path="OpenSim/Region/ClientStack/Linden/Caps" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../../../bin/</OutputPath>
         </Options>
@@ -1506,13 +1506,13 @@
 
     
     <Project frameworkVersion="v4_0" name="OpenSim.Region.CoreModules" path="OpenSim/Region/CoreModules" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
           <AllowUnsafe>true</AllowUnsafe>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
           <AllowUnsafe>true</AllowUnsafe>
@@ -1572,12 +1572,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Region.RegionCombinerModule" path="OpenSim/Region/RegionCombinerModule" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -1611,12 +1611,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Region.OptionalModules" path="OpenSim/Region/OptionalModules" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -1670,12 +1670,12 @@
 
     <!-- Datastore Plugins -->
     <Project frameworkVersion="v4_0" name="OpenSim.Data.Null" path="OpenSim/Data/Null" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -1699,12 +1699,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Region.Physics.ConvexDecompositionDotNet" path="OpenSim/Region/Physics/ConvexDecompositionDotNet" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../../bin/</OutputPath>
         </Options>
@@ -1724,13 +1724,13 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Region.Physics.BulletSPlugin" path="OpenSim/Region/Physics/BulletSPlugin" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../../bin/Physics/</OutputPath>
           <AllowUnsafe>true</AllowUnsafe>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../../bin/Physics/</OutputPath>
           <AllowUnsafe>true</AllowUnsafe>
@@ -1763,12 +1763,12 @@
 
     <!-- OpenSim app -->
     <Project frameworkVersion="v4_0" name="OpenSim" path="OpenSim/Region/Application" type="Exe">
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -1809,12 +1809,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.ApplicationPlugins.LoadRegions" path="OpenSim/ApplicationPlugins/LoadRegions" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -1845,12 +1845,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.ApplicationPlugins.RegionModulesController" path="OpenSim/ApplicationPlugins/RegionModulesController" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -1876,12 +1876,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.ApplicationPlugins.RemoteController" path="OpenSim/ApplicationPlugins/RemoteController" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -1919,12 +1919,12 @@
     <!-- Scene Server API Example Apps -->
 
     <Project frameworkVersion="v4_0" name="OpenSim.Region.DataSnapshot" path="OpenSim/Region/DataSnapshot" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -1957,12 +1957,12 @@
 
     <!-- Data Base Modules -->
     <Project frameworkVersion="v4_0" name="OpenSim.Data.MySQL" path="OpenSim/Data/MySQL" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -1997,12 +1997,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Data.MSSQL" path="OpenSim/Data/MSSQL" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -2033,12 +2033,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Data.PGSQL" path="OpenSim/Data/PGSQL" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -2070,12 +2070,12 @@
     </Project>
 	
     <Project frameworkVersion="v4_0" name="OpenSim.Data.SQLite" path="OpenSim/Data/SQLite" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -2111,12 +2111,12 @@
 
     
     <Project frameworkVersion="v4_0" name="OpenSim.Region.ScriptEngine.Shared" path="OpenSim/Region/ScriptEngine/Shared" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../../bin/</OutputPath>
         </Options>
@@ -2149,12 +2149,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Region.ScriptEngine.Shared.Api.Runtime" path="OpenSim/Region/ScriptEngine/Shared/Api/Runtime" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../../../../bin/</OutputPath>
         </Options>
@@ -2183,12 +2183,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Region.ScriptEngine.Shared.Api" path="OpenSim/Region/ScriptEngine/Shared/Api/Implementation" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../../../../bin/</OutputPath>
         </Options>
@@ -2224,12 +2224,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Region.ScriptEngine.Shared.CodeTools" path="OpenSim/Region/ScriptEngine/Shared/CodeTools" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../../../bin/</OutputPath>
         </Options>
@@ -2255,12 +2255,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Region.ScriptEngine.Shared.Instance" path="OpenSim/Region/ScriptEngine/Shared/Instance" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../../../bin/</OutputPath>
         </Options>
@@ -2295,12 +2295,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Region.ScriptEngine.XEngine.Api.Runtime" path="OpenSim/Region/ScriptEngine/XEngine/Api/Runtime" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../../../../bin/</OutputPath>
         </Options>
@@ -2330,12 +2330,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Region.ScriptEngine.XEngine" path="OpenSim/Region/ScriptEngine/XEngine" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../../bin/</OutputPath>
         </Options>
@@ -2376,12 +2376,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Region.UserStatistics" path="OpenSim/Region/UserStatistics" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -2428,12 +2428,12 @@
     <!-- Addons -->
     
     <Project frameworkVersion="v4_0" name="OpenSim.Addons.OfflineIM" path="OpenSim/Addons/OfflineIM" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
@@ -2476,12 +2476,12 @@
     </Project>
 
     <Project frameworkVersion="v4_0" name="OpenSim.Addons.Groups" path="OpenSim/Addons/Groups" type="Library">
-      <Configuration name="Debug">
+      <Configuration name="Release">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
       </Configuration>
-      <Configuration name="Release">
+      <Configuration name="Debug">
         <Options>
           <OutputPath>../../../bin/</OutputPath>
         </Options>
