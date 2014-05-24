@@ -42,7 +42,7 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         private bool enabled = true;
-        private List<Scene> m_SceneList = new List<Scene>();
+        private ThreadedClasses.RwLockedList<Scene> m_SceneList = new ThreadedClasses.RwLockedList<Scene>();
         private string m_RestURL = String.Empty;
 
         public void Initialise(IConfigSource config)
@@ -75,12 +75,9 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
             if (!enabled)
                 return;
 
-            lock (m_SceneList)
-            {
-                m_SceneList.Add(scene);
+            m_SceneList.Add(scene);
 
-                scene.EventManager.OnNewClient += OnNewClient;
-            }
+            scene.EventManager.OnNewClient += OnNewClient;
         }
 
         public void RegionLoaded(Scene scene)
@@ -92,10 +89,7 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
             if (!enabled)
                 return;
 
-            lock (m_SceneList)
-            {
-                m_SceneList.Remove(scene);
-            }
+            m_SceneList.Remove(scene);
         }
 
         public void PostInitialise()
