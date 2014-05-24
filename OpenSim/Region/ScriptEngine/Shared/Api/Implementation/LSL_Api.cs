@@ -111,7 +111,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         protected int m_scriptConsoleChannel = 0;
         protected bool m_scriptConsoleChannelEnabled = false;
         protected IUrlModule m_UrlModule = null;
-        protected Dictionary<UUID, UserInfoCacheEntry> m_userInfoCache = new Dictionary<UUID, UserInfoCacheEntry>();
+        protected ThreadedClasses.RwLockedDictionary<UUID, UserInfoCacheEntry> m_userInfoCache = new ThreadedClasses.RwLockedDictionary<UUID, UserInfoCacheEntry>();
         protected int EMAIL_PAUSE_TIME = 20;  // documented delay value for smtp.
         protected ISoundModule m_SoundModule = null;
 
@@ -4212,20 +4212,19 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             m_host.AddScriptLPS(1);
 
             UUID uuid = (UUID)id;
+
+            UserInfoCacheEntry ce = null;
             PresenceInfo pinfo = null;
             UserAccount account;
 
-            UserInfoCacheEntry ce;
-
-            lock (m_userInfoCache)
+            try
             {
-                if (!m_userInfoCache.TryGetValue(uuid, out ce))
+                ce = m_userInfoCache.GetOrAddIfNotExists(uuid, delegate()
                 {
                     account = World.UserAccountService.GetUserAccount(World.RegionInfo.ScopeID, uuid);
                     if (account == null)
                     {
-                        m_userInfoCache[uuid] = null; // Cache negative
-                        return UUID.Zero.ToString();
+                        return null; // Cache negative
                     }
 
                     PresenceInfo[] pinfos = World.PresenceService.GetAgents(new string[] { uuid.ToString() });
@@ -4244,43 +4243,44 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                     ce.time = Util.EnvironmentTickCount();
                     ce.account = account;
                     ce.pinfo = pinfo;
+                    return ce;
+                });
+            }
+            catch
+            {
+                ce = null;
+            }
 
-                    m_userInfoCache[uuid] = ce;
+            if (ce == null)
+                return UUID.Zero.ToString();
+
+            account = ce.account;
+
+            if (Util.EnvironmentTickCount() < ce.time || (Util.EnvironmentTickCount() - ce.time)
+                >= LlRequestAgentDataCacheTimeoutMs)
+            {
+                PresenceInfo[] pinfos = World.PresenceService.GetAgents(new string[] { uuid.ToString() });
+                if (pinfos != null && pinfos.Length > 0)
+                {
+                    foreach (PresenceInfo p in pinfos)
+                    {
+                        if (p.RegionID != UUID.Zero)
+                        {
+                            pinfo = p;
+                        }
+                    }
                 }
                 else
                 {
-                    if (ce == null)
-                        return UUID.Zero.ToString();
-
-                    account = ce.account;
-
-                    if (Util.EnvironmentTickCount() < ce.time || (Util.EnvironmentTickCount() - ce.time) 
-                        >= LlRequestAgentDataCacheTimeoutMs)
-                    {
-                        PresenceInfo[] pinfos = World.PresenceService.GetAgents(new string[] { uuid.ToString() });
-                        if (pinfos != null && pinfos.Length > 0)
-                        {
-                            foreach (PresenceInfo p in pinfos)
-                            {
-                                if (p.RegionID != UUID.Zero)
-                                {
-                                    pinfo = p;
-                                }
-                            }
-                        }
-                        else
-                        {
-                            pinfo = null;
-                        }
-
-                        ce.time = Util.EnvironmentTickCount();
-                        ce.pinfo = pinfo;
-                    }
-                    else
-                    {
-                        pinfo = ce.pinfo;
-                    }
+                    pinfo = null;
                 }
+
+                ce.time = Util.EnvironmentTickCount();
+                ce.pinfo = pinfo;
+            }
+            else
+            {
+                pinfo = ce.pinfo;
             }
 
             string reply = String.Empty;
