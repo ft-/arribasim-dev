@@ -45,7 +45,7 @@ namespace OpenSim.Region.CoreModules.Framework
         private static readonly ILog m_log = LogManager.GetLogger(
                 MethodBase.GetCurrentMethod().DeclaringType);
 
-        private readonly List<Scene> m_scenes = new List<Scene>();
+        private readonly ThreadedClasses.RwLockedList<Scene> m_scenes = new ThreadedClasses.RwLockedList<Scene>();
         private System.Timers.Timer m_timer = new System.Timers.Timer();
 
         private Queue<Action> m_RequestQueue = new Queue<Action>();
@@ -75,13 +75,10 @@ namespace OpenSim.Region.CoreModules.Framework
 
         public void AddRegion(Scene scene)
         {
-            lock (m_scenes)
-            {
-                m_scenes.Add(scene);
-                scene.RegisterModuleInterface<IServiceThrottleModule>(this);
-                scene.EventManager.OnNewClient += OnNewClient;
-                scene.EventManager.OnMakeRootAgent += OnMakeRootAgent;
-            }
+            m_scenes.Add(scene);
+            scene.RegisterModuleInterface<IServiceThrottleModule>(this);
+            scene.EventManager.OnNewClient += OnNewClient;
+            scene.EventManager.OnMakeRootAgent += OnMakeRootAgent;
         }
 
         public void RegionLoaded(Scene scene)
@@ -90,11 +87,8 @@ namespace OpenSim.Region.CoreModules.Framework
 
         public void RemoveRegion(Scene scene)
         {
-            lock (m_scenes)
-            {
-                m_scenes.Remove(scene);
-                scene.EventManager.OnNewClient -= OnNewClient;
-            }
+            m_scenes.Remove(scene);
+            scene.EventManager.OnNewClient -= OnNewClient;
         }
 
         public void PostInitialise()
