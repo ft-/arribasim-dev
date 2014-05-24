@@ -95,8 +95,7 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
         //     LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         private ListenerManager m_listenerManager;
-        private Queue m_pending;
-        private Queue m_pendingQ;
+        private ThreadedClasses.NonblockingQueue<ListenerInfo> m_pending;
         private Scene m_scene;
         private int m_whisperdistance = 10;
         private int m_saydistance = 20;
@@ -129,8 +128,7 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
             if (maxlisteners < 1) maxlisteners = int.MaxValue;
             if (maxhandles < 1) maxhandles = int.MaxValue;
             m_listenerManager = new ListenerManager(maxlisteners, maxhandles);
-            m_pendingQ = new Queue();
-            m_pending = Queue.Synchronized(m_pendingQ);
+            m_pending = new ThreadedClasses.NonblockingQueue<ListenerInfo>();
         }
 
         public void PostInitialise()
@@ -447,10 +445,7 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
 
         protected void QueueMessage(ListenerInfo li)
         {
-            lock (m_pending.SyncRoot)
-            {
-                m_pending.Enqueue(li);
-            }
+            m_pending.Enqueue(li);
         }
 
         /// <summary>
@@ -468,14 +463,7 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
         /// <returns>ListenerInfo with filter filled in</returns>
         public IWorldCommListenerInfo GetNextMessage()
         {
-            ListenerInfo li = null;
-
-            lock (m_pending.SyncRoot)
-            {
-                li = (ListenerInfo)m_pending.Dequeue();
-            }
-
-            return li;
+            return m_pending.Dequeue();
         }
 
         #endregion
