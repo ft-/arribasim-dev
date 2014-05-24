@@ -7675,8 +7675,8 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                     switch (code)
                     {
-                        case (int)ScriptBaseClass.PRIM_POSITION:
-                        case (int)ScriptBaseClass.PRIM_POS_LOCAL:
+                        case ScriptBaseClass.PRIM_POSITION:
+                        case ScriptBaseClass.PRIM_POS_LOCAL:
                             if (remain < 1)
                                 return null;
 
@@ -7685,7 +7685,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                             currentPosition = GetSetPosTarget(part, v, currentPosition);
 
                             break;
-                        case (int)ScriptBaseClass.PRIM_SIZE:
+                        case ScriptBaseClass.PRIM_SIZE:
                             if (remain < 1)
                                 return null;
 
@@ -7693,7 +7693,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                             SetScale(part, v);
 
                             break;
-                        case (int)ScriptBaseClass.PRIM_ROTATION:
+                        case ScriptBaseClass.PRIM_ROTATION:
                             if (remain < 1)
                                 return null;
 
@@ -7713,7 +7713,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                             break;
 
-                        case (int)ScriptBaseClass.PRIM_TYPE:
+                        case ScriptBaseClass.PRIM_TYPE:
                             if (remain < 3)
                                 return null;
 
@@ -7732,7 +7732,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                             switch (code)
                             {
-                                case (int)ScriptBaseClass.PRIM_TYPE_BOX:
+                                case ScriptBaseClass.PRIM_TYPE_BOX:
                                     if (remain < 6)
                                         return null;
 
@@ -7747,7 +7747,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                                         (byte)ProfileShape.Square, (byte)Extrusion.Straight);
                                     break;
 
-                                case (int)ScriptBaseClass.PRIM_TYPE_CYLINDER:
+                                case ScriptBaseClass.PRIM_TYPE_CYLINDER:
                                     if (remain < 6)
                                         return null;
 
@@ -7761,7 +7761,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                                         (byte)ProfileShape.Circle, (byte)Extrusion.Straight);
                                     break;
 
-                                case (int)ScriptBaseClass.PRIM_TYPE_PRISM:
+                                case ScriptBaseClass.PRIM_TYPE_PRISM:
                                     if (remain < 6)
                                         return null;
 
@@ -7775,7 +7775,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                                         (byte)ProfileShape.EquilateralTriangle, (byte)Extrusion.Straight);
                                     break;
 
-                                case (int)ScriptBaseClass.PRIM_TYPE_SPHERE:
+                                case ScriptBaseClass.PRIM_TYPE_SPHERE:
                                     if (remain < 5)
                                         return null;
 
@@ -7788,7 +7788,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                                         (byte)ProfileShape.HalfCircle, (byte)Extrusion.Curve1);
                                     break;
 
-                                case (int)ScriptBaseClass.PRIM_TYPE_TORUS:
+                                case ScriptBaseClass.PRIM_TYPE_TORUS:
                                     if (remain < 11)
                                         return null;
 
@@ -7807,7 +7807,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                                         revolutions, radiusoffset, skew, (byte)ProfileShape.Circle, (byte)Extrusion.Curve1);
                                     break;
 
-                                case (int)ScriptBaseClass.PRIM_TYPE_TUBE:
+                                case ScriptBaseClass.PRIM_TYPE_TUBE:
                                     if (remain < 11)
                                         return null;
 
@@ -7826,7 +7826,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                                         revolutions, radiusoffset, skew, (byte)ProfileShape.Square, (byte)Extrusion.Curve1);
                                     break;
 
-                                case (int)ScriptBaseClass.PRIM_TYPE_RING:
+                                case ScriptBaseClass.PRIM_TYPE_RING:
                                     if (remain < 11)
                                         return null;
 
@@ -7845,7 +7845,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                                         revolutions, radiusoffset, skew, (byte)ProfileShape.EquilateralTriangle, (byte)Extrusion.Curve1);
                                     break;
 
-                                case (int)ScriptBaseClass.PRIM_TYPE_SCULPT:
+                                case ScriptBaseClass.PRIM_TYPE_SCULPT:
                                     if (remain < 2)
                                         return null;
 
@@ -7857,7 +7857,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                             break;
 
-                        case (int)ScriptBaseClass.PRIM_TEXTURE:
+                        case ScriptBaseClass.PRIM_TEXTURE:
                             if (remain < 5)
                                 return null;
 
@@ -7874,7 +7874,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                             break;
 
-                        case (int)ScriptBaseClass.PRIM_COLOR:
+                        case ScriptBaseClass.PRIM_COLOR:
                             if (remain < 3)
                                 return null;
 
@@ -7886,7 +7886,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                             break;
 
-                        case (int)ScriptBaseClass.PRIM_FLEXIBLE:
+                        case ScriptBaseClass.PRIM_FLEXIBLE:
                             if (remain < 7)
                                 return null;
 
@@ -7902,7 +7902,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                             break;
 
-                        case (int)ScriptBaseClass.PRIM_POINT_LIGHT:
+                        case ScriptBaseClass.PRIM_POINT_LIGHT:
                             if (remain < 5)
                                 return null;
                             bool light = rules.GetLSLIntegerItem(idx++);
@@ -7915,7 +7915,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                             break;
 
-                        case (int)ScriptBaseClass.PRIM_GLOW:
+                        case ScriptBaseClass.PRIM_GLOW:
                             if (remain < 2)
                                 return null;
                             face = rules.GetLSLIntegerItem(idx++);
@@ -7925,7 +7925,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                             break;
 
-                        case (int)ScriptBaseClass.PRIM_BUMP_SHINY:
+                        case ScriptBaseClass.PRIM_BUMP_SHINY:
                             if (remain < 3)
                                 return null;
                             face = (int)rules.GetLSLIntegerItem(idx++);
@@ -7936,7 +7936,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                             break;
 
-                         case (int)ScriptBaseClass.PRIM_FULLBRIGHT:
+                         case ScriptBaseClass.PRIM_FULLBRIGHT:
                              if (remain < 2)
                                  return null;
                              face = rules.GetLSLIntegerItem(idx++);
@@ -7944,7 +7944,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                              SetFullBright(part, face , st);
                              break;
 
-                         case (int)ScriptBaseClass.PRIM_MATERIAL:
+                         case ScriptBaseClass.PRIM_MATERIAL:
                              if (remain < 1)
                                  return null;
                              int mat = rules.GetLSLIntegerItem(idx++);
@@ -7954,7 +7954,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                              part.Material = Convert.ToByte(mat);
                              break;
 
-                         case (int)ScriptBaseClass.PRIM_PHANTOM:
+                         case ScriptBaseClass.PRIM_PHANTOM:
                              if (remain < 1)
                                  return null;
 
@@ -7963,7 +7963,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                              break;
 
-                         case (int)ScriptBaseClass.PRIM_PHYSICS:
+                         case ScriptBaseClass.PRIM_PHYSICS:
                             if (remain < 1)
                                  return null;
                              string phy = rules.Data[idx++].ToString();
@@ -7977,7 +7977,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                              part.ScriptSetPhysicsStatus(physics);
                              break;
 
-                        case (int)ScriptBaseClass.PRIM_PHYSICS_SHAPE_TYPE:
+                        case ScriptBaseClass.PRIM_PHYSICS_SHAPE_TYPE:
                             if (remain < 1)
                                 return null;
 
@@ -7993,7 +7993,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                             break;
 
-                        case (int)ScriptBaseClass.PRIM_TEMP_ON_REZ:
+                        case ScriptBaseClass.PRIM_TEMP_ON_REZ:
                             if (remain < 1)
                                 return null;
                             string temp = rules.Data[idx++].ToString();
@@ -8002,7 +8002,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                             break;
 
-                        case (int)ScriptBaseClass.PRIM_TEXGEN:
+                        case ScriptBaseClass.PRIM_TEXGEN:
                             if (remain < 2)
                                 return null;
                                 //face,type
@@ -8010,7 +8010,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                             int style = rules.GetLSLIntegerItem(idx++);
                             SetTexGen(part, face, style);
                             break;
-                        case (int)ScriptBaseClass.PRIM_TEXT:
+                        case ScriptBaseClass.PRIM_TEXT:
                             if (remain < 3)
                                 return null;
                             string primText = rules.GetLSLStringItem(idx++);
@@ -8020,24 +8020,24 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                             part.SetText(primText, av3, Util.Clip((float)primTextAlpha, 0.0f, 1.0f));
 
                             break;
-                        case (int)ScriptBaseClass.PRIM_NAME:
+                        case ScriptBaseClass.PRIM_NAME:
                             if (remain < 1)
                                 return null;
                             string primName = rules.GetLSLStringItem(idx++);
                             part.Name = primName;
                             break;
-                        case (int)ScriptBaseClass.PRIM_DESC:
+                        case ScriptBaseClass.PRIM_DESC:
                             if (remain < 1)
                                 return null;
                             string primDesc = rules.GetLSLStringItem(idx++);
                             part.Description = primDesc;
                             break;
-                        case (int)ScriptBaseClass.PRIM_ROT_LOCAL:
+                        case ScriptBaseClass.PRIM_ROT_LOCAL:
                             if (remain < 1)
                                 return null;
                             SetRot(part, rules.GetQuaternionItem(idx++));
                             break;
-                        case (int)ScriptBaseClass.PRIM_OMEGA:
+                        case ScriptBaseClass.PRIM_OMEGA:
                             if (remain < 3)
                                 return null;
                             LSL_Vector axis = rules.GetVector3Item(idx++);
@@ -8045,17 +8045,21 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                             LSL_Float gain = rules.GetLSLFloatItem(idx++);
                             TargetOmega(part, axis, (double)spinrate, (double)gain);
                             break;
-                        case (int)ScriptBaseClass.PRIM_SLICE:
+                        case ScriptBaseClass.PRIM_SLICE:
                             if (remain < 1)
                                 return null;
                             LSL_Vector slice = rules.GetVector3Item(idx++);
                             part.UpdateSlice((float)slice.x, (float)slice.y);
                             break;
-                        case (int)ScriptBaseClass.PRIM_LINK_TARGET:
+                        case ScriptBaseClass.PRIM_LINK_TARGET:
                             if (remain < 3) // setting to 3 on the basis that parsing any usage of PRIM_LINK_TARGET that has nothing following it is pointless.
                                 return null;
 
                             return rules.GetSublist(idx, -1);
+
+                        default:
+                            Error(originFunc, string.Format("Error running rule #{0}: arg #{1} - unsupported parameter", rulesParsed, idx - idxStart));
+                            return null;
                     }
                 }
             }
@@ -8102,15 +8106,15 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                     switch (code)
                     {
-                        case (int)ScriptBaseClass.PRIM_POSITION:
-                        case (int)ScriptBaseClass.PRIM_POS_LOCAL:
+                        case ScriptBaseClass.PRIM_POSITION:
+                        case ScriptBaseClass.PRIM_POS_LOCAL:
                             if (remain < 1)
                                 return null;
 
                             sp.OffsetPosition = rules.GetVector3Item(idx++);
                             break;
 
-                        case (int)ScriptBaseClass.PRIM_ROTATION:                       
+                        case ScriptBaseClass.PRIM_ROTATION:                       
                             if (remain < 1)
                                 return null;
 
@@ -8123,13 +8127,32 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                             break;
 
-                        case (int)ScriptBaseClass.PRIM_ROT_LOCAL:
+                        case ScriptBaseClass.PRIM_ROT_LOCAL:
                             if (remain < 1)
                                 return null;
 
                             sp.Rotation = rules.GetQuaternionItem(idx++);
 
                             break;
+
+                        case ScriptBaseClass.PRIM_TYPE:
+                            Error(originFunc, "PRIM_TYPE disallowed on agent");
+                            return null;
+
+                        case ScriptBaseClass.PRIM_OMEGA:
+                            Error(originFunc, "PRIM_OMEGA disallowed on agent");
+                            return null;
+
+                        case ScriptBaseClass.PRIM_LINK_TARGET:
+                            if (remain < 3) // setting to 3 on the basis that parsing any usage of PRIM_LINK_TARGET that has nothing following it is pointless.
+                                return null;
+
+                            return rules.GetSublist(idx, -1);
+
+                        default:
+                            Error(originFunc,
+                                string.Format("Error running rule #{0} on agent: arg #{1} - disallowed on agent", rulesParsed, idx - idxStart));
+                            return null;
                     }
                 }
             }
