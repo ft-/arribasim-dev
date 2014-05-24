@@ -134,10 +134,12 @@ namespace OpenSim.Region.Framework.Scenes
             if (0 == m_items.Count)
                 return;
 
-            m_items.ForEach(delegate(TaskInventoryItem item)
+            foreach(TaskInventoryItem item in m_items.Values)
             {
+                m_items.Remove(item.ItemID);
                 item.ResetIDs(m_part.UUID);
-            });
+                m_items.Add(item.ItemID, item);
+            }
         }
 
         public void ResetObjectID()
