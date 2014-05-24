@@ -2116,15 +2116,12 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                 texface = tex.GetFace((uint)face);
                 string texture = texface.TextureID.ToString();
 
-                lock (part.TaskInventory)
+                foreach (KeyValuePair<UUID, TaskInventoryItem> inv in part.TaskInventory)
                 {
-                    foreach (KeyValuePair<UUID, TaskInventoryItem> inv in part.TaskInventory)
+                    if (inv.Value.AssetID == texface.TextureID)
                     {
-                        if (inv.Value.AssetID == texface.TextureID)
-                        {
-                            texture = inv.Value.Name.ToString();
-                            break;
-                        }
+                        texture = inv.Value.Name.ToString();
+                        break;
                     }
                 }
 
@@ -3673,7 +3670,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                 {
                     if (npcModule.CheckPermissions(agentID, m_host.OwnerID))
                     {
-                        lock (m_host.TaskInventory)
+                        lock (m_host.TaskInventory[m_item.ItemID])
                         {
                             m_host.TaskInventory[m_item.ItemID].PermsGranter = agentID;
                             m_host.TaskInventory[m_item.ItemID].PermsMask = perm;
@@ -3696,7 +3693,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                 if (!m_waitingForScriptAnswer)
                 {
-                    lock (m_host.TaskInventory)
+                    lock (m_host.TaskInventory[m_item.ItemID])
                     {
                         m_host.TaskInventory[m_item.ItemID].PermsGranter = agentID;
                         m_host.TaskInventory[m_item.ItemID].PermsMask = 0;
@@ -3729,7 +3726,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             if ((answer & ScriptBaseClass.PERMISSION_TAKE_CONTROLS) == 0)
                 llReleaseControls();
 
-            lock (m_host.TaskInventory)
+            lock (m_host.TaskInventory[m_item.ItemID])
             {
                 m_host.TaskInventory[m_item.ItemID].PermsMask = answer;
             }
@@ -4033,14 +4030,11 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             m_host.AddScriptLPS(1);
             int count = 0;
 
-            lock (m_host.TaskInventory)
+            foreach (KeyValuePair<UUID, TaskInventoryItem> inv in m_host.TaskInventory)
             {
-                foreach (KeyValuePair<UUID, TaskInventoryItem> inv in m_host.TaskInventory)
+                if (inv.Value.Type == type || type == -1)
                 {
-                    if (inv.Value.Type == type || type == -1)
-                    {
-                        count = count + 1;
-                    }
+                    count = count + 1;
                 }
             }
 
@@ -4052,14 +4046,11 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             m_host.AddScriptLPS(1);
             ArrayList keys = new ArrayList();
 
-            lock (m_host.TaskInventory)
+            foreach (KeyValuePair<UUID, TaskInventoryItem> inv in m_host.TaskInventory)
             {
-                foreach (KeyValuePair<UUID, TaskInventoryItem> inv in m_host.TaskInventory)
+                if (inv.Value.Type == type || type == -1)
                 {
-                    if (inv.Value.Type == type || type == -1)
-                    {
-                        keys.Add(inv.Value.Name);
-                    }
+                    keys.Add(inv.Value.Name);
                 }
             }
 

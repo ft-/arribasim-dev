@@ -2597,15 +2597,12 @@ namespace OpenSim.Region.Framework.Scenes
                 TaskInventoryDictionary taskIDict = part.TaskInventory;
                 if (taskIDict != null)
                 {
-                    lock (taskIDict)
+                    foreach (UUID taskID in taskIDict.Keys)
                     {
-                        foreach (UUID taskID in taskIDict.Keys)
-                        {
-                            UnRegisterControlEventsToScript(LocalId, taskID);
-                            taskIDict[taskID].PermsMask &= ~(
-                                2048 | //PERMISSION_CONTROL_CAMERA
-                                4); // PERMISSION_TAKE_CONTROLS
-                        }
+                        UnRegisterControlEventsToScript(LocalId, taskID);
+                        taskIDict[taskID].PermsMask &= ~(
+                            2048 | //PERMISSION_CONTROL_CAMERA
+                            4); // PERMISSION_TAKE_CONTROLS
                     }
                 }
 

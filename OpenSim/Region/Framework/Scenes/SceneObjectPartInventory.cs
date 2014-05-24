@@ -354,7 +354,7 @@ namespace OpenSim.Region.Framework.Scenes
                 if (m_part.ParentGroup.m_savedScriptState != null)
                     item.OldItemID = RestoreSavedScriptState(item.LoadedItemID, item.OldItemID, item.ItemID);
 
-                lock (m_items)
+                lock (m_items[item.ItemID])
                 {
                     m_items[item.ItemID].OldItemID = item.OldItemID;
                     m_items[item.ItemID].PermsMask = 0;
