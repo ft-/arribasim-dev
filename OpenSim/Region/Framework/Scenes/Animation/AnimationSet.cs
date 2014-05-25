@@ -91,7 +91,14 @@ namespace OpenSim.Region.Framework.Scenes.Animation
             m_AnimationsLock.AcquireWriterLock(-1);
             try
             {
-                if (!HasAnimation(animID))
+                bool hasAnimation = false;
+                for (int i = 0; i < m_animations.Count; ++i)
+                {
+                    if (m_animations[i].AnimID == animID)
+                        hasAnimation = true;
+                }
+
+                if (!hasAnimation)
                 {
                     m_animations.Add(new OpenSim.Framework.Animation(animID, sequenceNum, objectID));
                     return true;
@@ -124,14 +131,23 @@ namespace OpenSim.Region.Framework.Scenes.Animation
                     else
                         ResetDefaultAnimation();
                 }
-                else if (HasAnimation(animID))
+                else
                 {
-                    for (int i = 0; i < m_animations.Count; i++)
+                    bool hasAnimation = false;
+                    for (int i = 0; i < m_animations.Count; ++i)
                     {
                         if (m_animations[i].AnimID == animID)
+                            hasAnimation = true;
+                    }
+                    if (hasAnimation)
+                    {
+                        for (int i = 0; i < m_animations.Count; i++)
                         {
-                            m_animations.RemoveAt(i);
-                            return true;
+                            if (m_animations[i].AnimID == animID)
+                            {
+                                m_animations.RemoveAt(i);
+                                return true;
+                            }
                         }
                     }
                 }

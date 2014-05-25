@@ -59,8 +59,8 @@ namespace OpenSim.Services.HypergridService
 
         protected static IInstantMessageSimConnector m_IMSimConnector;
 
-        protected static Dictionary<UUID, object> m_UserLocationMap = new Dictionary<UUID, object>();
-        private static ExpiringCache<UUID, GridRegion> m_RegionCache;
+        protected static ThreadedClasses.RwLockedDictionary<UUID, object> m_UserLocationMap = new ThreadedClasses.RwLockedDictionary<UUID, object>();
+        private static ThreadedClasses.ExpiringCache<UUID, GridRegion> m_RegionCache;
 
         private static bool m_ForwardOfflineGroupMessages;
         private static bool m_InGatekeeper;
@@ -97,7 +97,7 @@ namespace OpenSim.Services.HypergridService
                 m_PresenceService = ServerUtils.LoadPlugin<IPresenceService>(presenceService, args);
                 m_UserAgentService = ServerUtils.LoadPlugin<IUserAgentService>(userAgentService, args);
 
-                m_RegionCache = new ExpiringCache<UUID, GridRegion>();
+                m_RegionCache = new ThreadedClasses.ExpiringCache<UUID, GridRegion>(30);
 
                 IConfig cnf = config.Configs["Messaging"];
                 if (cnf == null)
@@ -161,28 +161,25 @@ namespace OpenSim.Services.HypergridService
 
             bool lookupAgent = false;
 
-            lock (m_UserLocationMap)
+            object o;
+            if (m_UserLocationMap.TryGetValue(toAgentID, out o))
             {
-                if (m_UserLocationMap.ContainsKey(toAgentID))
-                {
-                    object o = m_UserLocationMap[toAgentID];
-                    if (o is PresenceInfo)
-                        upd = (PresenceInfo)o;
-                    else if (o is string)
-                        url = (string)o;
+                if (o is PresenceInfo)
+                    upd = (PresenceInfo)o;
+                else if (o is string)
+                    url = (string)o;
 
-                    // We need to compare the current location with the previous 
-                    // or the recursive loop will never end because it will never try to lookup the agent again
-                    if (!firstTime)
-                    {
-                        lookupAgent = true;
-                        upd = null;
-                    }
-                }
-                else
+                // We need to compare the current location with the previous 
+                // or the recursive loop will never end because it will never try to lookup the agent again
+                if (!firstTime)
                 {
                     lookupAgent = true;
+                    upd = null;
                 }
+            }
+            else
+            {
+                lookupAgent = true;
             }
 
             //m_log.DebugFormat("[XXX] Neeed lookup ? {0}", (lookupAgent ? "yes" : "no"));
@@ -280,17 +277,7 @@ namespace OpenSim.Services.HypergridService
             if (imresult)
             {
                 // IM delivery successful, so store the Agent's location in our local cache.
-                lock (m_UserLocationMap)
-                {
-                    if (m_UserLocationMap.ContainsKey(toAgentID))
-                    {
-                        m_UserLocationMap[toAgentID] = upd;
-                    }
-                    else
-                    {
-                        m_UserLocationMap.Add(toAgentID, upd);
-                    }
-                }
+                m_UserLocationMap[toAgentID] = upd;
                 return true;
             }
             else
@@ -311,17 +298,7 @@ namespace OpenSim.Services.HypergridService
             if (InstantMessageServiceConnector.SendInstantMessage(url, im))
             {
                 // IM delivery successful, so store the Agent's location in our local cache.
-                lock (m_UserLocationMap)
-                {
-                    if (m_UserLocationMap.ContainsKey(toAgentID))
-                    {
-                        m_UserLocationMap[toAgentID] = url;
-                    }
-                    else
-                    {
-                        m_UserLocationMap.Add(toAgentID, url);
-                    }
-                }
+                m_UserLocationMap[toAgentID] = url;
 
                 return true;
             }

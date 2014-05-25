@@ -75,7 +75,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.XmlRpcGroups
         /// until caches have updated.
         /// Therefore, we set the cache expiry to just 20 seconds.
         /// </remarks>
-        private ExpiringCache<UUID, PresenceInfo[]> m_usersOnlineCache;
+        private ThreadedClasses.ExpiringCache<UUID, PresenceInfo[]> m_usersOnlineCache;
 
         private int m_usersOnlineCacheExpirySeconds = 20;
 
@@ -111,7 +111,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.XmlRpcGroups
                 m_messageOnlineAgentsOnly = groupsConfig.GetBoolean("MessageOnlineUsersOnly", false);
 
                 if (m_messageOnlineAgentsOnly)
-                     m_usersOnlineCache = new ExpiringCache<UUID, PresenceInfo[]>();
+                    m_usersOnlineCache = new ThreadedClasses.ExpiringCache<UUID, PresenceInfo[]>(30);
 
                 m_debugEnabled = groupsConfig.GetBoolean("DebugEnabled", true);
             }
@@ -309,7 +309,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.XmlRpcGroups
 
                 // Copy Message
                 GridInstantMessage msg = new GridInstantMessage();
-                msg.imSessionID = groupID.Guid;
+                msg.imSessionID = im.imSessionID;
                 msg.fromAgentName = im.fromAgentName;
                 msg.message = im.message;
                 msg.dialog = im.dialog;

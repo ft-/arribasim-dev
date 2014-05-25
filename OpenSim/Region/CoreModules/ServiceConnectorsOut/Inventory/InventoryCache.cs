@@ -38,9 +38,9 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Inventory
     {
         private const double CACHE_EXPIRATION_SECONDS = 3600.0; // 1 hour
 
-        private static ExpiringCache<UUID, InventoryFolderBase> m_RootFolders = new ExpiringCache<UUID, InventoryFolderBase>();
-        private static ExpiringCache<UUID, Dictionary<AssetType, InventoryFolderBase>> m_FolderTypes = new ExpiringCache<UUID, Dictionary<AssetType, InventoryFolderBase>>();
-        private static ExpiringCache<UUID, InventoryCollection> m_Inventories = new ExpiringCache<UUID, InventoryCollection>();
+        private static ThreadedClasses.ExpiringCache<UUID, InventoryFolderBase> m_RootFolders = new ThreadedClasses.ExpiringCache<UUID, InventoryFolderBase>(30);
+        private static ThreadedClasses.ExpiringCache<UUID, ThreadedClasses.RwLockedDictionary<AssetType, InventoryFolderBase>> m_FolderTypes = new ThreadedClasses.ExpiringCache<UUID, ThreadedClasses.RwLockedDictionary<AssetType, InventoryFolderBase>>(30);
+        private static ThreadedClasses.ExpiringCache<UUID, InventoryCollection> m_Inventories = new ThreadedClasses.ExpiringCache<UUID, InventoryCollection>(30);
 
         public void Cache(UUID userID, InventoryFolderBase root)
         {
@@ -58,35 +58,31 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Inventory
 
         public void Cache(UUID userID, AssetType type, InventoryFolderBase folder)
         {
-            Dictionary<AssetType, InventoryFolderBase> ff = null;
-            if (!m_FolderTypes.TryGetValue(userID, out ff))
+            ThreadedClasses.RwLockedDictionary<AssetType, InventoryFolderBase> ff = null;
+            ff = m_FolderTypes.GetOrAdd(userID, delegate()
             {
-                ff = new Dictionary<AssetType, InventoryFolderBase>();
-                m_FolderTypes.Add(userID, ff, CACHE_EXPIRATION_SECONDS);
-            }
+                return new ThreadedClasses.RwLockedDictionary<AssetType, InventoryFolderBase>();
+            }, CACHE_EXPIRATION_SECONDS);
 
-            // We need to lock here since two threads could potentially retrieve the same dictionary
-            // and try to add a folder for that type simultaneously.  Dictionary<>.Add() is not described as thread-safe in the SDK
-            // even if the folders are identical.
-            lock (ff)
+            try
             {
-                if (!ff.ContainsKey(type))
-                    ff.Add(type, folder);
+                ff.Add(type, folder);
+            }
+            catch
+            {
+
             }
         }
 
         public InventoryFolderBase GetFolderForType(UUID userID, AssetType type)
         {
-            Dictionary<AssetType, InventoryFolderBase> ff = null;
+            ThreadedClasses.RwLockedDictionary<AssetType, InventoryFolderBase> ff = null;
             if (m_FolderTypes.TryGetValue(userID, out ff))
             {
                 InventoryFolderBase f = null;
 
-                lock (ff)
-                {
-                    if (ff.TryGetValue(type, out f))
-                        return f;
-                }
+                if (ff.TryGetValue(type, out f))
+                    return f;
             }
 
             return null;

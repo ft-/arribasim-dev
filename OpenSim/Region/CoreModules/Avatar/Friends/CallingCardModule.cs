@@ -45,8 +45,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Friends
     public class CallingCardModule : ISharedRegionModule, ICallingCardModule
     {
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
-        private List<Scene> m_Scenes = new List<Scene>();
-        private ReaderWriterLock m_ScenesRwLock = new ReaderWriterLock();
+        private ThreadedClasses.RwLockedList<Scene> m_Scenes = new ThreadedClasses.RwLockedList<Scene>();
         private bool m_Enabled = true;
 
         public void Initialise(IConfigSource source)
@@ -61,15 +60,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Friends
             if (!m_Enabled)
                 return;
 
-            m_ScenesRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_Scenes.Add(scene);
-            }
-            finally
-            {
-                m_ScenesRwLock.ReleaseWriterLock();
-            }
+            m_Scenes.Add(scene);
 
             scene.RegisterModuleInterface<ICallingCardModule>(this);
         }
@@ -79,15 +70,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Friends
             if (!m_Enabled)
                 return;
 
-            m_ScenesRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_Scenes.Remove(scene);
-            }
-            finally
-            {
-                m_ScenesRwLock.ReleaseWriterLock();
-            }
+            m_Scenes.Remove(scene);
 
             scene.EventManager.OnNewClient -= OnNewClient;
             scene.EventManager.OnIncomingInstantMessage +=
@@ -285,44 +268,42 @@ namespace OpenSim.Region.CoreModules.Avatar.Friends
 
         private Scene GetClientScene(UUID agentId)
         {
-            m_ScenesRwLock.AcquireReaderLock(-1);
             try
             {
-                foreach (Scene scene in m_Scenes)
+                m_Scenes.ForEach(delegate(Scene scene)
                 {
                     ScenePresence presence = scene.GetScenePresence(agentId);
                     if (presence != null)
                     {
                         if (!presence.IsChildAgent)
-                            return scene;
+                            throw new ThreadedClasses.ReturnValueException<Scene>(scene);
                     }
-                }
+                });
             }
-            finally
+            catch(ThreadedClasses.ReturnValueException<Scene> e)
             {
-                m_ScenesRwLock.ReleaseReaderLock();
+                return e.Value;
             }
             return null;
         }
 
         private ScenePresence GetClientPresence(UUID agentId)
         {
-            m_ScenesRwLock.AcquireReaderLock(-1);
             try
             {
-                foreach (Scene scene in m_Scenes)
+                m_Scenes.ForEach(delegate(Scene scene)
                 {
                     ScenePresence presence = scene.GetScenePresence(agentId);
                     if (presence != null)
                     {
                         if (!presence.IsChildAgent)
-                            return presence;
+                            throw new ThreadedClasses.ReturnValueException<ScenePresence>(presence);
                     }
-                }
+                });
             }
-            finally
+            catch(ThreadedClasses.ReturnValueException<ScenePresence> e)
             {
-                m_ScenesRwLock.ReleaseReaderLock();
+                return e.Value;
             }
             return null;
         }

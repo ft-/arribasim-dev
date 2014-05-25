@@ -164,8 +164,6 @@ namespace OpenSim.Region.Framework.Scenes
         private ScriptControlled IgnoredControls = ScriptControlled.CONTROL_ZERO;
         private ScriptControlled LastCommands = ScriptControlled.CONTROL_ZERO;
         private bool MouseDown = false;
-//        private SceneObjectGroup proxyObjectGroup;
-        //private SceneObjectPart proxyObjectPart = null;
         public Vector3 lastKnownAllowedPosition;
         public bool sentMessageAboutRestrictedParcelFlyingDown;
         public Vector4 CollisionPlane = Vector4.UnitW;
@@ -206,11 +204,6 @@ namespace OpenSim.Region.Framework.Scenes
             set { PhysicsActor.IsColliding = value; }
         }
 
-//        private int m_lastColCount = -1;		//KF: Look for Collision chnages
-//        private int m_updateCount = 0;			//KF: Update Anims for a while
-//        private static readonly int UPDATE_COUNT = 10;		// how many frames to update for
-        private List<uint> m_lastColliders = new List<uint>();
-
         private TeleportFlags m_teleportFlags;
         public TeleportFlags TeleportFlags
         {
@@ -228,14 +221,11 @@ namespace OpenSim.Region.Framework.Scenes
 
         private SendCoarseLocationsMethod m_sendCoarseLocationsMethod;
 
-        //private Vector3 m_requestedSitOffset = new Vector3();
-
         private Vector3 m_LastFinitePos;
 
         private float m_sitAvatarHeight = 2.0f;
 
         private Vector3 m_lastChildAgentUpdatePosition;
-//        private Vector3 m_lastChildAgentUpdateCamPosition;
 
         private const int LAND_VELOCITYMAG_MAX = 12;
 
@@ -269,10 +259,7 @@ namespace OpenSim.Region.Framework.Scenes
         private const int NumMovementsBetweenRayCast = 5;
 
         private bool CameraConstraintActive;
-        //private int m_moveToPositionStateStatus;
         //*****************************************************
-
-        private object m_collisionEventLock = new Object();
 
         private int m_movementAnimationUpdateCounter = 0;
 
@@ -2610,15 +2597,12 @@ namespace OpenSim.Region.Framework.Scenes
                 TaskInventoryDictionary taskIDict = part.TaskInventory;
                 if (taskIDict != null)
                 {
-                    lock (taskIDict)
+                    foreach (UUID taskID in taskIDict.Keys)
                     {
-                        foreach (UUID taskID in taskIDict.Keys)
-                        {
-                            UnRegisterControlEventsToScript(LocalId, taskID);
-                            taskIDict[taskID].PermsMask &= ~(
-                                2048 | //PERMISSION_CONTROL_CAMERA
-                                4); // PERMISSION_TAKE_CONTROLS
-                        }
+                        UnRegisterControlEventsToScript(LocalId, taskID);
+                        taskIDict[taskID].PermsMask &= ~(
+                            2048 | //PERMISSION_CONTROL_CAMERA
+                            4); // PERMISSION_TAKE_CONTROLS
                     }
                 }
 
@@ -2791,6 +2775,10 @@ namespace OpenSim.Region.Framework.Scenes
 
                 cameraAtOffset = part.GetCameraAtOffset();
                 cameraEyeOffset = part.GetCameraEyeOffset();
+
+                if (cameraEyeOffset != Vector3.Zero || cameraAtOffset != Vector3.Zero)
+                    cameraEyeOffset += part.OffsetPosition;
+
                 forceMouselook = part.GetForceMouselook();
 
                 // An viewer expects to specify sit positions as offsets to the root prim, even if a child prim is
@@ -3812,8 +3800,8 @@ namespace OpenSim.Region.Framework.Scenes
 
             //m_log.Debug("   >>> ChildAgentPositionUpdate <<< " + rRegionX + "-" + rRegionY);
             // Find  the distance (in meters) between the two regions
-            uint shiftx = Util.RegionToWorldLoc(rRegionX - tRegionX);
-            uint shifty = Util.RegionToWorldLoc(rRegionY - tRegionY);
+            long shiftx = ((int)rRegionX - (int)tRegionX) * (int) Constants.RegionSize;
+            long shifty = ((int)rRegionY - (int)tRegionY) * (int)Constants.RegionSize;
 
             Vector3 offset = new Vector3(shiftx, shifty, 0f);
 

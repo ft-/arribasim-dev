@@ -89,7 +89,6 @@ namespace OpenSim.Region.CoreModules.Scripting.HttpRequest
     [Extension(Path = "/OpenSim/RegionModules", NodeName = "RegionModule", Id = "HttpRequestModule")]
     public class HttpRequestModule : ISharedRegionModule, IHttpRequestModule
     {
-        private ReaderWriterLock HttpListLock = new ReaderWriterLock();
         private int httpTimeout = 30000;
         private string m_name = "HttpScriptRequests";
 
@@ -97,7 +96,7 @@ namespace OpenSim.Region.CoreModules.Scripting.HttpRequest
         private string m_proxyexcepts = "";
 
         // <request id, HttpRequestClass>
-        private Dictionary<UUID, HttpRequestClass> m_pendingRequests;
+        private ThreadedClasses.RwLockedDictionary<UUID, HttpRequestClass> m_pendingRequests = new ThreadedClasses.RwLockedDictionary<UUID, HttpRequestClass>();
         private Scene m_scene;
         // private Queue<HttpRequestClass> rpcQueue = new Queue<HttpRequestClass>();
 
@@ -238,15 +237,7 @@ namespace OpenSim.Region.CoreModules.Scripting.HttpRequest
             htc.proxyurl = m_proxyurl;
             htc.proxyexcepts = m_proxyexcepts;
 
-            HttpListLock.AcquireWriterLock(-1);
-            try
-            {
-                m_pendingRequests.Add(reqID, htc);
-            }
-            finally
-            {
-                HttpListLock.ReleaseWriterLock();
-            }
+            m_pendingRequests.Add(reqID, htc);
 
             htc.Process();
 
@@ -255,44 +246,19 @@ namespace OpenSim.Region.CoreModules.Scripting.HttpRequest
 
         public void StopHttpRequestsForScript(UUID id)
         {
-            if (m_pendingRequests != null)
+            List<UUID> keysToRemove = new List<UUID>();
+
+            m_pendingRequests.ForEach(delegate(HttpRequestClass req)
             {
-                List<UUID> keysToRemove = null;
-
-                HttpListLock.AcquireReaderLock(-1);
-                try
+                if (req.ItemID == id)
                 {
-                    foreach (HttpRequestClass req in m_pendingRequests.Values)
-                    {
-                        if (req.ItemID == id)
-                        {
-                            req.Stop();
+                    req.Stop();
 
-                            if (keysToRemove == null)
-                                keysToRemove = new List<UUID>();
-
-                            keysToRemove.Add(req.ReqID);
-                        }
-                    }
-
-                    if (keysToRemove != null)
-                    {
-                        LockCookie lc = HttpListLock.UpgradeToWriterLock(-1);
-                        try
-                        {
-                            keysToRemove.ForEach(keyToRemove => m_pendingRequests.Remove(keyToRemove));
-                        }
-                        finally
-                        {
-                            HttpListLock.DowngradeFromWriterLock(ref lc);
-                        }
-                    }
+                    keysToRemove.Add(req.ReqID);
                 }
-                finally
-                {
-                    HttpListLock.ReleaseReaderLock();
-                }
-            }
+            });
+
+            keysToRemove.ForEach(keyToRemove => m_pendingRequests.Remove(keyToRemove));
         }
 
         /*
@@ -306,18 +272,17 @@ namespace OpenSim.Region.CoreModules.Scripting.HttpRequest
 
         public IServiceRequest GetNextCompletedRequest()
         {
-            HttpListLock.AcquireReaderLock(-1);
             try
             {
-                foreach (HttpRequestClass req in m_pendingRequests.Values)
+                m_pendingRequests.ForEach(delegate(HttpRequestClass req)
                 {
                     if (req.Finished)
-                        return req;
-                }
+                        throw new ThreadedClasses.ReturnValueException<HttpRequestClass>(req);
+                });
             }
-            finally
+            catch(ThreadedClasses.ReturnValueException<HttpRequestClass> e)
             {
-                HttpListLock.ReleaseReaderLock();
+                return e.Value;
             }
 
             return null;
@@ -325,20 +290,12 @@ namespace OpenSim.Region.CoreModules.Scripting.HttpRequest
 
         public void RemoveCompletedRequest(UUID id)
         {
-            HttpListLock.AcquireWriterLock(-1);
-            try
+            HttpRequestClass tmpReq;
+            if (m_pendingRequests.TryGetValue(id, out tmpReq))
             {
-                HttpRequestClass tmpReq;
-                if (m_pendingRequests.TryGetValue(id, out tmpReq))
-                {
-                    tmpReq.Stop();
-                    tmpReq = null;
-                    m_pendingRequests.Remove(id);
-                }
-            }
-            finally
-            {
-                HttpListLock.ReleaseWriterLock();
+                tmpReq.Stop();
+                tmpReq = null;
+                m_pendingRequests.Remove(id);
             }
         }
 
@@ -350,8 +307,6 @@ namespace OpenSim.Region.CoreModules.Scripting.HttpRequest
         {
             m_proxyurl = config.Configs["Startup"].GetString("HttpProxy");
             m_proxyexcepts = config.Configs["Startup"].GetString("HttpProxyExceptions");
-
-            m_pendingRequests = new Dictionary<UUID, HttpRequestClass>();
         }
 
         public void AddRegion(Scene scene)

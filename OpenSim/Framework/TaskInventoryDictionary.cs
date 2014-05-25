@@ -41,7 +41,7 @@ namespace OpenSim.Framework
     /// This class is not thread safe.  Callers must synchronize on Dictionary methods or Clone() this object before
     /// iterating over it.
     /// </remarks>
-    public class TaskInventoryDictionary : Dictionary<UUID, TaskInventoryItem>,
+    public class TaskInventoryDictionary : ThreadedClasses.RwLockedDictionary<UUID, TaskInventoryItem>,
                                            ICloneable, IXmlSerializable
     {
         // private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
@@ -54,12 +54,9 @@ namespace OpenSim.Framework
         {
             TaskInventoryDictionary clone = new TaskInventoryDictionary();
 
-            lock (this)
+            foreach (KeyValuePair<UUID, TaskInventoryItem> kvp in this)
             {
-                foreach (UUID uuid in Keys)
-                {
-                    clone.Add(uuid, (TaskInventoryItem) this[uuid].Clone());
-                }
+                clone.Add(kvp.Key, kvp.Value);
             }
             
             return clone;
@@ -120,12 +117,9 @@ namespace OpenSim.Framework
         // see IXmlSerializable
         public void WriteXml(XmlWriter writer)
         {
-            lock (this)
+            foreach (TaskInventoryItem item in Values)
             {
-                foreach (TaskInventoryItem item in Values)
-                {
-                    tiiSerializer.Serialize(writer, item);
-                }
+                tiiSerializer.Serialize(writer, item);
             }
 
             //tiiSerializer.Serialize(writer, Values);

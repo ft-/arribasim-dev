@@ -58,8 +58,8 @@ namespace OpenSim.Services.HypergridService
 
 //        private UserAccountCache m_Cache;
 
-        private ExpiringCache<UUID, List<XInventoryFolder>> m_SuitcaseTrees = new ExpiringCache<UUID, List<XInventoryFolder>>();
-        private ExpiringCache<UUID, AvatarAppearance> m_Appearances = new ExpiringCache<UUID, AvatarAppearance>();
+        private ThreadedClasses.ExpiringCache<UUID, List<XInventoryFolder>> m_SuitcaseTrees = new ThreadedClasses.ExpiringCache<UUID, List<XInventoryFolder>>(30);
+        private ThreadedClasses.ExpiringCache<UUID, AvatarAppearance> m_Appearances = new ThreadedClasses.ExpiringCache<UUID, AvatarAppearance>(30);
 
         public HGSuitcaseInventoryService(IConfigSource config, string configName)
             : base(config, configName)

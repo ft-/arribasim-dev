@@ -40,12 +40,12 @@ namespace OpenSim.Framework
         /// <summary>
         /// Items that are contained in this folder
         /// </summary>
-        public Dictionary<UUID, InventoryItemBase> Items = new Dictionary<UUID, InventoryItemBase>();
+        public ThreadedClasses.RwLockedDictionary<UUID, InventoryItemBase> Items = new ThreadedClasses.RwLockedDictionary<UUID, InventoryItemBase>();
 
         /// <summary>
         /// Child folders that are contained in this folder
         /// </summary>
-        protected Dictionary<UUID, InventoryFolderImpl> m_childFolders = new Dictionary<UUID, InventoryFolderImpl>();
+        protected ThreadedClasses.RwLockedDictionary<UUID, InventoryFolderImpl> m_childFolders = new ThreadedClasses.RwLockedDictionary<UUID, InventoryFolderImpl>();
 
         // Constructors
         public InventoryFolderImpl(InventoryFolderBase folderbase)
@@ -71,9 +71,9 @@ namespace OpenSim.Framework
         /// <returns>The newly created subfolder.  Returns null if the folder already exists</returns>
         public InventoryFolderImpl CreateChildFolder(UUID folderID, string folderName, ushort type)
         {
-            lock (m_childFolders)
+            try
             {
-                if (!m_childFolders.ContainsKey(folderID))
+                return m_childFolders.AddIfNotExists(folderID, delegate()
                 {
                     InventoryFolderImpl subFold = new InventoryFolderImpl();
                     subFold.Name = folderName;
@@ -81,13 +81,13 @@ namespace OpenSim.Framework
                     subFold.Type = (short)type;
                     subFold.ParentID = this.ID;
                     subFold.Owner = Owner;
-                    m_childFolders.Add(subFold.ID, subFold);
-
                     return subFold;
-                }
+                });
             }
-
-            return null;
+            catch(ThreadedClasses.RwLockedDictionary<UUID, InventoryFolderImpl>.KeyAlreadyExistsException)
+            {
+                return null;
+            }
         }
 
         /// <summary>
@@ -96,11 +96,8 @@ namespace OpenSim.Framework
         /// <param name="folder"></param>
         public void AddChildFolder(InventoryFolderImpl folder)
         {
-            lock (m_childFolders)
-            {
-                folder.ParentID = ID;
-                m_childFolders[folder.ID] = folder;
-            }
+            folder.ParentID = ID;
+            m_childFolders[folder.ID] = folder;
         }
 
         /// <summary>
@@ -122,10 +119,7 @@ namespace OpenSim.Framework
         {
             InventoryFolderImpl folder = null;
 
-            lock (m_childFolders)
-            {
-                m_childFolders.TryGetValue(folderID, out folder);
-            }
+            m_childFolders.TryGetValue(folderID, out folder);
 
             return folder;
         }
@@ -141,14 +135,7 @@ namespace OpenSim.Framework
         {
             InventoryFolderImpl removedFolder = null;
 
-            lock (m_childFolders)
-            {
-                if (m_childFolders.ContainsKey(folderID))
-                {
-                    removedFolder = m_childFolders[folderID];
-                    m_childFolders.Remove(folderID);
-                }
-            }
+            m_childFolders.Remove(folderID, out removedFolder);
 
             return removedFolder;
         }
@@ -158,10 +145,10 @@ namespace OpenSim.Framework
         /// </summary>
         public void Purge()
         {
-            foreach (InventoryFolderImpl folder in m_childFolders.Values)
+            m_childFolders.ForEach(delegate(InventoryFolderImpl folder)
             {
                 folder.Purge();
-            }
+            });
 
             m_childFolders.Clear();
             Items.Clear();
@@ -174,15 +161,13 @@ namespace OpenSim.Framework
         /// <returns>null if the item is not found</returns>
         public InventoryItemBase FindItem(UUID itemID)
         {
-            lock (Items)
+            InventoryItemBase ret;
+            if (Items.TryGetValue(itemID, out ret))
             {
-                if (Items.ContainsKey(itemID))
-                {
-                    return Items[itemID];
-                }
+                return ret;
             }
 
-            lock (m_childFolders)
+            try
             {
                 foreach (InventoryFolderImpl folder in m_childFolders.Values)
                 {
@@ -190,9 +175,13 @@ namespace OpenSim.Framework
 
                     if (item != null)
                     {
-                        return item;
+                        throw new ThreadedClasses.ReturnValueException<InventoryItemBase>(item);
                     }
                 }
+            }
+            catch(ThreadedClasses.ReturnValueException<InventoryItemBase> e)
+            {
+                return e.Value;
             }
 
             return null;
@@ -200,26 +189,34 @@ namespace OpenSim.Framework
 
         public InventoryItemBase FindAsset(UUID assetID)
         {
-            lock (Items)
+            try
             {
-                foreach (InventoryItemBase item in Items.Values)
+                Items.ForEach(delegate(InventoryItemBase item)
                 {
                     if (item.AssetID == assetID)
-                        return item;
-                }
+                        throw new ThreadedClasses.ReturnValueException<InventoryItemBase>(item);
+                });
+            }
+            catch(ThreadedClasses.ReturnValueException<InventoryItemBase> e)
+            {
+                return e.Value;
             }
 
-            lock (m_childFolders)
+            try
             {
-                foreach (InventoryFolderImpl folder in m_childFolders.Values)
+                m_childFolders.ForEach(delegate(InventoryFolderImpl folder)
                 {
                     InventoryItemBase item = folder.FindAsset(assetID);
 
                     if (item != null)
                     {
-                        return item;
+                        throw new ThreadedClasses.ReturnValueException<InventoryItemBase>(item);
                     }
-                }
+                });
+            }
+            catch(ThreadedClasses.ReturnValueException<InventoryItemBase> e)
+            {
+                return e.Value;
             }
 
             return null;
@@ -232,31 +229,27 @@ namespace OpenSim.Framework
         /// <returns></returns>
         public bool DeleteItem(UUID itemID)
         {
-            bool found = false;
-
-            lock (Items)
+            if (Items.Remove(itemID))
             {
-                if (Items.ContainsKey(itemID))
-                {
-                    Items.Remove(itemID);
-                    return true;
-                }
+                return true;
             }
 
-            lock (m_childFolders)
+            try
             {
-                foreach (InventoryFolderImpl folder in m_childFolders.Values)
+                m_childFolders.ForEach(delegate(InventoryFolderImpl folder)
                 {
-                    found = folder.DeleteItem(itemID);
-
-                    if (found == true)
+                    if(folder.DeleteItem(itemID))
                     {
-                        break;
+                        throw new ThreadedClasses.ReturnValueException<bool>(true);
                     }
-                }
+                });
+            }
+            catch(ThreadedClasses.ReturnValueException<bool>)
+            {
+                return true;
             }
 
-            return found;
+            return false;
         }
 
         /// <summary>
@@ -269,15 +262,19 @@ namespace OpenSim.Framework
             if (folderID == ID)
                 return this;
 
-            lock (m_childFolders)
+            try
             {
-                foreach (InventoryFolderImpl folder in m_childFolders.Values)
+                m_childFolders.ForEach(delegate(InventoryFolderImpl folder)
                 {
                     InventoryFolderImpl returnFolder = folder.FindFolder(folderID);
 
                     if (returnFolder != null)
-                        return returnFolder;
-                }
+                        throw new ThreadedClasses.ReturnValueException<InventoryFolderImpl>(returnFolder);
+                });
+            }
+            catch(ThreadedClasses.ReturnValueException<InventoryFolderImpl> e)
+            {
+                return e.Value;
             }
 
             return null;
@@ -290,13 +287,17 @@ namespace OpenSim.Framework
         /// <returns>Returns null if no such folder is found</returns>
         public InventoryFolderImpl FindFolderForType(int type)
         {
-            lock (m_childFolders)
+            try
             {
-                foreach (InventoryFolderImpl f in m_childFolders.Values)
+                m_childFolders.ForEach(delegate(InventoryFolderImpl f)
                 {
                     if (f.Type == type)
-                        return f;
-                }
+                        throw new ThreadedClasses.ReturnValueException<InventoryFolderImpl>(f);
+                });
+            }
+            catch(ThreadedClasses.ReturnValueException<InventoryFolderImpl> e)
+            {
+                return e.Value;
             }
 
             return null;
@@ -330,16 +331,20 @@ namespace OpenSim.Framework
 
             string[] components = path.Split(new string[] { PATH_DELIMITER }, 2, StringSplitOptions.None);
 
-            lock (m_childFolders)
+            try
             {
-                foreach (InventoryFolderImpl folder in m_childFolders.Values)
+                m_childFolders.ForEach(delegate(InventoryFolderImpl folder)
                 {
                     if (folder.Name == components[0])
                         if (components.Length > 1)
-                            return folder.FindFolderByPath(components[1]);
+                            throw new ThreadedClasses.ReturnValueException<InventoryFolderImpl>(folder.FindFolderByPath(components[1]));
                         else
-                            return folder;
-                }
+                            throw new ThreadedClasses.ReturnValueException<InventoryFolderImpl>(folder);
+                });
+            }
+            catch(ThreadedClasses.ReturnValueException<InventoryFolderImpl> e)
+            {
+                return e.Value;
             }
 
             // We didn't find a folder with the given name
@@ -366,24 +371,32 @@ namespace OpenSim.Framework
 
             if (components.Length == 1)
             {
-                lock (Items)
+                try
                 {
-                    foreach (InventoryItemBase item in Items.Values)
+                    Items.ForEach(delegate(InventoryItemBase item)
                     {
                         if (item.Name == components[0])
-                            return item;
-                    }
+                            throw new ThreadedClasses.ReturnValueException<InventoryItemBase>(item);
+                    });
+                }
+                catch(ThreadedClasses.ReturnValueException<InventoryItemBase> e)
+                {
+                    return e.Value;
                 }
             }
             else
             {
-                lock (m_childFolders)
+                try
                 {
-                    foreach (InventoryFolderImpl folder in m_childFolders.Values)
+                    m_childFolders.ForEach(delegate(InventoryFolderImpl folder)
                     {
                         if (folder.Name == components[0])
-                            return folder.FindItemByPath(components[1]);
-                    }
+                            throw new ThreadedClasses.ReturnValueException<InventoryItemBase>(folder.FindItemByPath(components[1]));
+                    });
+                }
+                catch(ThreadedClasses.ReturnValueException<InventoryItemBase> e)
+                {
+                    return e.Value;
                 }
             }
 
@@ -398,17 +411,14 @@ namespace OpenSim.Framework
         {
             List<InventoryItemBase> itemList = new List<InventoryItemBase>();
 
-            lock (Items)
+            Items.ForEach(delegate(InventoryItemBase item)
             {
-                foreach (InventoryItemBase item in Items.Values)
-                {
-//                    m_log.DebugFormat(
-//                        "[INVENTORY FOLDER IMPL]: Returning item {0} {1}, OwnerPermissions {2:X}",
-//                        item.Name, item.ID, item.CurrentPermissions);
+                //                    m_log.DebugFormat(
+                //                        "[INVENTORY FOLDER IMPL]: Returning item {0} {1}, OwnerPermissions {2:X}",
+                //                        item.Name, item.ID, item.CurrentPermissions);
 
-                    itemList.Add(item);
-                }
-            }
+                itemList.Add(item);
+            });
 
             //m_log.DebugFormat("[INVENTORY FOLDER IMPL]: Found {0} items", itemList.Count);
 
@@ -420,32 +430,12 @@ namespace OpenSim.Framework
         /// </summary>
         public List<InventoryFolderBase> RequestListOfFolders()
         {
-            List<InventoryFolderBase> folderList = new List<InventoryFolderBase>();
-
-            lock (m_childFolders)
-            {
-                foreach (InventoryFolderBase folder in m_childFolders.Values)
-                {
-                    folderList.Add(folder);
-                }
-            }
-
-            return folderList;
+            return new List<InventoryFolderBase>(m_childFolders.Values);
         }
 
         public List<InventoryFolderImpl> RequestListOfFolderImpls()
         {
-            List<InventoryFolderImpl> folderList = new List<InventoryFolderImpl>();
-
-            lock (m_childFolders)
-            {
-                foreach (InventoryFolderImpl folder in m_childFolders.Values)
-                {
-                    folderList.Add(folder);
-                }
-            }
-
-            return folderList;
+            return new List<InventoryFolderImpl>(m_childFolders.Values); ;
         }
 
         /// <value>

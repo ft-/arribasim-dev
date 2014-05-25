@@ -47,8 +47,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Inventory.Transfer
             = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         /// <summary>
-        private List<Scene> m_Scenelist = new List<Scene>();
-        private ReaderWriterLock m_ScenelistRwLock = new ReaderWriterLock();
+        private ThreadedClasses.RwLockedList<Scene> m_Scenelist = new ThreadedClasses.RwLockedList<Scene>();
 
         private IMessageTransferModule m_TransferModule;
         private bool m_Enabled = true;
@@ -76,15 +75,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Inventory.Transfer
             if (!m_Enabled)
                 return;
 
-            m_ScenelistRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_Scenelist.Add(scene);
-            }
-            finally
-            {
-                m_ScenelistRwLock.ReleaseWriterLock();
-            }
+            m_Scenelist.Add(scene);
 
 //            scene.RegisterModuleInterface<IInventoryTransferModule>(this);
 
@@ -113,15 +104,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Inventory.Transfer
         {
             scene.EventManager.OnNewClient -= OnNewClient;
             scene.EventManager.OnIncomingInstantMessage -= OnGridInstantMessage;
-            m_ScenelistRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_Scenelist.Remove(scene);
-            }
-            finally
-            {
-                m_ScenelistRwLock.ReleaseWriterLock();
-            }
+            m_Scenelist.Remove(scene);
         }
 
         public void PostInitialise()
@@ -152,19 +135,18 @@ namespace OpenSim.Region.CoreModules.Avatar.Inventory.Transfer
 
         private Scene FindClientScene(UUID agentId)
         {
-            m_ScenelistRwLock.AcquireReaderLock(-1);
             try
             {
-                foreach (Scene scene in m_Scenelist)
+                m_Scenelist.ForEach(delegate(Scene scene)
                 {
                     ScenePresence presence = scene.GetScenePresence(agentId);
                     if (presence != null)
-                        return scene;
-                }
+                        throw new ThreadedClasses.ReturnValueException<Scene>(scene);
+                });
             }
-            finally
+            catch(ThreadedClasses.ReturnValueException<Scene> e)
             {
-                m_ScenelistRwLock.ReleaseReaderLock();
+                return e.Value;
             }
             return null;
         }

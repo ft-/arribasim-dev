@@ -295,7 +295,6 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
                             null,
                             constructorParams,
                             null,
-                            null,
                             null);
                 else
                     m_Script 
@@ -477,13 +476,14 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
         {
             int permsMask;
             UUID permsGranter;
-            lock (Part.TaskInventory)
-            {
-                if (!Part.TaskInventory.ContainsKey(ItemID))
-                    return;
+            TaskInventoryItem item;
+            if (!Part.TaskInventory.TryGetValue(ItemID, out item))
+                return;
 
-                permsGranter = Part.TaskInventory[ItemID].PermsGranter;
-                permsMask = Part.TaskInventory[ItemID].PermsMask;
+            lock (item)
+            {
+                permsGranter = item.PermsGranter;
+                permsMask = item.PermsMask;
             }
 
             if ((permsMask & ScriptBaseClass.PERMISSION_TAKE_CONTROLS) != 0)

@@ -47,8 +47,7 @@ namespace OpenSim.Groups
         private static readonly ILog m_log =
             LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
-        private List<Scene> m_sceneList = new List<Scene>();
-        private ReaderWriterLock m_sceneListRwLock = new ReaderWriterLock();
+        private ThreadedClasses.RwLockedList<Scene> m_sceneList = new ThreadedClasses.RwLockedList<Scene>();
 
         private IMessageTransferModule m_msgTransferModule = null;
         
@@ -177,16 +176,7 @@ namespace OpenSim.Groups
                     m_log.Warn("[Groups]: Could not get UserManagementModule");
             }
 
-            m_sceneListRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_sceneList.Add(scene);
-            }
-            finally
-            {
-                m_sceneListRwLock.ReleaseWriterLock();
-            }
-
+            m_sceneList.Add(scene);
         }
 
         public void RemoveRegion(Scene scene)
@@ -201,15 +191,7 @@ namespace OpenSim.Groups
             scene.EventManager.OnMakeChildAgent -= OnMakeChild;
             scene.EventManager.OnIncomingInstantMessage -= OnGridInstantMessage;
 
-            m_sceneListRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_sceneList.Remove(scene);
-            }
-            finally
-            {
-                m_sceneListRwLock.ReleaseWriterLock();
-            }
+            m_sceneList.Remove(scene);
         }
 
         public void Close()
@@ -1204,7 +1186,7 @@ namespace OpenSim.Groups
             IClientAPI child = null;
 
             // Try root avatar first
-            foreach (Scene scene in m_sceneList)
+            foreach(Scene scene in m_sceneList)
             {
                 ScenePresence sp = scene.GetScenePresence(agentID);
                 if (sp != null)
@@ -1219,7 +1201,6 @@ namespace OpenSim.Groups
                     }
                 }
             }
-
             // If we didn't find a root, then just return whichever child we found, or null if none
             return child;
         }
@@ -1293,22 +1274,20 @@ namespace OpenSim.Groups
         {
             if (m_debugEnabled) m_log.DebugFormat("[Groups]: Updating scene title for {0} with title: {1}", AgentID, Title);
 
-            ScenePresence presence = null;
-
-            foreach (Scene scene in m_sceneList)
+            m_sceneList.ForEach(delegate(Scene scene)
             {
-                presence = scene.GetScenePresence(AgentID);
+                ScenePresence presence = scene.GetScenePresence(AgentID);
                 if (presence != null)
                 {
                     if (presence.Grouptitle != Title)
                     {
                         presence.Grouptitle = Title;
 
-                        if (! presence.IsChildAgent)
+                        if (!presence.IsChildAgent)
                             presence.SendAvatarDataToAllAgents();
                     }
                 }
-            }
+            });
         }
 
         /// <summary>
@@ -1320,18 +1299,10 @@ namespace OpenSim.Groups
 
             // TODO: Probably isn't nessesary to update every client in every scene.
             // Need to examine client updates and do only what's nessesary.
-            m_sceneListRwLock.AcquireReaderLock(-1);
-            try
+            m_sceneList.ForEach(delegate(Scene scene)
             {
-                foreach (Scene scene in m_sceneList)
-                {
-                    scene.ForEachClient(delegate(IClientAPI client) { SendAgentGroupDataUpdate(client, dataForClientID); });
-                }
-            }
-            finally
-            {
-                m_sceneListRwLock.ReleaseReaderLock();
-            }
+                scene.ForEachClient(delegate(IClientAPI client) { SendAgentGroupDataUpdate(client, dataForClientID); });
+            });
         }
 
         /// <summary>

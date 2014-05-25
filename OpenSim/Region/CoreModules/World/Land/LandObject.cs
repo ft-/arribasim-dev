@@ -52,10 +52,10 @@ namespace OpenSim.Region.CoreModules.World.Land
         private int m_lastSeqId = 0;
               
         protected Scene m_scene;
-        protected List<SceneObjectGroup> primsOverMe = new List<SceneObjectGroup>();
+        protected ThreadedClasses.RwLockedList<SceneObjectGroup> primsOverMe = new ThreadedClasses.RwLockedList<SceneObjectGroup>();
         protected Dictionary<uint, UUID> m_listTransactions = new Dictionary<uint, UUID>();
 
-        protected ExpiringCache<UUID, bool> m_groupMemberCache = new ExpiringCache<UUID, bool>();
+        protected ThreadedClasses.ExpiringCache<UUID, bool> m_groupMemberCache = new ThreadedClasses.ExpiringCache<UUID, bool>(30);
         protected TimeSpan m_groupMemberCacheTimeout = TimeSpan.FromSeconds(30);  // cache invalidation after 30 seconds
 
         public bool[,] LandBitmap { get; set; }
@@ -956,32 +956,29 @@ namespace OpenSim.Region.CoreModules.World.Land
                 List<uint> resultLocalIDs = new List<uint>();
                 try
                 {
-                    lock (primsOverMe)
+                    primsOverMe.ForEach(delegate(SceneObjectGroup obj)
                     {
-                        foreach (SceneObjectGroup obj in primsOverMe)
+                        if (obj.LocalId > 0)
                         {
-                            if (obj.LocalId > 0)
+                            if (request_type == LandChannel.LAND_SELECT_OBJECTS_OWNER && obj.OwnerID == LandData.OwnerID)
                             {
-                                if (request_type == LandChannel.LAND_SELECT_OBJECTS_OWNER && obj.OwnerID == LandData.OwnerID)
-                                {
-                                    resultLocalIDs.Add(obj.LocalId);
-                                }
-                                else if (request_type == LandChannel.LAND_SELECT_OBJECTS_GROUP && obj.GroupID == LandData.GroupID && LandData.GroupID != UUID.Zero)
-                                {
-                                    resultLocalIDs.Add(obj.LocalId);
-                                }
-                                else if (request_type == LandChannel.LAND_SELECT_OBJECTS_OTHER &&
-                                         obj.OwnerID != remote_client.AgentId)
-                                {
-                                    resultLocalIDs.Add(obj.LocalId);
-                                }
-                                else if (request_type == (int)ObjectReturnType.List && returnIDs.Contains(obj.OwnerID))
-                                {
-                                    resultLocalIDs.Add(obj.LocalId);
-                                }
+                                resultLocalIDs.Add(obj.LocalId);
+                            }
+                            else if (request_type == LandChannel.LAND_SELECT_OBJECTS_GROUP && obj.GroupID == LandData.GroupID && LandData.GroupID != UUID.Zero)
+                            {
+                                resultLocalIDs.Add(obj.LocalId);
+                            }
+                            else if (request_type == LandChannel.LAND_SELECT_OBJECTS_OTHER &&
+                                        obj.OwnerID != remote_client.AgentId)
+                            {
+                                resultLocalIDs.Add(obj.LocalId);
+                            }
+                            else if (request_type == (int)ObjectReturnType.List && returnIDs.Contains(obj.OwnerID))
+                            {
+                                resultLocalIDs.Add(obj.LocalId);
                             }
                         }
-                    }
+                    });
                 } catch (InvalidOperationException)
                 {
                     m_log.Error("[LAND]: Unable to force select the parcel objects. Arr.");
@@ -1006,43 +1003,40 @@ namespace OpenSim.Region.CoreModules.World.Land
                 Dictionary<UUID, int> primCount = new Dictionary<UUID, int>();
                 List<UUID> groups = new List<UUID>();
 
-                lock (primsOverMe)
-                {
 //                    m_log.DebugFormat(
 //                        "[LAND OBJECT]: Request for SendLandObjectOwners() from {0} with {1} known prims on region", 
 //                        remote_client.Name, primsOverMe.Count);
                     
-                    try
+                try
+                {
+                    primsOverMe.ForEach(delegate(SceneObjectGroup obj)
                     {
-                        foreach (SceneObjectGroup obj in primsOverMe)
+                        try
                         {
-                            try
+                            if (!primCount.ContainsKey(obj.OwnerID))
                             {
-                                if (!primCount.ContainsKey(obj.OwnerID))
-                                {
-                                    primCount.Add(obj.OwnerID, 0);
-                                }
+                                primCount.Add(obj.OwnerID, 0);
                             }
-                            catch (NullReferenceException)
-                            {
-                                m_log.Error("[LAND]: " + "Got Null Reference when searching land owners from the parcel panel");
-                            }
-                            try
-                            {
-                                primCount[obj.OwnerID] += obj.PrimCount;
-                            }
-                            catch (KeyNotFoundException)
-                            {
-                                m_log.Error("[LAND]: Unable to match a prim with it's owner.");
-                            }
-                            if (obj.OwnerID == obj.GroupID && (!groups.Contains(obj.OwnerID)))
-                                groups.Add(obj.OwnerID);
                         }
-                    }
-                    catch (InvalidOperationException)
-                    {
-                        m_log.Error("[LAND]: Unable to Enumerate Land object arr.");
-                    }
+                        catch (NullReferenceException)
+                        {
+                            m_log.Error("[LAND]: " + "Got Null Reference when searching land owners from the parcel panel");
+                        }
+                        try
+                        {
+                            primCount[obj.OwnerID] += obj.PrimCount;
+                        }
+                        catch (KeyNotFoundException)
+                        {
+                            m_log.Error("[LAND]: Unable to match a prim with it's owner.");
+                        }
+                        if (obj.OwnerID == obj.GroupID && (!groups.Contains(obj.OwnerID)))
+                            groups.Add(obj.OwnerID);
+                    });
+                }
+                catch (InvalidOperationException)
+                {
+                    m_log.Error("[LAND]: Unable to Enumerate Land object arr.");
                 }
 
                 remote_client.SendLandObjectOwners(LandData, groups, primCount);
@@ -1053,26 +1047,22 @@ namespace OpenSim.Region.CoreModules.World.Land
         {
             Dictionary<UUID, int> ownersAndCount = new Dictionary<UUID, int>();
             
-            lock (primsOverMe)
+            try
             {
-                try
+                primsOverMe.ForEach(delegate(SceneObjectGroup obj)
                 {
-
-                    foreach (SceneObjectGroup obj in primsOverMe)
+                    if (!ownersAndCount.ContainsKey(obj.OwnerID))
                     {
-                        if (!ownersAndCount.ContainsKey(obj.OwnerID))
-                        {
-                            ownersAndCount.Add(obj.OwnerID, 0);
-                        }
-                        ownersAndCount[obj.OwnerID] += obj.PrimCount;
+                        ownersAndCount.Add(obj.OwnerID, 0);
                     }
-                }
-                catch (InvalidOperationException)
-                {
-                    m_log.Error("[LAND]: Unable to enumerate land owners. arr.");
-                }
-
+                    ownersAndCount[obj.OwnerID] += obj.PrimCount;
+                });
             }
+            catch (InvalidOperationException)
+            {
+                m_log.Error("[LAND]: Unable to enumerate land owners. arr.");
+            }
+
             return ownersAndCount;
         }
 
@@ -1102,15 +1092,12 @@ namespace OpenSim.Region.CoreModules.World.Land
                 return;
             }
 
-            lock (primsOverMe)
+            primsOverMe.ForEach(delegate(SceneObjectGroup obj)
             {
-                foreach (SceneObjectGroup obj in primsOverMe)
-                {
-                    if (obj.OwnerID == previousOwner && obj.GroupID == UUID.Zero &&
-                        (obj.GetEffectivePermissions() & (uint)(OpenSim.Framework.PermissionMask.Transfer)) != 0)
-                        m_BuySellModule.BuyObject(sp.ControllingClient, UUID.Zero, obj.LocalId, 1, 0);
-                }
-            }
+                if (obj.OwnerID == previousOwner && obj.GroupID == UUID.Zero &&
+                    (obj.GetEffectivePermissions() & (uint)(OpenSim.Framework.PermissionMask.Transfer)) != 0)
+                    m_BuySellModule.BuyObject(sp.ControllingClient, UUID.Zero, obj.LocalId, 1, 0);
+            });
         }
 
         #endregion
@@ -1131,64 +1118,61 @@ namespace OpenSim.Region.CoreModules.World.Land
             
             Dictionary<UUID,List<SceneObjectGroup>> returns = new Dictionary<UUID,List<SceneObjectGroup>>();
 
-            lock (primsOverMe)
+            if (type == (uint)ObjectReturnType.Owner)
             {
-                if (type == (uint)ObjectReturnType.Owner)
+                primsOverMe.ForEach(delegate(SceneObjectGroup obj)
                 {
-                    foreach (SceneObjectGroup obj in primsOverMe)
+                    if (obj.OwnerID == LandData.OwnerID)
                     {
-                        if (obj.OwnerID == LandData.OwnerID)
-                        {
-                            if (!returns.ContainsKey(obj.OwnerID))
-                                returns[obj.OwnerID] =
-                                        new List<SceneObjectGroup>();
-                            returns[obj.OwnerID].Add(obj);
-                        }
+                        if (!returns.ContainsKey(obj.OwnerID))
+                            returns[obj.OwnerID] =
+                                    new List<SceneObjectGroup>();
+                        returns[obj.OwnerID].Add(obj);
                     }
-                }
-                else if (type == (uint)ObjectReturnType.Group && LandData.GroupID != UUID.Zero)
+                });
+            }
+            else if (type == (uint)ObjectReturnType.Group && LandData.GroupID != UUID.Zero)
+            {
+                primsOverMe.ForEach(delegate(SceneObjectGroup obj)
                 {
-                    foreach (SceneObjectGroup obj in primsOverMe)
+                    if (obj.GroupID == LandData.GroupID)
                     {
-                        if (obj.GroupID == LandData.GroupID)
-                        {
-                            if (!returns.ContainsKey(obj.OwnerID))
-                                returns[obj.OwnerID] =
-                                        new List<SceneObjectGroup>();
-                            returns[obj.OwnerID].Add(obj);
-                        }
+                        if (!returns.ContainsKey(obj.OwnerID))
+                            returns[obj.OwnerID] =
+                                    new List<SceneObjectGroup>();
+                        returns[obj.OwnerID].Add(obj);
                     }
-                }
-                else if (type == (uint)ObjectReturnType.Other)
+                });
+            }
+            else if (type == (uint)ObjectReturnType.Other)
+            {
+                primsOverMe.ForEach(delegate(SceneObjectGroup obj)
                 {
-                    foreach (SceneObjectGroup obj in primsOverMe)
+                    if (obj.OwnerID != LandData.OwnerID &&
+                        (obj.GroupID != LandData.GroupID ||
+                        LandData.GroupID == UUID.Zero))
                     {
-                        if (obj.OwnerID != LandData.OwnerID &&
-                            (obj.GroupID != LandData.GroupID ||
-                            LandData.GroupID == UUID.Zero))
-                        {
-                            if (!returns.ContainsKey(obj.OwnerID))
-                                returns[obj.OwnerID] =
-                                        new List<SceneObjectGroup>();
-                            returns[obj.OwnerID].Add(obj);
-                        }
+                        if (!returns.ContainsKey(obj.OwnerID))
+                            returns[obj.OwnerID] =
+                                    new List<SceneObjectGroup>();
+                        returns[obj.OwnerID].Add(obj);
                     }
-                }
-                else if (type == (uint)ObjectReturnType.List)
-                {
-                    List<UUID> ownerlist = new List<UUID>(owners);
+                });
+            }
+            else if (type == (uint)ObjectReturnType.List)
+            {
+                List<UUID> ownerlist = new List<UUID>(owners);
 
-                    foreach (SceneObjectGroup obj in primsOverMe)
+                primsOverMe.ForEach(delegate(SceneObjectGroup obj)
+                {
+                    if (ownerlist.Contains(obj.OwnerID))
                     {
-                        if (ownerlist.Contains(obj.OwnerID))
-                        {
-                            if (!returns.ContainsKey(obj.OwnerID))
-                                returns[obj.OwnerID] =
-                                        new List<SceneObjectGroup>();
-                            returns[obj.OwnerID].Add(obj);
-                        }
+                        if (!returns.ContainsKey(obj.OwnerID))
+                            returns[obj.OwnerID] =
+                                    new List<SceneObjectGroup>();
+                        returns[obj.OwnerID].Add(obj);
                     }
-                }
+                });
             }
 
             foreach (List<SceneObjectGroup> ol in returns.Values)
@@ -1204,24 +1188,21 @@ namespace OpenSim.Region.CoreModules.World.Land
 
         public void ResetOverMeRecord()
         {
-            lock (primsOverMe)
-                primsOverMe.Clear();
+            primsOverMe.Clear();
         }
 
         public void AddPrimOverMe(SceneObjectGroup obj)
         {
 //            m_log.DebugFormat("[LAND OBJECT]: Adding scene object {0} {1} over {2}", obj.Name, obj.LocalId, LandData.Name);
             
-            lock (primsOverMe)
-                primsOverMe.Add(obj);
+            primsOverMe.Add(obj);
         }
 
         public void RemovePrimFromOverMe(SceneObjectGroup obj)
         {
 //            m_log.DebugFormat("[LAND OBJECT]: Removing scene object {0} {1} from over {2}", obj.Name, obj.LocalId, LandData.Name);
             
-            lock (primsOverMe)
-                primsOverMe.Remove(obj);
+            primsOverMe.Remove(obj);
         }
 
         #endregion

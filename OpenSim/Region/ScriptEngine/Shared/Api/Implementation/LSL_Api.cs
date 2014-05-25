@@ -111,7 +111,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         protected int m_scriptConsoleChannel = 0;
         protected bool m_scriptConsoleChannelEnabled = false;
         protected IUrlModule m_UrlModule = null;
-        protected Dictionary<UUID, UserInfoCacheEntry> m_userInfoCache = new Dictionary<UUID, UserInfoCacheEntry>();
+        protected ThreadedClasses.RwLockedDictionary<UUID, UserInfoCacheEntry> m_userInfoCache = new ThreadedClasses.RwLockedDictionary<UUID, UserInfoCacheEntry>();
         protected int EMAIL_PAUSE_TIME = 20;  // documented delay value for smtp.
         protected ISoundModule m_SoundModule = null;
 
@@ -2116,15 +2116,12 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                 texface = tex.GetFace((uint)face);
                 string texture = texface.TextureID.ToString();
 
-                lock (part.TaskInventory)
+                foreach (KeyValuePair<UUID, TaskInventoryItem> inv in part.TaskInventory)
                 {
-                    foreach (KeyValuePair<UUID, TaskInventoryItem> inv in part.TaskInventory)
+                    if (inv.Value.AssetID == texface.TextureID)
                     {
-                        if (inv.Value.AssetID == texface.TextureID)
-                        {
-                            texture = inv.Value.Name.ToString();
-                            break;
-                        }
+                        texture = inv.Value.Name.ToString();
+                        break;
                     }
                 }
 
@@ -3673,7 +3670,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                 {
                     if (npcModule.CheckPermissions(agentID, m_host.OwnerID))
                     {
-                        lock (m_host.TaskInventory)
+                        lock (m_host.TaskInventory[m_item.ItemID])
                         {
                             m_host.TaskInventory[m_item.ItemID].PermsGranter = agentID;
                             m_host.TaskInventory[m_item.ItemID].PermsMask = perm;
@@ -3696,7 +3693,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                 if (!m_waitingForScriptAnswer)
                 {
-                    lock (m_host.TaskInventory)
+                    lock (m_host.TaskInventory[m_item.ItemID])
                     {
                         m_host.TaskInventory[m_item.ItemID].PermsGranter = agentID;
                         m_host.TaskInventory[m_item.ItemID].PermsMask = 0;
@@ -3729,7 +3726,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             if ((answer & ScriptBaseClass.PERMISSION_TAKE_CONTROLS) == 0)
                 llReleaseControls();
 
-            lock (m_host.TaskInventory)
+            lock (m_host.TaskInventory[m_item.ItemID])
             {
                 m_host.TaskInventory[m_item.ItemID].PermsMask = answer;
             }
@@ -4033,14 +4030,11 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             m_host.AddScriptLPS(1);
             int count = 0;
 
-            lock (m_host.TaskInventory)
+            foreach (KeyValuePair<UUID, TaskInventoryItem> inv in m_host.TaskInventory)
             {
-                foreach (KeyValuePair<UUID, TaskInventoryItem> inv in m_host.TaskInventory)
+                if (inv.Value.Type == type || type == -1)
                 {
-                    if (inv.Value.Type == type || type == -1)
-                    {
-                        count = count + 1;
-                    }
+                    count = count + 1;
                 }
             }
 
@@ -4052,14 +4046,11 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             m_host.AddScriptLPS(1);
             ArrayList keys = new ArrayList();
 
-            lock (m_host.TaskInventory)
+            foreach (KeyValuePair<UUID, TaskInventoryItem> inv in m_host.TaskInventory)
             {
-                foreach (KeyValuePair<UUID, TaskInventoryItem> inv in m_host.TaskInventory)
+                if (inv.Value.Type == type || type == -1)
                 {
-                    if (inv.Value.Type == type || type == -1)
-                    {
-                        keys.Add(inv.Value.Name);
-                    }
+                    keys.Add(inv.Value.Name);
                 }
             }
 
@@ -4212,20 +4203,19 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             m_host.AddScriptLPS(1);
 
             UUID uuid = (UUID)id;
+
+            UserInfoCacheEntry ce = null;
             PresenceInfo pinfo = null;
             UserAccount account;
 
-            UserInfoCacheEntry ce;
-
-            lock (m_userInfoCache)
+            try
             {
-                if (!m_userInfoCache.TryGetValue(uuid, out ce))
+                ce = m_userInfoCache.GetOrAddIfNotExists(uuid, delegate()
                 {
                     account = World.UserAccountService.GetUserAccount(World.RegionInfo.ScopeID, uuid);
                     if (account == null)
                     {
-                        m_userInfoCache[uuid] = null; // Cache negative
-                        return UUID.Zero.ToString();
+                        return null; // Cache negative
                     }
 
                     PresenceInfo[] pinfos = World.PresenceService.GetAgents(new string[] { uuid.ToString() });
@@ -4244,43 +4234,44 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                     ce.time = Util.EnvironmentTickCount();
                     ce.account = account;
                     ce.pinfo = pinfo;
+                    return ce;
+                });
+            }
+            catch
+            {
+                ce = null;
+            }
 
-                    m_userInfoCache[uuid] = ce;
+            if (ce == null)
+                return UUID.Zero.ToString();
+
+            account = ce.account;
+
+            if (Util.EnvironmentTickCount() < ce.time || (Util.EnvironmentTickCount() - ce.time)
+                >= LlRequestAgentDataCacheTimeoutMs)
+            {
+                PresenceInfo[] pinfos = World.PresenceService.GetAgents(new string[] { uuid.ToString() });
+                if (pinfos != null && pinfos.Length > 0)
+                {
+                    foreach (PresenceInfo p in pinfos)
+                    {
+                        if (p.RegionID != UUID.Zero)
+                        {
+                            pinfo = p;
+                        }
+                    }
                 }
                 else
                 {
-                    if (ce == null)
-                        return UUID.Zero.ToString();
-
-                    account = ce.account;
-
-                    if (Util.EnvironmentTickCount() < ce.time || (Util.EnvironmentTickCount() - ce.time) 
-                        >= LlRequestAgentDataCacheTimeoutMs)
-                    {
-                        PresenceInfo[] pinfos = World.PresenceService.GetAgents(new string[] { uuid.ToString() });
-                        if (pinfos != null && pinfos.Length > 0)
-                        {
-                            foreach (PresenceInfo p in pinfos)
-                            {
-                                if (p.RegionID != UUID.Zero)
-                                {
-                                    pinfo = p;
-                                }
-                            }
-                        }
-                        else
-                        {
-                            pinfo = null;
-                        }
-
-                        ce.time = Util.EnvironmentTickCount();
-                        ce.pinfo = pinfo;
-                    }
-                    else
-                    {
-                        pinfo = ce.pinfo;
-                    }
+                    pinfo = null;
                 }
+
+                ce.time = Util.EnvironmentTickCount();
+                ce.pinfo = pinfo;
+            }
+            else
+            {
+                pinfo = ce.pinfo;
             }
 
             string reply = String.Empty;
@@ -7675,8 +7666,8 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                     switch (code)
                     {
-                        case (int)ScriptBaseClass.PRIM_POSITION:
-                        case (int)ScriptBaseClass.PRIM_POS_LOCAL:
+                        case ScriptBaseClass.PRIM_POSITION:
+                        case ScriptBaseClass.PRIM_POS_LOCAL:
                             if (remain < 1)
                                 return null;
 
@@ -7685,7 +7676,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                             currentPosition = GetSetPosTarget(part, v, currentPosition);
 
                             break;
-                        case (int)ScriptBaseClass.PRIM_SIZE:
+                        case ScriptBaseClass.PRIM_SIZE:
                             if (remain < 1)
                                 return null;
 
@@ -7693,7 +7684,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                             SetScale(part, v);
 
                             break;
-                        case (int)ScriptBaseClass.PRIM_ROTATION:
+                        case ScriptBaseClass.PRIM_ROTATION:
                             if (remain < 1)
                                 return null;
 
@@ -7713,7 +7704,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                             break;
 
-                        case (int)ScriptBaseClass.PRIM_TYPE:
+                        case ScriptBaseClass.PRIM_TYPE:
                             if (remain < 3)
                                 return null;
 
@@ -7732,7 +7723,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                             switch (code)
                             {
-                                case (int)ScriptBaseClass.PRIM_TYPE_BOX:
+                                case ScriptBaseClass.PRIM_TYPE_BOX:
                                     if (remain < 6)
                                         return null;
 
@@ -7747,7 +7738,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                                         (byte)ProfileShape.Square, (byte)Extrusion.Straight);
                                     break;
 
-                                case (int)ScriptBaseClass.PRIM_TYPE_CYLINDER:
+                                case ScriptBaseClass.PRIM_TYPE_CYLINDER:
                                     if (remain < 6)
                                         return null;
 
@@ -7761,7 +7752,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                                         (byte)ProfileShape.Circle, (byte)Extrusion.Straight);
                                     break;
 
-                                case (int)ScriptBaseClass.PRIM_TYPE_PRISM:
+                                case ScriptBaseClass.PRIM_TYPE_PRISM:
                                     if (remain < 6)
                                         return null;
 
@@ -7775,7 +7766,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                                         (byte)ProfileShape.EquilateralTriangle, (byte)Extrusion.Straight);
                                     break;
 
-                                case (int)ScriptBaseClass.PRIM_TYPE_SPHERE:
+                                case ScriptBaseClass.PRIM_TYPE_SPHERE:
                                     if (remain < 5)
                                         return null;
 
@@ -7788,7 +7779,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                                         (byte)ProfileShape.HalfCircle, (byte)Extrusion.Curve1);
                                     break;
 
-                                case (int)ScriptBaseClass.PRIM_TYPE_TORUS:
+                                case ScriptBaseClass.PRIM_TYPE_TORUS:
                                     if (remain < 11)
                                         return null;
 
@@ -7807,7 +7798,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                                         revolutions, radiusoffset, skew, (byte)ProfileShape.Circle, (byte)Extrusion.Curve1);
                                     break;
 
-                                case (int)ScriptBaseClass.PRIM_TYPE_TUBE:
+                                case ScriptBaseClass.PRIM_TYPE_TUBE:
                                     if (remain < 11)
                                         return null;
 
@@ -7826,7 +7817,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                                         revolutions, radiusoffset, skew, (byte)ProfileShape.Square, (byte)Extrusion.Curve1);
                                     break;
 
-                                case (int)ScriptBaseClass.PRIM_TYPE_RING:
+                                case ScriptBaseClass.PRIM_TYPE_RING:
                                     if (remain < 11)
                                         return null;
 
@@ -7845,7 +7836,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                                         revolutions, radiusoffset, skew, (byte)ProfileShape.EquilateralTriangle, (byte)Extrusion.Curve1);
                                     break;
 
-                                case (int)ScriptBaseClass.PRIM_TYPE_SCULPT:
+                                case ScriptBaseClass.PRIM_TYPE_SCULPT:
                                     if (remain < 2)
                                         return null;
 
@@ -7857,7 +7848,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                             break;
 
-                        case (int)ScriptBaseClass.PRIM_TEXTURE:
+                        case ScriptBaseClass.PRIM_TEXTURE:
                             if (remain < 5)
                                 return null;
 
@@ -7874,7 +7865,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                             break;
 
-                        case (int)ScriptBaseClass.PRIM_COLOR:
+                        case ScriptBaseClass.PRIM_COLOR:
                             if (remain < 3)
                                 return null;
 
@@ -7886,7 +7877,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                             break;
 
-                        case (int)ScriptBaseClass.PRIM_FLEXIBLE:
+                        case ScriptBaseClass.PRIM_FLEXIBLE:
                             if (remain < 7)
                                 return null;
 
@@ -7902,7 +7893,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                             break;
 
-                        case (int)ScriptBaseClass.PRIM_POINT_LIGHT:
+                        case ScriptBaseClass.PRIM_POINT_LIGHT:
                             if (remain < 5)
                                 return null;
                             bool light = rules.GetLSLIntegerItem(idx++);
@@ -7915,7 +7906,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                             break;
 
-                        case (int)ScriptBaseClass.PRIM_GLOW:
+                        case ScriptBaseClass.PRIM_GLOW:
                             if (remain < 2)
                                 return null;
                             face = rules.GetLSLIntegerItem(idx++);
@@ -7925,7 +7916,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                             break;
 
-                        case (int)ScriptBaseClass.PRIM_BUMP_SHINY:
+                        case ScriptBaseClass.PRIM_BUMP_SHINY:
                             if (remain < 3)
                                 return null;
                             face = (int)rules.GetLSLIntegerItem(idx++);
@@ -7936,7 +7927,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                             break;
 
-                         case (int)ScriptBaseClass.PRIM_FULLBRIGHT:
+                         case ScriptBaseClass.PRIM_FULLBRIGHT:
                              if (remain < 2)
                                  return null;
                              face = rules.GetLSLIntegerItem(idx++);
@@ -7944,7 +7935,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                              SetFullBright(part, face , st);
                              break;
 
-                         case (int)ScriptBaseClass.PRIM_MATERIAL:
+                         case ScriptBaseClass.PRIM_MATERIAL:
                              if (remain < 1)
                                  return null;
                              int mat = rules.GetLSLIntegerItem(idx++);
@@ -7954,7 +7945,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                              part.Material = Convert.ToByte(mat);
                              break;
 
-                         case (int)ScriptBaseClass.PRIM_PHANTOM:
+                         case ScriptBaseClass.PRIM_PHANTOM:
                              if (remain < 1)
                                  return null;
 
@@ -7963,7 +7954,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                              break;
 
-                         case (int)ScriptBaseClass.PRIM_PHYSICS:
+                         case ScriptBaseClass.PRIM_PHYSICS:
                             if (remain < 1)
                                  return null;
                              string phy = rules.Data[idx++].ToString();
@@ -7977,7 +7968,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                              part.ScriptSetPhysicsStatus(physics);
                              break;
 
-                        case (int)ScriptBaseClass.PRIM_PHYSICS_SHAPE_TYPE:
+                        case ScriptBaseClass.PRIM_PHYSICS_SHAPE_TYPE:
                             if (remain < 1)
                                 return null;
 
@@ -7993,7 +7984,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                             break;
 
-                        case (int)ScriptBaseClass.PRIM_TEMP_ON_REZ:
+                        case ScriptBaseClass.PRIM_TEMP_ON_REZ:
                             if (remain < 1)
                                 return null;
                             string temp = rules.Data[idx++].ToString();
@@ -8002,7 +7993,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                             break;
 
-                        case (int)ScriptBaseClass.PRIM_TEXGEN:
+                        case ScriptBaseClass.PRIM_TEXGEN:
                             if (remain < 2)
                                 return null;
                                 //face,type
@@ -8010,7 +8001,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                             int style = rules.GetLSLIntegerItem(idx++);
                             SetTexGen(part, face, style);
                             break;
-                        case (int)ScriptBaseClass.PRIM_TEXT:
+                        case ScriptBaseClass.PRIM_TEXT:
                             if (remain < 3)
                                 return null;
                             string primText = rules.GetLSLStringItem(idx++);
@@ -8020,24 +8011,24 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                             part.SetText(primText, av3, Util.Clip((float)primTextAlpha, 0.0f, 1.0f));
 
                             break;
-                        case (int)ScriptBaseClass.PRIM_NAME:
+                        case ScriptBaseClass.PRIM_NAME:
                             if (remain < 1)
                                 return null;
                             string primName = rules.GetLSLStringItem(idx++);
                             part.Name = primName;
                             break;
-                        case (int)ScriptBaseClass.PRIM_DESC:
+                        case ScriptBaseClass.PRIM_DESC:
                             if (remain < 1)
                                 return null;
                             string primDesc = rules.GetLSLStringItem(idx++);
                             part.Description = primDesc;
                             break;
-                        case (int)ScriptBaseClass.PRIM_ROT_LOCAL:
+                        case ScriptBaseClass.PRIM_ROT_LOCAL:
                             if (remain < 1)
                                 return null;
                             SetRot(part, rules.GetQuaternionItem(idx++));
                             break;
-                        case (int)ScriptBaseClass.PRIM_OMEGA:
+                        case ScriptBaseClass.PRIM_OMEGA:
                             if (remain < 3)
                                 return null;
                             LSL_Vector axis = rules.GetVector3Item(idx++);
@@ -8045,17 +8036,21 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                             LSL_Float gain = rules.GetLSLFloatItem(idx++);
                             TargetOmega(part, axis, (double)spinrate, (double)gain);
                             break;
-                        case (int)ScriptBaseClass.PRIM_SLICE:
+                        case ScriptBaseClass.PRIM_SLICE:
                             if (remain < 1)
                                 return null;
                             LSL_Vector slice = rules.GetVector3Item(idx++);
                             part.UpdateSlice((float)slice.x, (float)slice.y);
                             break;
-                        case (int)ScriptBaseClass.PRIM_LINK_TARGET:
+                        case ScriptBaseClass.PRIM_LINK_TARGET:
                             if (remain < 3) // setting to 3 on the basis that parsing any usage of PRIM_LINK_TARGET that has nothing following it is pointless.
                                 return null;
 
                             return rules.GetSublist(idx, -1);
+
+                        default:
+                            Error(originFunc, string.Format("Error running rule #{0}: arg #{1} - unsupported parameter", rulesParsed, idx - idxStart));
+                            return null;
                     }
                 }
             }
@@ -8102,15 +8097,15 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                     switch (code)
                     {
-                        case (int)ScriptBaseClass.PRIM_POSITION:
-                        case (int)ScriptBaseClass.PRIM_POS_LOCAL:
+                        case ScriptBaseClass.PRIM_POSITION:
+                        case ScriptBaseClass.PRIM_POS_LOCAL:
                             if (remain < 1)
                                 return null;
 
                             sp.OffsetPosition = rules.GetVector3Item(idx++);
                             break;
 
-                        case (int)ScriptBaseClass.PRIM_ROTATION:                       
+                        case ScriptBaseClass.PRIM_ROTATION:                       
                             if (remain < 1)
                                 return null;
 
@@ -8123,13 +8118,32 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                             break;
 
-                        case (int)ScriptBaseClass.PRIM_ROT_LOCAL:
+                        case ScriptBaseClass.PRIM_ROT_LOCAL:
                             if (remain < 1)
                                 return null;
 
                             sp.Rotation = rules.GetQuaternionItem(idx++);
 
                             break;
+
+                        case ScriptBaseClass.PRIM_TYPE:
+                            Error(originFunc, "PRIM_TYPE disallowed on agent");
+                            return null;
+
+                        case ScriptBaseClass.PRIM_OMEGA:
+                            Error(originFunc, "PRIM_OMEGA disallowed on agent");
+                            return null;
+
+                        case ScriptBaseClass.PRIM_LINK_TARGET:
+                            if (remain < 3) // setting to 3 on the basis that parsing any usage of PRIM_LINK_TARGET that has nothing following it is pointless.
+                                return null;
+
+                            return rules.GetSublist(idx, -1);
+
+                        default:
+                            Error(originFunc,
+                                string.Format("Error running rule #{0} on agent: arg #{1} - disallowed on agent", rulesParsed, idx - idxStart));
+                            return null;
                     }
                 }
             }
@@ -11529,9 +11543,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                     return;
                 }
 
-                string data = Encoding.UTF8.GetString(a.Data);
-                //m_log.Debug(data);
-                NotecardCache.Cache(id, data);
+                NotecardCache.Cache(id, a.Data);
                 AsyncCommands.DataserverPlugin.DataserverReply(reqIdentifier, NotecardCache.GetLines(id).ToString());
             });
 
@@ -11583,9 +11595,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                                  return;
                              }
 
-                             string data = Encoding.UTF8.GetString(a.Data);
-                             //m_log.Debug(data);
-                             NotecardCache.Cache(id, data);
+                             NotecardCache.Cache(id, a.Data);
                              AsyncCommands.DataserverPlugin.DataserverReply(
                                 reqIdentifier, NotecardCache.GetLine(assetID, line, m_notecardLineReadCharsMax));
                          });
@@ -12364,71 +12374,46 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             public DateTime lastRef;
         }
 
-        private static Dictionary<UUID, Notecard> m_Notecards =
-            new Dictionary<UUID, Notecard>();
-        private static ReaderWriterLock m_NotecardsRwLock = new ReaderWriterLock();
+        private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
-        public static void Cache(UUID assetID, string text)
+        private static ThreadedClasses.RwLockedDictionary<UUID, Notecard> m_Notecards =
+            new ThreadedClasses.RwLockedDictionary<UUID, Notecard>();
+
+        public static void Cache(UUID assetID, byte[] text)
         {
             CheckCache();
 
-            m_NotecardsRwLock.AcquireReaderLock(-1);
-            try
-            {
-                if (m_Notecards.ContainsKey(assetID))
-                    return;
-
-                LockCookie lc = m_NotecardsRwLock.UpgradeToWriterLock(-1);
-                try
+            m_Notecards.GetOrAddIfNotExists(assetID,
+                delegate()
                 {
-                    /* check again */
-                    if (m_Notecards.ContainsKey(assetID))
-                        return;
-
                     Notecard nc = new Notecard();
                     nc.lastRef = DateTime.Now;
-                    nc.text = SLUtil.ParseNotecardToList(text).ToArray();
-                    m_Notecards[assetID] = nc;
-                }
-                finally
-                {
-                    m_NotecardsRwLock.DowngradeFromWriterLock(ref lc);
-                }
-            }
-            finally
-            {
-                m_NotecardsRwLock.ReleaseReaderLock();
-            }
+                    try
+                    {
+                        nc.text = SLUtil.ParseNotecardToArray(text);
+                    }
+                    catch(SLUtil.NotANotecardFormatException e)
+                    {
+                        nc.text = new string[0];
+                        m_log.WarnFormat("[NOTECARD CACHE]: Parsing of notecard asset {0} failed at line number {1}", assetID.ToString(), e.lineNumber);
+                    }
+                    return nc;
+                });
         }
 
         public static bool IsCached(UUID assetID)
         {
-            m_NotecardsRwLock.AcquireReaderLock(-1);
-            try
-            {
-                return m_Notecards.ContainsKey(assetID);
-            }
-            finally
-            {
-                m_NotecardsRwLock.ReleaseReaderLock();
-            }
+            return m_Notecards.ContainsKey(assetID);
         }
 
         public static int GetLines(UUID assetID)
         {
-            if (!IsCached(assetID))
+            Notecard nc;
+            if(!m_Notecards.TryGetValue(assetID, out nc))
                 return -1;
 
-            m_NotecardsRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_Notecards[assetID].lastRef = DateTime.Now;
-                return m_Notecards[assetID].text.Length;
-            }
-            finally
-            {
-                m_NotecardsRwLock.ReleaseWriterLock();
-            }
+            nc.lastRef = DateTime.Now;
+            return nc.text.Length;
         }
 
         /// <summary>
@@ -12444,25 +12429,21 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
             string data;
 
-            if (!IsCached(assetID))
+            Notecard nc;
+
+            if (!m_Notecards.TryGetValue(assetID, out nc))
+            {
                 return "";
-
-            m_NotecardsRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_Notecards[assetID].lastRef = DateTime.Now;
-
-                if (lineNumber >= m_Notecards[assetID].text.Length)
-                    return "\n\n\n";
-
-                data = m_Notecards[assetID].text[lineNumber];
-
-                return data;
             }
-            finally
-            {
-                m_NotecardsRwLock.ReleaseWriterLock();
-            }
+
+            nc.lastRef = DateTime.Now;
+
+            if (lineNumber >= nc.text.Length)
+                return "\n\n\n";
+
+            data = nc.text[lineNumber];
+
+            return data;
         }
 
         /// <summary>
@@ -12489,29 +12470,13 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
         public static void CheckCache()
         {
-            m_NotecardsRwLock.AcquireReaderLock(-1);
-            try
+            foreach (UUID key in new List<UUID>(m_Notecards.Keys))
             {
-                foreach (UUID key in new List<UUID>(m_Notecards.Keys))
+                Notecard nc = m_Notecards[key];
+                if (nc.lastRef.AddSeconds(30) < DateTime.Now)
                 {
-                    Notecard nc = m_Notecards[key];
-                    if (nc.lastRef.AddSeconds(30) < DateTime.Now)
-                    {
-                        LockCookie lc = m_NotecardsRwLock.UpgradeToWriterLock(-1);
-                        try
-                        {
-                            m_Notecards.Remove(key);
-                        }
-                        finally
-                        {
-                            m_NotecardsRwLock.DowngradeFromWriterLock(ref lc);
-                        }
-                    }
+                    m_Notecards.Remove(key);
                 }
-            }
-            finally
-            {
-                m_NotecardsRwLock.ReleaseReaderLock();
             }
         }
     }

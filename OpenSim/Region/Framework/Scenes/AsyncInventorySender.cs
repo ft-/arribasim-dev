@@ -72,7 +72,7 @@ namespace OpenSim.Region.Framework.Scenes
         /// <summary>
         /// Queues fetch requests
         /// </summary>
-        Queue<FetchHolder> m_fetchHolder = new Queue<FetchHolder>();
+        ThreadedClasses.NonblockingQueue<FetchHolder> m_fetchHolder = new ThreadedClasses.NonblockingQueue<FetchHolder>();
 
         /// <summary>
         /// Signal whether a queue is currently being processed or not.
@@ -93,13 +93,10 @@ namespace OpenSim.Region.Framework.Scenes
         /// <param name="ownerID"></param>
         public void HandleFetchInventory(IClientAPI remoteClient, UUID itemID, UUID ownerID)
         {
-            lock (m_fetchHolder)
-            {
 //                m_log.DebugFormat(
 //                    "[ASYNC INVENTORY SENDER]: Putting request from {0} for {1} on queue", remoteClient.Name, itemID);
 
-                m_fetchHolder.Enqueue(new FetchHolder(remoteClient, itemID));
-            }
+            m_fetchHolder.Enqueue(new FetchHolder(remoteClient, itemID));
 
             if (!m_processing)
             {
@@ -117,19 +114,16 @@ namespace OpenSim.Region.Framework.Scenes
 
             while (true)
             {
-                lock (m_fetchHolder)
-                {
 //                    m_log.DebugFormat("[ASYNC INVENTORY SENDER]: {0} items left to process", m_fetchHolder.Count);
 
-                    if (m_fetchHolder.Count == 0)
-                    {
-                        m_processing = false;
-                        return;
-                    }
-                    else
-                    {
-                        fh = m_fetchHolder.Dequeue();
-                    }
+                if (m_fetchHolder.Count == 0)
+                {
+                    m_processing = false;
+                    return;
+                }
+                else
+                {
+                    fh = m_fetchHolder.Dequeue();
                 }
 
                 if (!fh.Client.IsActive)

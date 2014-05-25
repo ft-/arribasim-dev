@@ -306,6 +306,24 @@ namespace OpenSim.Data.PGSQL
             }
         }
 
+        public virtual T[] Get(string where, NpgsqlParameter parameter)
+        {
+            using (NpgsqlConnection conn = new NpgsqlConnection(m_ConnectionString))
+            using (NpgsqlCommand cmd = new NpgsqlCommand())
+            {
+
+                string query = String.Format("SELECT * FROM {0} WHERE {1}",
+                                             m_Realm, where);
+                cmd.Connection = conn;
+                cmd.CommandText = query;
+
+                cmd.Parameters.Add(parameter);
+
+                conn.Open();
+                return DoQuery(cmd);
+            }
+        }
+
         public virtual bool Store(T row)
         {
             List<string> constraintFields = GetConstraints();

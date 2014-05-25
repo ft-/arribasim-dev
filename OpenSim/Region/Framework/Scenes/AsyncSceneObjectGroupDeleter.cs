@@ -60,7 +60,7 @@ namespace OpenSim.Region.Framework.Scenes
         public bool Enabled;
         
         private Timer m_inventoryTicker = new Timer(2000);
-        private readonly Queue<DeleteToInventoryHolder> m_inventoryDeletes = new Queue<DeleteToInventoryHolder>();
+        private readonly ThreadedClasses.NonblockingQueue<DeleteToInventoryHolder> m_inventoryDeletes = new ThreadedClasses.NonblockingQueue<DeleteToInventoryHolder>();
         private Scene m_scene;
         
         public AsyncSceneObjectGroupDeleter(Scene scene)
@@ -82,17 +82,14 @@ namespace OpenSim.Region.Framework.Scenes
                 lock (m_inventoryTicker)
                     m_inventoryTicker.Stop();
 
-            lock (m_inventoryDeletes)
-            {
-                DeleteToInventoryHolder dtis = new DeleteToInventoryHolder();
-                dtis.action = action;
-                dtis.folderID = folderID;
-                dtis.objectGroups = objectGroups;
-                dtis.remoteClient = remoteClient;
-                dtis.permissionToDelete = permissionToDelete;
+            DeleteToInventoryHolder dtis = new DeleteToInventoryHolder();
+            dtis.action = action;
+            dtis.folderID = folderID;
+            dtis.objectGroups = objectGroups;
+            dtis.remoteClient = remoteClient;
+            dtis.permissionToDelete = permissionToDelete;
 
-                m_inventoryDeletes.Enqueue(dtis);
-            }
+            m_inventoryDeletes.Enqueue(dtis);
 
             if (Enabled)
                 lock (m_inventoryTicker)
@@ -134,37 +131,34 @@ namespace OpenSim.Region.Framework.Scenes
  
             try
             {
-                lock (m_inventoryDeletes)
+                int left = m_inventoryDeletes.Count;
+                if (left > 0)
                 {
-                    int left = m_inventoryDeletes.Count;
-                    if (left > 0)
-                    {
-                        x = m_inventoryDeletes.Dequeue();
+                    x = m_inventoryDeletes.Dequeue();
 
 //                        m_log.DebugFormat(
 //                            "[ASYNC DELETER]: Sending object to user's inventory, action {1}, count {2}, {0} item(s) remaining.",
 //                            left, x.action, x.objectGroups.Count);
                         
-                        try
-                        {
-                            IInventoryAccessModule invAccess = m_scene.RequestModuleInterface<IInventoryAccessModule>();
-                            if (invAccess != null)
-                                invAccess.CopyToInventory(x.action, x.folderID, x.objectGroups, x.remoteClient, false);
+                    try
+                    {
+                        IInventoryAccessModule invAccess = m_scene.RequestModuleInterface<IInventoryAccessModule>();
+                        if (invAccess != null)
+                            invAccess.CopyToInventory(x.action, x.folderID, x.objectGroups, x.remoteClient, false);
                             
-                            if (x.permissionToDelete)
-                            {
-                                foreach (SceneObjectGroup g in x.objectGroups)
-                                    m_scene.DeleteSceneObject(g, true);
-                            }
-                        }
-                        catch (Exception e)
+                        if (x.permissionToDelete)
                         {
-                            m_log.ErrorFormat(
-                                "[ASYNC DELETER]: Exception background sending object: {0}{1}", e.Message, e.StackTrace);
+                            foreach (SceneObjectGroup g in x.objectGroups)
+                                m_scene.DeleteSceneObject(g, true);
                         }
-                        
-                        return true;
                     }
+                    catch (Exception e)
+                    {
+                        m_log.ErrorFormat(
+                            "[ASYNC DELETER]: Exception background sending object: {0}{1}", e.Message, e.StackTrace);
+                    }
+                        
+                    return true;
                 }
             }
             catch (Exception e)

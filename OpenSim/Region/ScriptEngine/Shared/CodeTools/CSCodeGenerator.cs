@@ -147,19 +147,11 @@ namespace OpenSim.Region.ScriptEngine.Shared.CodeTools
 
             string retstr = String.Empty;
 
-            // standard preamble
-            //retstr = GenerateLine("using OpenSim.Region.ScriptEngine.Common;");
-            //retstr += GenerateLine("using System.Collections.Generic;");
-            //retstr += GenerateLine("");
-            //retstr += GenerateLine("namespace SecondLife");
-            //retstr += GenerateLine("{");
             m_braceCount++;
-            //retstr += GenerateIndentedLine("public class Script : OpenSim.Region.ScriptEngine.Common");
-            //retstr += GenerateIndentedLine("{");
             m_braceCount++;
 
             // line number
-            m_CSharpLine += 3;
+            m_CSharpLine += 2;
 
             // here's the payload
             retstr += GenerateLine();
@@ -168,9 +160,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.CodeTools
 
             // close braces!
             m_braceCount--;
-            //retstr += GenerateIndentedLine("}");
             m_braceCount--;
-            //retstr += GenerateLine("}");
 
             // Removes all carriage return characters which may be generated in Windows platform. Is there
             // cleaner way of doing this?

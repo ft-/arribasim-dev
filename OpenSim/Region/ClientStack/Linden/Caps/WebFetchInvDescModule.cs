@@ -97,8 +97,8 @@ namespace OpenSim.Region.ClientStack.Linden
 
         private static Thread[] m_workerThreads = null;
 
-        private static DoubleQueue<aPollRequest> m_queue =
-                new DoubleQueue<aPollRequest>();
+        private static ThreadedClasses.BlockingQueue<aPollRequest> m_queue =
+                new ThreadedClasses.BlockingQueue<aPollRequest>();
 
         #region ISharedRegionModule Members
 
@@ -304,8 +304,6 @@ namespace OpenSim.Region.ClientStack.Linden
 
                     ArrayList foldersrequested = (ArrayList)hash["folders"];
 
-                    bool highPriority = false;
-
                     for (int i = 0; i < foldersrequested.Count; i++)
                     {
                         Hashtable inventoryhash = (Hashtable)foldersrequested[i];
@@ -321,10 +319,7 @@ namespace OpenSim.Region.ClientStack.Linden
                         }
                     }
 
-                    if (highPriority)
-                        m_queue.EnqueueHigh(reqinfo);
-                    else
-                        m_queue.EnqueueLow(reqinfo);
+                    m_queue.Enqueue(reqinfo);
                 };
 
                 NoEvents = (x, y) =>

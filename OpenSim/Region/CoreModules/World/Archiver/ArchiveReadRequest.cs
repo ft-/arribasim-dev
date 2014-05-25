@@ -133,7 +133,7 @@ namespace OpenSim.Region.CoreModules.World.Archiver
         /// <summary>
         /// Used to cache lookups for valid uuids.
         /// </summary>
-        private IDictionary<UUID, bool> m_validUserUuids = new Dictionary<UUID, bool>();
+        private ThreadedClasses.RwLockedDictionary<UUID, bool> m_validUserUuids = new ThreadedClasses.RwLockedDictionary<UUID, bool>();
 
         private IUserManagement m_UserMan;
         private IUserManagement UserManager
@@ -151,7 +151,7 @@ namespace OpenSim.Region.CoreModules.World.Archiver
         /// <summary>
         /// Used to cache lookups for valid groups.
         /// </summary>
-        private IDictionary<UUID, bool> m_validGroupUuids = new Dictionary<UUID, bool>();
+        private ThreadedClasses.RwLockedDictionary<UUID, bool> m_validGroupUuids = new ThreadedClasses.RwLockedDictionary<UUID, bool>();
 
         private IGroupsModule m_groupsModule;
 
@@ -595,29 +595,25 @@ namespace OpenSim.Region.CoreModules.World.Archiver
                 // Fix ownership/creator of inventory items
                 // Not doing so results in inventory items
                 // being no copy/no mod for everyone
-                lock (part.TaskInventory)
+                part.TaskInventory.ForEach(delegate(KeyValuePair<UUID, TaskInventoryItem> kvp)
                 {
-                    TaskInventoryDictionary inv = part.TaskInventory;
-                    foreach (KeyValuePair<UUID, TaskInventoryItem> kvp in inv)
+                    if (!(ResolveUserUuid(scene, kvp.Value.OwnerID) || ResolveGroupUuid(kvp.Value.OwnerID)))
                     {
-                        if (!(ResolveUserUuid(scene, kvp.Value.OwnerID) || ResolveGroupUuid(kvp.Value.OwnerID)))
-                        {
-                            kvp.Value.OwnerID = m_defaultUser;
-                        }
-
-                        if (string.IsNullOrEmpty(kvp.Value.CreatorData))
-                        {
-                            if (!ResolveUserUuid(scene, kvp.Value.CreatorID))
-                                kvp.Value.CreatorID = m_defaultUser;
-                        }
-
-                        if (UserManager != null)
-                            UserManager.AddUser(kvp.Value.CreatorID, kvp.Value.CreatorData);
-
-                        if (!ResolveGroupUuid(kvp.Value.GroupID))
-                            kvp.Value.GroupID = UUID.Zero;
+                        kvp.Value.OwnerID = m_defaultUser;
                     }
-                }
+
+                    if (string.IsNullOrEmpty(kvp.Value.CreatorData))
+                    {
+                        if (!ResolveUserUuid(scene, kvp.Value.CreatorID))
+                            kvp.Value.CreatorID = m_defaultUser;
+                    }
+
+                    if (UserManager != null)
+                        UserManager.AddUser(kvp.Value.CreatorID, kvp.Value.CreatorData);
+
+                    if (!ResolveGroupUuid(kvp.Value.GroupID))
+                        kvp.Value.GroupID = UUID.Zero;
+                });
             }
         }
 
@@ -701,18 +697,11 @@ namespace OpenSim.Region.CoreModules.World.Archiver
         /// <returns></returns>
         private bool ResolveUserUuid(Scene scene, UUID uuid)
         {
-            lock (m_validUserUuids)
+            return m_validUserUuids.GetOrAddIfNotExists(uuid, delegate()
             {
-                if (!m_validUserUuids.ContainsKey(uuid))
-                {
-                    // Note: we call GetUserAccount() inside the lock because this UserID is likely
-                    // to occur many times, and we only want to query the users service once.
-                    UserAccount account = scene.UserAccountService.GetUserAccount(scene.RegionInfo.ScopeID, uuid);
-                    m_validUserUuids.Add(uuid, account != null);
-                }
-
-                return m_validUserUuids[uuid];
-            }
+                UserAccount account = scene.UserAccountService.GetUserAccount(scene.RegionInfo.ScopeID, uuid);
+                return account != null;
+            });
         }
 
         /// <summary>
@@ -722,26 +711,14 @@ namespace OpenSim.Region.CoreModules.World.Archiver
         /// <returns></returns>
         private bool ResolveGroupUuid(UUID uuid)
         {
-            lock (m_validGroupUuids)
+            if (m_groupsModule == null)
             {
-                if (!m_validGroupUuids.ContainsKey(uuid))
-                {
-                    bool exists;
-                    if (m_groupsModule == null)
-                    {
-                        exists = false;
-                    }
-                    else
-                    {
-                        // Note: we call GetGroupRecord() inside the lock because this GroupID is likely
-                        // to occur many times, and we only want to query the groups service once.
-                        exists = (m_groupsModule.GetGroupRecord(uuid) != null);
-                    }
-                    m_validGroupUuids.Add(uuid, exists);
-                }
-
-                return m_validGroupUuids[uuid];
+                return false;
             }
+            return m_validGroupUuids.GetOrAddIfNotExists(uuid, delegate()
+            {
+                return (m_groupsModule.GetGroupRecord(uuid) != null);
+            });
         }
 
         /// Load an asset

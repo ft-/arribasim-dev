@@ -117,6 +117,10 @@ namespace OpenSimProfile.Modules.OpenProfile
 
         public void RegionLoaded(Scene scene)
         {
+            if(!m_Enabled)
+            {
+                return;
+            }
             // Hook up events
             scene.EventManager.OnNewClient += OnNewClient;
         }

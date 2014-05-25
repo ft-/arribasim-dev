@@ -116,7 +116,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.XmlRpcGroups
 
         private IUserAccountService m_accountService = null;
 
-        private ExpiringCache<string, XmlRpcResponse> m_memoryCache;
+        private ThreadedClasses.ExpiringCache<string, XmlRpcResponse> m_memoryCache;
         private int m_cacheTimeout = 30;
 
         // Used to track which agents are have dropped from a group chat session
@@ -188,7 +188,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.XmlRpcGroups
                 m_debugEnabled = groupsConfig.GetBoolean("DebugEnabled", false);
 
                 // If we got all the config options we need, lets start'er'up
-                m_memoryCache = new ExpiringCache<string, XmlRpcResponse>();
+                m_memoryCache = new ThreadedClasses.ExpiringCache<string, XmlRpcResponse>(30);
                 m_connectorEnabled = true;
             }
         }
