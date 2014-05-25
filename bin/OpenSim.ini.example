@@ -805,14 +805,11 @@
     ;; Some Windows users have also reported script loading problems when AppDomainLoading = false
     ; AppDomainLoading = true
 
-    ;; Controls whether scripts are stopped by aborting their threads externally (abort) or by co-operative checks from the compiled script (co-op) 
-    ;; co-op will be more stable but this option is currently experimental.
-    ;; If moving from co-op to abort, existing script DLLs will need to be recompiled.
+    ;; When coming from a previous version before 2014-05-25 follow the following information:
     ;; This currently can only be done manually, either by setting DeleteScriptsOnStartup = true for one run  
     ;; or by deleting the script DLL* files in bin/ScriptEngines/<region-id>/
-    ;; One can move from co-op back to abort without recompilation, but reverting back to co-op again will need script recompile
-    ;; Current valid values are "abort" and "co-op"
-    ; ScriptStopStrategy = abort
+    ;; Current valid value is "co-op"
+    ; ScriptStopStrategy = co-op
     
 
     ;# {DeleteScriptsOnStartup} {} {Delete previously compiled script DLLs on startup?} {true false} true
