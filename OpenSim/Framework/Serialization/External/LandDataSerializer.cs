@@ -210,9 +210,14 @@ namespace OpenSim.Framework.Serialization.External
             xtw.WriteElementString("ClaimDate",      Convert.ToString(landData.ClaimDate));
             xtw.WriteElementString("ClaimPrice",     Convert.ToString(landData.ClaimPrice));
             xtw.WriteElementString("GlobalID",       landData.GlobalID.ToString());
-            xtw.WriteElementString("GroupID",        landData.GroupID.ToString());
-            xtw.WriteElementString("IsGroupOwned",   Convert.ToString(landData.IsGroupOwned));
-            xtw.WriteElementString("Bitmap",         Convert.ToBase64String(landData.Bitmap));
+
+            UUID groupID = options.ContainsKey("wipe-owners") ? UUID.Zero : landData.GroupID;
+            xtw.WriteElementString("GroupID", groupID.ToString());
+
+            bool isGroupOwned = options.ContainsKey("wipe-owners") ? false : landData.IsGroupOwned;
+            xtw.WriteElementString("IsGroupOwned", Convert.ToString(isGroupOwned));
+
+            xtw.WriteElementString("Bitmap", Convert.ToBase64String(landData.Bitmap));
             xtw.WriteElementString("Description",    landData.Description);
             xtw.WriteElementString("Flags",          Convert.ToString((uint)landData.Flags));
             xtw.WriteElementString("LandingType",    Convert.ToString((byte)landData.LandingType));
@@ -224,13 +229,8 @@ namespace OpenSim.Framework.Serialization.External
             xtw.WriteElementString("MediaURL",       landData.MediaURL);
             xtw.WriteElementString("MusicURL",       landData.MusicURL);
 
-            UUID ownerIdToWrite;
-            if (options != null && options.ContainsKey("wipe-owners"))
-                ownerIdToWrite = UUID.Zero;                
-            else
-                ownerIdToWrite = landData.OwnerID;
-
-            xtw.WriteElementString("OwnerID",        ownerIdToWrite.ToString());
+            UUID ownerID = options.ContainsKey("wipe-owners") ? UUID.Zero : landData.OwnerID;
+            xtw.WriteElementString("OwnerID", ownerID.ToString());
 
             xtw.WriteStartElement("ParcelAccessList");
             foreach (LandAccessEntry pal in landData.ParcelAccessList)

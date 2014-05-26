@@ -1341,7 +1341,9 @@ namespace OpenSim.Region.Framework.Scenes.Serialization
             writer.WriteElementString("SalePrice", sop.SalePrice.ToString());
             writer.WriteElementString("ObjectSaleType", sop.ObjectSaleType.ToString());
             writer.WriteElementString("OwnershipCost", sop.OwnershipCost.ToString());
-            WriteUUID(writer, "GroupID", sop.GroupID, options);
+
+            UUID groupID = options.ContainsKey("wipe-owners") ? UUID.Zero : sop.GroupID;
+            WriteUUID(writer, "GroupID", groupID, options);
 
             UUID ownerID = options.ContainsKey("wipe-owners") ? UUID.Zero : sop.OwnerID;
             WriteUUID(writer, "OwnerID", ownerID, options);
@@ -1467,7 +1469,10 @@ namespace OpenSim.Region.Framework.Scenes.Serialization
                     writer.WriteElementString("Description", item.Description);
                     writer.WriteElementString("EveryonePermissions", item.EveryonePermissions.ToString());
                     writer.WriteElementString("Flags", item.Flags.ToString());
-                    WriteUUID(writer, "GroupID", item.GroupID, options);
+                    
+                    UUID groupID = options.ContainsKey("wipe-owners") ? UUID.Zero : item.GroupID;
+                    WriteUUID(writer, "GroupID", groupID, options);
+
                     writer.WriteElementString("GroupPermissions", item.GroupPermissions.ToString());
                     writer.WriteElementString("InvType", item.InvType.ToString());
                     WriteUUID(writer, "ItemID", item.ItemID, options);
@@ -1488,7 +1493,9 @@ namespace OpenSim.Region.Framework.Scenes.Serialization
                     WriteUUID(writer, "PermsGranter", item.PermsGranter, options);
                     writer.WriteElementString("PermsMask", item.PermsMask.ToString());
                     writer.WriteElementString("Type", item.Type.ToString());
-                    writer.WriteElementString("OwnerChanged", item.OwnerChanged.ToString().ToLower());
+
+                    bool ownerChanged = options.ContainsKey("wipe-owners") ? false : item.OwnerChanged;
+                    writer.WriteElementString("OwnerChanged", ownerChanged.ToString().ToLower());
 
                     writer.WriteEndElement(); // TaskInventoryItem
                 }
