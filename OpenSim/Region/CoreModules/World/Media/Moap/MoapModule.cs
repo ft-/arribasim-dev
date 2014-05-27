@@ -119,6 +119,7 @@ namespace OpenSim.Region.CoreModules.World.Media.Moap
             
             string omCapUrl = "/CAPS/" + UUID.Random();
 
+            m_omCap.Remove(agentID);
             m_omCap.Add(omCapUrl, agentID);
                 
             // Even though we're registering for POST we're going to get GETS and UPDATES too
@@ -129,6 +130,7 @@ namespace OpenSim.Region.CoreModules.World.Media.Moap
             
             string omuCapUrl = "/CAPS/" + UUID.Random();
 
+            m_omuCap.Remove(agentID);
             m_omuCap.Add(omuCapUrl, agentID);
                 
             // Even though we're registering for POST we're going to get GETS and UPDATES too
