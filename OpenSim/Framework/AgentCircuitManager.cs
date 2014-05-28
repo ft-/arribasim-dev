@@ -97,6 +97,7 @@ namespace OpenSim.Framework
             catch(ArgumentException)
             {
                 m_agentCircuits.Remove(circuitCode);
+                m_agentCircuits.Remove(agentData.AgentID);
                 m_agentCircuits.Add(circuitCode, agentData.AgentID, agentData);
             }
         }
