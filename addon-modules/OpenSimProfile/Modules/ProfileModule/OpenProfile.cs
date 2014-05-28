@@ -34,8 +34,7 @@ namespace OpenSimProfile.Modules.OpenProfile
         //
         // Module vars
         //
-        private List<Scene> m_Scenes = new List<Scene>();
-        private ReaderWriterLock m_ScenesRwLock = new ReaderWriterLock();
+        private ThreadedClasses.RwLockedList<Scene> m_Scenes = new ThreadedClasses.RwLockedList<Scene>();
         private string m_ProfileServer = "";
         private bool m_Enabled = true;
 
@@ -86,15 +85,7 @@ namespace OpenSimProfile.Modules.OpenProfile
             scene.RegisterModuleInterface<IProfileModule>(this);
 
             // Add our scene to our list...
-            m_ScenesRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_Scenes.Add(scene);
-            }
-            finally
-            {
-                m_ScenesRwLock.ReleaseWriterLock();
-            }
+            m_Scenes.Add(scene);
         }
 
         public void RemoveRegion(Scene scene)
@@ -104,15 +95,7 @@ namespace OpenSimProfile.Modules.OpenProfile
 
             scene.UnregisterModuleInterface<IProfileModule>(this);
 
-            m_ScenesRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_Scenes.Remove(scene);
-            }
-            finally
-            {
-                m_ScenesRwLock.ReleaseWriterLock();
-            }
+            m_Scenes.Remove(scene);
         }
 
         public void RegionLoaded(Scene scene)
@@ -148,21 +131,13 @@ namespace OpenSimProfile.Modules.OpenProfile
         {
             ScenePresence p;
 
-            m_ScenesRwLock.AcquireReaderLock(-1);
-            try
+            foreach (Scene s in m_Scenes)
             {
-                foreach (Scene s in m_Scenes)
-                {
-                    p = s.GetScenePresence(clientID);
-                    if (p != null && !p.IsChildAgent)
-                        return p;
-                }
-                return null;
+                p = s.GetScenePresence(clientID);
+                if (p != null && !p.IsChildAgent)
+                    return p;
             }
-            finally
-            {
-                m_ScenesRwLock.ReleaseReaderLock();
-            }
+            return null;
         }
 
         /// New Client Event Handler
@@ -1017,16 +992,7 @@ namespace OpenSimProfile.Modules.OpenProfile
             else
             {
                 // Is local
-                Scene scene;
-                m_ScenesRwLock.AcquireReaderLock(-1);
-                try
-                {
-                    scene = m_Scenes[0];
-                }
-                finally
-                {
-                    m_ScenesRwLock.ReleaseReaderLock();
-                }
+                Scene scene = m_Scenes[0];
                 IUserAccountService uas = scene.UserAccountService;
                 UserAccount account = uas.GetUserAccount(scene.RegionInfo.ScopeID, userID);
 

@@ -32,8 +32,7 @@ namespace OpenSimSearch.Modules.OpenSearch
         //
         // Module vars
         //
-        private List<Scene> m_Scenes = new List<Scene>();
-        private ReaderWriterLock m_ScenesRwLock = new ReaderWriterLock();
+        private ThreadedClasses.RwLockedList<Scene> m_Scenes = new ThreadedClasses.RwLockedList<Scene>();
         private string m_SearchServer = "";
         private bool m_Enabled = true;
 
@@ -77,15 +76,7 @@ namespace OpenSimSearch.Modules.OpenSearch
             scene.RegisterModuleInterface<ISearchModule>(this);
 
             // Add our scene to our list...
-            m_ScenesRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_Scenes.Add(scene);
-            }
-            finally
-            {
-                m_ScenesRwLock.ReleaseWriterLock();
-            }
+            m_Scenes.Add(scene);
         }
 
         public void RemoveRegion(Scene scene)
@@ -94,15 +85,7 @@ namespace OpenSimSearch.Modules.OpenSearch
                 return;
 
             scene.UnregisterModuleInterface<ISearchModule>(this);
-            m_ScenesRwLock.AcquireWriterLock(-1);
-            try
-            {
-                m_Scenes.Remove(scene);
-            }
-            finally
-            {
-                m_ScenesRwLock.ReleaseWriterLock();
-            }
+            m_Scenes.Remove(scene);
         }
 
         public void RegionLoaded(Scene scene)
@@ -620,26 +603,18 @@ namespace OpenSimSearch.Modules.OpenSearch
 
                     ParcelRegionUUID = d["region_UUID"].ToString();
 
-                    m_ScenesRwLock.AcquireReaderLock(-1);
-                    try
+                    foreach (Scene scene in m_Scenes)
                     {
-                        foreach (Scene scene in m_Scenes)
+                        if (scene.RegionInfo.RegionID.ToString() == ParcelRegionUUID)
                         {
-                            if (scene.RegionInfo.RegionID.ToString() == ParcelRegionUUID)
-                            {
-                                landingpoint = d["landing_point"].ToString().Split('/');
+                            landingpoint = d["landing_point"].ToString().Split('/');
 
-                                mapitem.x = (uint)((scene.RegionInfo.RegionLocX * 256) +
-                                                    Convert.ToDecimal(landingpoint[0]));
-                                mapitem.y = (uint)((scene.RegionInfo.RegionLocY * 256) +
-                                                    Convert.ToDecimal(landingpoint[1]));
-                                break;
-                            }
+                            mapitem.x = (uint)((scene.RegionInfo.RegionLocX * 256) +
+                                                Convert.ToDecimal(landingpoint[0]));
+                            mapitem.y = (uint)((scene.RegionInfo.RegionLocY * 256) +
+                                                Convert.ToDecimal(landingpoint[1]));
+                            break;
                         }
-                    }
-                    finally
-                    {
-                        m_ScenesRwLock.ReleaseReaderLock();
                     }
 
                     mapitem.id = new UUID(d["parcel_id"].ToString());
