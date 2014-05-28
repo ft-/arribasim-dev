@@ -24,7 +24,7 @@ using System.Xml;
 namespace OpenSimProfile.Modules.OpenProfile
 {
     [Extension(Path = "/OpenSim/RegionModules", NodeName = "RegionModule")]
-    public class OpenProfileModule : IProfileModule, ISharedRegionModule
+    public class OpenSimProfile : IProfileModule, ISharedRegionModule
     {
         //
         // Log module
