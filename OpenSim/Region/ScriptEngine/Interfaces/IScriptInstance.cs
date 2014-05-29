@@ -139,7 +139,9 @@ namespace OpenSim.Region.ScriptEngine.Interfaces
         /// </summary>
         TaskInventoryItem ScriptTask { get; }
 
-        Queue EventQueue { get; }
+        void EnqueueEvent(object o);
+
+        object DequeueEvent();
 
         /// <summary>
         /// Number of events queued for processing.

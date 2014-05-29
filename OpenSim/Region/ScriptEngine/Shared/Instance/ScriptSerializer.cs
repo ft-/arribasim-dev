@@ -73,12 +73,12 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
 
             XmlElement queue = xmldoc.CreateElement("", "Queue", "");
 
-            int count = instance.EventQueue.Count;
+            long count = instance.EventsQueued;
 
             while (count > 0)
             {
-                EventParams ep = (EventParams)instance.EventQueue.Dequeue();
-                instance.EventQueue.Enqueue(ep);
+                EventParams ep = (EventParams)instance.DequeueEvent();
+                instance.EnqueueEvent(ep);
                 count--;
 
                 XmlElement item = xmldoc.CreateElement("", "Item", "");
@@ -342,7 +342,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
                             EventParams ep = new EventParams(
                                     eventName, parms.ToArray(),
                                     detected.ToArray());
-                            instance.EventQueue.Enqueue(ep);
+                            instance.EnqueueEvent(ep);
                         }
                         break;
                     case "Plugins":

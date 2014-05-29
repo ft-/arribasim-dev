@@ -164,7 +164,17 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
 
         public UUID AssetID { get; private set; }
 
-        public Queue EventQueue { get; private set; }
+        private Queue EventQueue;
+
+        public void EnqueueEvent(object o)
+        {
+            lock (EventQueue) EventQueue.Enqueue(o);
+        }
+
+        public object DequeueEvent()
+        {
+            lock (EventQueue) return EventQueue.Dequeue();
+        }
 
         public long EventsQueued
         {
