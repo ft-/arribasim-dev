@@ -45,7 +45,6 @@ namespace OpenSim.Capabilities.Handlers
 
         private IInventoryService m_InventoryService;
         private ILibraryService m_LibraryService;
-//        private object m_fetchLock = new Object();
 
         public WebFetchInvDescHandler(IInventoryService invService, ILibraryService libService) 
         {
