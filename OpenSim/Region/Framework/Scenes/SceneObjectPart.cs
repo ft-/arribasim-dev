@@ -290,7 +290,7 @@ namespace OpenSim.Region.Framework.Scenes
         
         private int m_scriptAccessPin;
         
-        private readonly Dictionary<UUID, scriptEvents> m_scriptEvents = new Dictionary<UUID, scriptEvents>();
+        private readonly ThreadedClasses.RwLockedDictionary<UUID, scriptEvents> m_scriptEvents = new ThreadedClasses.RwLockedDictionary<UUID, scriptEvents>();
         private string m_sitName = String.Empty;
         private Quaternion m_sitTargetOrientation = Quaternion.Identity;
         private Vector3 m_sitTargetPosition;
@@ -2527,18 +2527,12 @@ namespace OpenSim.Region.Framework.Scenes
         
         public void RemoveScriptEvents(UUID scriptid)
         {
-            lock (m_scriptEvents)
+            scriptEvents oldparts;
+            if (m_scriptEvents.Remove(scriptid, out oldparts))
             {
-                if (m_scriptEvents.ContainsKey(scriptid))
-                {
-                    scriptEvents oldparts = scriptEvents.None;
-                    oldparts = (scriptEvents) m_scriptEvents[scriptid];
-
-                    // remove values from aggregated script events
-                    AggregateScriptEvents &= ~oldparts;
-                    m_scriptEvents.Remove(scriptid);
-                    aggregateScriptEvents();
-                }
+                // remove values from aggregated script events
+                AggregateScriptEvents &= ~oldparts;
+                aggregateScriptEvents();
             }
         }
 
@@ -3230,23 +3224,10 @@ namespace OpenSim.Region.Framework.Scenes
 //                scriptid, Name, ParentGroup.Name, events, ParentGroup.Scene.Name);
 
             // scriptEvents oldparts;
-            lock (m_scriptEvents)
+            if (m_scriptEvents.AddOrReplaceValueIf(scriptid, (scriptEvents)events, delegate(scriptEvents val) { return (int)val != (int)events; }))
             {
-                if (m_scriptEvents.ContainsKey(scriptid))
-                {
-                    // oldparts = m_scriptEvents[scriptid];
-
-                    // remove values from aggregated script events
-                    if (m_scriptEvents[scriptid] == (scriptEvents) events)
-                        return;
-                    m_scriptEvents[scriptid] = (scriptEvents) events;
-                }
-                else
-                {
-                    m_scriptEvents.Add(scriptid, (scriptEvents) events);
-                }
+                aggregateScriptEvents();
             }
-            aggregateScriptEvents();
         }
 
         /// <summary>
@@ -4685,12 +4666,9 @@ namespace OpenSim.Region.Framework.Scenes
             AggregateScriptEvents = 0;
 
             // Aggregate script events
-            lock (m_scriptEvents)
+            foreach (scriptEvents s in m_scriptEvents.Values)
             {
-                foreach (scriptEvents s in m_scriptEvents.Values)
-                {
-                    AggregateScriptEvents |= s;
-                }
+                AggregateScriptEvents |= s;
             }
 
             uint objectflagupdate = 0;
