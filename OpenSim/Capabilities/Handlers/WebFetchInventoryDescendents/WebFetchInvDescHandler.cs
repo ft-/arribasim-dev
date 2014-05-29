@@ -55,99 +55,90 @@ namespace OpenSim.Capabilities.Handlers
 
         public string FetchInventoryDescendentsRequest(string request, string path, string param, IOSHttpRequest httpRequest, IOSHttpResponse httpResponse)
         {
-//            lock (m_fetchLock)
-//            {
-//                m_log.DebugFormat("[WEB FETCH INV DESC HANDLER]: Received request {0}", request);
+            // nasty temporary hack here, the linden client falsely
+            // identifies the uuid 00000000-0000-0000-0000-000000000000
+            // as a string which breaks us
+            //
+            // correctly mark it as a uuid
+            //
+            request = request.Replace("<string>00000000-0000-0000-0000-000000000000</string>", "<uuid>00000000-0000-0000-0000-000000000000</uuid>");
     
-                // nasty temporary hack here, the linden client falsely
-                // identifies the uuid 00000000-0000-0000-0000-000000000000
-                // as a string which breaks us
-                //
-                // correctly mark it as a uuid
-                //
-                request = request.Replace("<string>00000000-0000-0000-0000-000000000000</string>", "<uuid>00000000-0000-0000-0000-000000000000</uuid>");
+            // another hack <integer>1</integer> results in a
+            // System.ArgumentException: Object type System.Int32 cannot
+            // be converted to target type: System.Boolean
+            //
+            request = request.Replace("<key>fetch_folders</key><integer>0</integer>", "<key>fetch_folders</key><boolean>0</boolean>");
+            request = request.Replace("<key>fetch_folders</key><integer>1</integer>", "<key>fetch_folders</key><boolean>1</boolean>");
     
-                // another hack <integer>1</integer> results in a
-                // System.ArgumentException: Object type System.Int32 cannot
-                // be converted to target type: System.Boolean
-                //
-                request = request.Replace("<key>fetch_folders</key><integer>0</integer>", "<key>fetch_folders</key><boolean>0</boolean>");
-                request = request.Replace("<key>fetch_folders</key><integer>1</integer>", "<key>fetch_folders</key><boolean>1</boolean>");
+            Hashtable hash = new Hashtable();
+            try
+            {
+                hash = (Hashtable)LLSD.LLSDDeserialize(Utils.StringToBytes(request));
+            }
+            catch (LLSD.LLSDParseException e)
+            {
+                m_log.ErrorFormat("[WEB FETCH INV DESC HANDLER]: Fetch error: {0}{1}" + e.Message, e.StackTrace);
+                m_log.Error("Request: " + request);
+            }
     
-                Hashtable hash = new Hashtable();
+            ArrayList foldersrequested = (ArrayList)hash["folders"];
+    
+            string response = "";
+            string bad_folders_response = "";
+
+            for (int i = 0; i < foldersrequested.Count; i++)
+            {
+                string inventoryitemstr = "";
+                Hashtable inventoryhash = (Hashtable)foldersrequested[i];
+
+                LLSDFetchInventoryDescendents llsdRequest = new LLSDFetchInventoryDescendents();
+
                 try
                 {
-                    hash = (Hashtable)LLSD.LLSDDeserialize(Utils.StringToBytes(request));
+                    LLSDHelpers.DeserialiseOSDMap(inventoryhash, llsdRequest);
                 }
-                catch (LLSD.LLSDParseException e)
+                catch (Exception e)
                 {
-                    m_log.ErrorFormat("[WEB FETCH INV DESC HANDLER]: Fetch error: {0}{1}" + e.Message, e.StackTrace);
-                    m_log.Error("Request: " + request);
+                    m_log.Debug("[WEB FETCH INV DESC HANDLER]: caught exception doing OSD deserialize" + e);
                 }
-    
-                ArrayList foldersrequested = (ArrayList)hash["folders"];
-    
-                string response = "";
-                string bad_folders_response = "";
-
-                for (int i = 0; i < foldersrequested.Count; i++)
+                LLSDInventoryDescendents reply = FetchInventoryReply(llsdRequest);
+                if(null == reply)
                 {
-                    string inventoryitemstr = "";
-                    Hashtable inventoryhash = (Hashtable)foldersrequested[i];
-
-                    LLSDFetchInventoryDescendents llsdRequest = new LLSDFetchInventoryDescendents();
-
-                    try
-                    {
-                        LLSDHelpers.DeserialiseOSDMap(inventoryhash, llsdRequest);
-                    }
-                    catch (Exception e)
-                    {
-                        m_log.Debug("[WEB FETCH INV DESC HANDLER]: caught exception doing OSD deserialize" + e);
-                    }
-                    LLSDInventoryDescendents reply = FetchInventoryReply(llsdRequest);
-                    if(null == reply)
-                    {
-                        bad_folders_response += "<uuid>"+llsdRequest.folder_id.ToString()+"</uuid>";
-                    }
-
-                    inventoryitemstr = LLSDHelpers.SerialiseLLSDReply(reply);
-                    inventoryitemstr = inventoryitemstr.Replace("<llsd><map><key>folders</key><array>", "");
-                    inventoryitemstr = inventoryitemstr.Replace("</array></map></llsd>", "");
-
-                    response += inventoryitemstr;
+                    bad_folders_response += "<uuid>"+llsdRequest.folder_id.ToString()+"</uuid>";
                 }
 
-                if (response.Length == 0)
+                inventoryitemstr = LLSDHelpers.SerialiseLLSDReply(reply);
+                inventoryitemstr = inventoryitemstr.Replace("<llsd><map><key>folders</key><array>", "");
+                inventoryitemstr = inventoryitemstr.Replace("</array></map></llsd>", "");
+
+                response += inventoryitemstr;
+            }
+
+            if (response.Length == 0)
+            {
+                /* Viewers expect a bad_folders array when not available */
+                if (bad_folders_response.Length != 0)
                 {
-                    /* Viewers expect a bad_folders array when not available */
-                    if (bad_folders_response.Length != 0)
-                    {
-                        response = "<llsd><map><key>bad_folders</key><array>"+bad_folders_response+"</array></map></llsd>";
-                    }
-                    else
-                    {
-                        response = "<llsd><map><key>folders</key><array /></map></llsd>";
-                    }
+                    response = "<llsd><map><key>bad_folders</key><array>"+bad_folders_response+"</array></map></llsd>";
                 }
                 else
                 {
-                    if (bad_folders_response.Length != 0)
-                    {
-                        response = "<llsd><map><key>folders</key><array>" + response + "</array><key>bad_folders</key><array>" + bad_folders_response + "</array></map></llsd>";
-                    }
-                    else
-                    {
-                        response = "<llsd><map><key>folders</key><array>" + response + "</array></map></llsd>";
-                    }
+                    response = "<llsd><map><key>folders</key><array /></map></llsd>";
                 }
+            }
+            else
+            {
+                if (bad_folders_response.Length != 0)
+                {
+                    response = "<llsd><map><key>folders</key><array>" + response + "</array><key>bad_folders</key><array>" + bad_folders_response + "</array></map></llsd>";
+                }
+                else
+                {
+                    response = "<llsd><map><key>folders</key><array>" + response + "</array></map></llsd>";
+                }
+            }
 
-//                m_log.DebugFormat("[WEB FETCH INV DESC HANDLER]: Replying to CAPS fetch inventory request");
-                //m_log.Debug("[WEB FETCH INV DESC HANDLER] "+response);
-
-                return response;
-
-//            }
+            return response;
         }
 
         /// <summary>
