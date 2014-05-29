@@ -32,7 +32,7 @@ namespace OpenSim.Framework
 {
     public class RegistryCore : IRegistryCore
     {
-        protected Dictionary<Type, object> m_moduleInterfaces = new Dictionary<Type, object>();
+        protected ThreadedClasses.RwLockedDictionary<Type, object> m_moduleInterfaces = new ThreadedClasses.RwLockedDictionary<Type, object>();
 
         /// <summary>
         /// Register an Module interface.
@@ -41,20 +41,22 @@ namespace OpenSim.Framework
         /// <param name="iface"></param>
         public void RegisterInterface<T>(T iface)
         {
-            lock (m_moduleInterfaces)
+            try
             {
-                if (!m_moduleInterfaces.ContainsKey(typeof(T)))
-                {
-                    m_moduleInterfaces.Add(typeof(T), iface);
-                }
+                m_moduleInterfaces.Add(typeof(T), iface);
+            }
+            catch
+            {
+
             }
         }
 
         public bool TryGet<T>(out T iface)
         {
-            if (m_moduleInterfaces.ContainsKey(typeof(T)))
+            object o;
+            if(m_moduleInterfaces.TryGetValue(typeof(T), out o))
             {
-                iface = (T)m_moduleInterfaces[typeof(T)];
+                iface = (T)o;
                 return true;
             }
             iface = default(T);
