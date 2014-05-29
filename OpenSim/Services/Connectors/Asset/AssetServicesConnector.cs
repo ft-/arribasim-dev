@@ -197,9 +197,10 @@ namespace OpenSim.Services.Connectors
 
             if (asset == null)
             {
+                AssetRetrievedEx handlerEx = new AssetRetrievedEx(delegate(AssetBase _asset) { handler(id, sender, _asset); });
+
                 lock (m_AssetHandlers)
                 {
-                    AssetRetrievedEx handlerEx = new AssetRetrievedEx(delegate(AssetBase _asset) { handler(id, sender, _asset); });
 
                     AssetRetrievedEx handlers;
                     if (m_AssetHandlers.TryGetValue(id, out handlers))
