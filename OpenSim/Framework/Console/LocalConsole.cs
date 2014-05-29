@@ -252,7 +252,7 @@ namespace OpenSim.Framework.Console
         {
             try
             {
-                lock (this)
+                lock (m_commandLine)
                 {
                     try
                     {
