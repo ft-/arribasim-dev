@@ -236,8 +236,8 @@ namespace OpenSim.Region.ClientStack.Linden
         {
             private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
-            private Dictionary<UUID, Hashtable> responses =
-                    new Dictionary<UUID, Hashtable>();
+            private ThreadedClasses.RwLockedDictionary<UUID, Hashtable> responses =
+                    new ThreadedClasses.RwLockedDictionary<UUID, Hashtable>();
 
             private WebFetchInvDescModule m_module;
 
@@ -246,20 +246,12 @@ namespace OpenSim.Region.ClientStack.Linden
             {
                 m_module = module;
 
-                HasEvents = (x, y) => { lock (responses) return responses.ContainsKey(x); };
+                HasEvents = (x, y) => { return responses.ContainsKey(x); };
                 GetEvents = (x, y) =>
                 {
-                    lock (responses)
-                    {
-                        try
-                        {
-                            return responses[x];
-                        }
-                        finally
-                        {
-                            responses.Remove(x);
-                        }
-                    }
+                    Hashtable val;
+                    responses.Remove(x, out val);
+                    return val;
                 };
 
                 Request = (x, y) =>
@@ -357,8 +349,7 @@ namespace OpenSim.Region.ClientStack.Linden
                 response["str_response_string"] = m_webFetchHandler.FetchInventoryDescendentsRequest(
                         requestinfo.request["body"].ToString(), String.Empty, String.Empty, null, null);
 
-                lock (responses)
-                    responses[requestID] = response;
+                responses[requestID] = response;
 
                 WebFetchInvDescModule.ProcessedRequestsCount++;
             }
