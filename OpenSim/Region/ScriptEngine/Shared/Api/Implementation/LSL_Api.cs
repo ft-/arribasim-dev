@@ -3642,7 +3642,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
             if ((perm & (~implicitPerms)) == 0) // Requested only implicit perms
             {
-                lock (m_host.TaskInventory)
+                lock (m_host.TaskInventory[m_item.ItemID])
                 {
                     m_host.TaskInventory[m_item.ItemID].PermsGranter = agentID;
                     m_host.TaskInventory[m_item.ItemID].PermsMask = perm;
