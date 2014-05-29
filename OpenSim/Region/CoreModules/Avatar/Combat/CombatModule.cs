@@ -49,7 +49,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Combat.CombatModule
         /// <summary>
         /// Scenes by Region Handle
         /// </summary>
-        private Dictionary<ulong, Scene> m_scenel = new Dictionary<ulong, Scene>();
+        private ThreadedClasses.RwLockedDictionary<ulong, Scene> m_scenel = new ThreadedClasses.RwLockedDictionary<ulong, Scene>();
 
         /// <summary>
         /// Startup
@@ -62,17 +62,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Combat.CombatModule
 
         public void AddRegion(Scene scene)
         {
-            lock (m_scenel)
-            {
-                if (m_scenel.ContainsKey(scene.RegionInfo.RegionHandle))
-                {
-                    m_scenel[scene.RegionInfo.RegionHandle] = scene;
-                }
-                else
-                {
-                    m_scenel.Add(scene.RegionInfo.RegionHandle, scene);
-                }
-            }
+            m_scenel[scene.RegionInfo.RegionHandle] = scene;
 
             scene.EventManager.OnAvatarKilled += KillAvatar;
             scene.EventManager.OnAvatarEnteringNewParcel += AvatarEnteringParcel;
@@ -80,8 +70,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Combat.CombatModule
 
         public void RemoveRegion(Scene scene)
         {
-            if (m_scenel.ContainsKey(scene.RegionInfo.RegionHandle))
-                m_scenel.Remove(scene.RegionInfo.RegionHandle);
+            m_scenel.Remove(scene.RegionInfo.RegionHandle);
 
             scene.EventManager.OnAvatarKilled -= KillAvatar;
             scene.EventManager.OnAvatarEnteringNewParcel -= AvatarEnteringParcel;
