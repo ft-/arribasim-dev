@@ -53,8 +53,8 @@ namespace OpenSim.Framework.Console
         private List<string> m_Scrollback = new List<string>();
         private ThreadedClasses.BlockingQueue<string> m_InputData = new ThreadedClasses.BlockingQueue<string>();
         private long m_LineNumber = 0;
-        private Dictionary<UUID, ConsoleConnection> m_Connections =
-                new Dictionary<UUID, ConsoleConnection>();
+        private ThreadedClasses.RwLockedDictionary<UUID, ConsoleConnection> m_Connections =
+                new ThreadedClasses.RwLockedDictionary<UUID, ConsoleConnection>();
         private string m_UserName = String.Empty;
         private string m_Password = String.Empty;
         private string m_AllowedOrigin = String.Empty;
@@ -158,19 +158,16 @@ namespace OpenSim.Framework.Console
         {
             List<UUID> expired = new List<UUID>();
 
-            lock (m_Connections)
+            foreach (KeyValuePair<UUID, ConsoleConnection> kvp in m_Connections)
             {
-                foreach (KeyValuePair<UUID, ConsoleConnection> kvp in m_Connections)
-                {
-                    if (System.Environment.TickCount - kvp.Value.last > 500000)
-                        expired.Add(kvp.Key);
-                }
+                if (System.Environment.TickCount - kvp.Value.last > 500000)
+                    expired.Add(kvp.Key);
+            }
 
-                foreach (UUID id in expired)
-                {
-                    m_Connections.Remove(id);
-                    CloseConnection(id);
-                }
+            foreach (UUID id in expired)
+            {
+                m_Connections.Remove(id);
+                CloseConnection(id);
             }
         }
 
@@ -203,10 +200,7 @@ namespace OpenSim.Framework.Console
 
             UUID sessionID = UUID.Random();
 
-            lock (m_Connections)
-            {
-                m_Connections[sessionID] = c;
-            }
+            m_Connections[sessionID] = c;
 
             string uri = "/ReadResponses/" + sessionID.ToString() + "/";
 
@@ -261,13 +255,9 @@ namespace OpenSim.Framework.Console
             if (!UUID.TryParse(post["ID"].ToString(), out id))
                 return reply;
 
-            lock (m_Connections)
+            if (m_Connections.Remove(id))
             {
-                if (m_Connections.ContainsKey(id))
-                {
-                    m_Connections.Remove(id);
-                    CloseConnection(id);
-                }
+                CloseConnection(id);
             }
 
             XmlDocument xmldoc = new XmlDocument();
@@ -311,11 +301,8 @@ namespace OpenSim.Framework.Console
             if (!UUID.TryParse(post["ID"].ToString(), out id))
                 return reply;
 
-            lock (m_Connections)
-            {
-                if (!m_Connections.ContainsKey(id))
-                    return reply;
-            }
+            if (!m_Connections.ContainsKey(id))
+                return reply;
 
             if (post["COMMAND"] == null)
                 return reply;
@@ -386,12 +373,8 @@ namespace OpenSim.Framework.Console
         {
             ConsoleConnection c = null;
 
-            lock (m_Connections)
-            {
-                if (!m_Connections.ContainsKey(sessionID))
-                    return false;
-                c = m_Connections[sessionID];
-            }
+            if (!m_Connections.TryGetValue(sessionID, out c))
+                return false;
             c.last = System.Environment.TickCount;
             if (c.lastLineSeen < m_LineNumber)
                 return true;
@@ -402,12 +385,8 @@ namespace OpenSim.Framework.Console
         {
             ConsoleConnection c = null;
 
-            lock (m_Connections)
-            {
-                if (!m_Connections.ContainsKey(sessionID))
-                    return NoEvents(RequestID, UUID.Zero);
-                c = m_Connections[sessionID];
-            }
+            if (!m_Connections.TryGetValue(sessionID, out c))
+                return NoEvents(RequestID, UUID.Zero);
             c.last = System.Environment.TickCount;
             if (c.lastLineSeen >= m_LineNumber)
                 return NoEvents(RequestID, UUID.Zero);
