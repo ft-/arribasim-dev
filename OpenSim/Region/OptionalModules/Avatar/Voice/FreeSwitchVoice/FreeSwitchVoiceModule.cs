@@ -90,8 +90,8 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.FreeSwitchVoice
         private string m_openSimWellKnownHTTPAddress;
 //        private string m_freeSwitchContext;
 
-        private readonly Dictionary<string, string> m_UUIDName = new Dictionary<string, string>();
-        private Dictionary<string, string> m_ParcelAddress = new Dictionary<string, string>();
+        private readonly ThreadedClasses.RwLockedDictionary<string, string> m_UUIDName = new ThreadedClasses.RwLockedDictionary<string, string>();
+        private ThreadedClasses.RwLockedDictionary<string, string> m_ParcelAddress = new ThreadedClasses.RwLockedDictionary<string, string>();
 
         private IConfig m_Config;
 
@@ -264,17 +264,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.FreeSwitchVoice
             m_log.DebugFormat("[FreeSwitchVoice]: setLandSIPAddress parcel id {0}: setting sip address {1}",
                                   GlobalID, SIPAddress);
 
-            lock (m_ParcelAddress)
-            {
-                if (m_ParcelAddress.ContainsKey(GlobalID.ToString()))
-                {
-                    m_ParcelAddress[GlobalID.ToString()] = SIPAddress;
-                }
-                else
-                {
-                    m_ParcelAddress.Add(GlobalID.ToString(), SIPAddress);
-                }
-            }
+            m_ParcelAddress[GlobalID.ToString()] = SIPAddress;
         }
 
         // <summary>
@@ -371,17 +361,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.FreeSwitchVoice
                 // those
                 agentname = agentname.Replace('+', '-').Replace('/', '_');
 
-                lock (m_UUIDName)
-                {
-                    if (m_UUIDName.ContainsKey(agentname))
-                    {
-                        m_UUIDName[agentname] = avatarName;
-                    }
-                    else
-                    {
-                        m_UUIDName.Add(agentname, avatarName);
-                    }
-                }
+                m_UUIDName[agentname] = avatarName;
 
                 // LLSDVoiceAccountResponse voiceAccountResponse =
                //     new LLSDVoiceAccountResponse(agentname, password, m_freeSwitchRealm, "http://etsvc02.hursley.ibm.com/api");
@@ -618,23 +598,15 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.FreeSwitchVoice
                 return response;
 
             string auth_token = (string)requestBody["auth_token"];
-            //string[] auth_tokenvals = auth_token.Split(':');
-            //string username = auth_tokenvals[0];
             int strcount = 0;
 
             string[] ids = new string[strcount];
 
-            int iter = -1;
-            lock (m_UUIDName)
-            {
-                strcount = m_UUIDName.Count;
-                ids = new string[strcount];
-                foreach (string s in m_UUIDName.Keys)
-                {
-                    iter++;
-                    ids[iter] = s;
-                }
-            }
+            ICollection<string> avkeys = m_UUIDName.Keys;
+            strcount = avkeys.Count;
+            ids = new string[strcount];
+            avkeys.CopyTo(ids, 0);
+
             StringBuilder resp = new StringBuilder();
             resp.Append("<?xml version=\"1.0\" encoding=\"iso-8859-1\" ?><response xmlns=\"http://www.vivox.com\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation= \"/xsd/buddy_list.xsd\">");
 
@@ -734,17 +706,13 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.FreeSwitchVoice
 
             string avatarName = string.Empty;
             int pos = -1;
-            lock (m_UUIDName)
+            if (m_UUIDName.TryGetValue(userid, out avatarName))
             {
-                if (m_UUIDName.ContainsKey(userid))
+                foreach (string s in m_UUIDName.Keys)
                 {
-                    avatarName = m_UUIDName[userid];
-                    foreach (string s in m_UUIDName.Keys)
-                    {
-                        pos++;
-                        if (s == userid)
-                            break;
-                    }
+                    pos++;
+                    if (s == userid)
+                        break;
                 }
             }
 
@@ -802,14 +770,12 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.FreeSwitchVoice
             // Create parcel voice channel. If no parcel exists, then the voice channel ID is the same
             // as the directory ID. Otherwise, it reflects the parcel's ID.
 
-            lock (m_ParcelAddress)
+            string parcelAddress;
+            if(m_ParcelAddress.TryGetValue(land.GlobalID.ToString(), out parcelAddress))
             {
-                if (m_ParcelAddress.ContainsKey(land.GlobalID.ToString()))
-                {
-                    m_log.DebugFormat("[FreeSwitchVoice]: parcel id {0}: using sip address {1}",
-                                      land.GlobalID, m_ParcelAddress[land.GlobalID.ToString()]);
-                    return m_ParcelAddress[land.GlobalID.ToString()];
-                }
+                m_log.DebugFormat("[FreeSwitchVoice]: parcel id {0}: using sip address {1}",
+                                    land.GlobalID, parcelAddress);
+                return parcelAddress;
             }
 
             if (land.LocalID != 1 && (land.Flags & (uint)ParcelFlags.UseEstateVoiceChan) == 0)
@@ -831,12 +797,13 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.FreeSwitchVoice
             // the personal speech indicators as well unless some siren14-3d codec magic happens. we dont have siren143d so we'll settle for the personal speech indicator.
             channelUri = String.Format("sip:conf-{0}@{1}", "x" + Convert.ToBase64String(Encoding.ASCII.GetBytes(landUUID)), m_freeSwitchRealm);
 
-            lock (m_ParcelAddress)
+            try
             {
-                if (!m_ParcelAddress.ContainsKey(land.GlobalID.ToString()))
-                {
-                    m_ParcelAddress.Add(land.GlobalID.ToString(),channelUri);
-                }
+                m_ParcelAddress.Add(land.GlobalID.ToString(),channelUri);
+            }
+            catch
+            {
+
             }
 
             return channelUri;
