@@ -48,8 +48,8 @@ namespace OpenSim.Region.OptionalModules.Avatar.Chat
         internal static bool Enabled = false;
         internal static IConfig m_config = null;
 
-        internal static List<ChannelState> m_channels = new List<ChannelState>();
-        internal static List<RegionState> m_regions = new List<RegionState>();
+        internal static ThreadedClasses.RwLockedList<ChannelState> m_channels = new ThreadedClasses.RwLockedList<ChannelState>();
+        internal static ThreadedClasses.RwLockedList<RegionState> m_regions = new ThreadedClasses.RwLockedList<RegionState>();
 
         internal static string m_password = String.Empty;
         internal RegionState m_region = null;
@@ -103,7 +103,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Chat
                         MainServer.Instance.AddXmlRPCHandler("irc_admin", XmlRpcAdminMethod, false);
 
                     m_region = new RegionState(scene, m_config);
-                    lock (m_regions) m_regions.Add(m_region);
+                    m_regions.Add(m_region);
                     m_region.Open();
                 }
                 catch (Exception e)
@@ -136,10 +136,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Chat
 
             m_region.Close();
 
-            if (m_regions.Contains(m_region))
-            {
-                lock (m_regions) m_regions.Remove(m_region);
-            }
+            m_regions.Remove(m_region);
         }
 
         public void Close()

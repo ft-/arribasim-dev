@@ -65,7 +65,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Chat
 
         // List of configured connectors
 
-        private static List<IRCConnector> m_connectors = new List<IRCConnector>();
+        private static ThreadedClasses.RwLockedList<IRCConnector> m_connectors = new ThreadedClasses.RwLockedList<IRCConnector>();
 
         // Watchdog state
 
@@ -259,8 +259,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Chat
                     Connect();
                 }
 
-                lock (m_connectors)
-                    m_connectors.Add(this);
+                m_connectors.Add(this);
 
                 m_enabled = true;
 
@@ -310,8 +309,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Chat
 
                     }
 
-                    lock (m_connectors)
-                        m_connectors.Remove(this);
+                    m_connectors.Remove(this);
 
                 }
             }
@@ -851,62 +849,60 @@ namespace OpenSim.Region.OptionalModules.Avatar.Chat
             _pdk_ = (_pdk_ + 1) % PING_PERIOD;    // cycle the ping trigger
             _icc_++;    // increment the inter-consecutive-connect-delay counter
 
-            lock (m_connectors)
-                foreach (IRCConnector connector in m_connectors)
+            m_connectors.ForEach(delegate(IRCConnector connector)
+            {
+
+                // m_log.InfoFormat("[IRC-Watchdog] Scanning {0}", connector);
+
+                if (connector.Enabled)
                 {
-
-                    // m_log.InfoFormat("[IRC-Watchdog] Scanning {0}", connector);
-
-                    if (connector.Enabled)
+                    if (!connector.Connected)
                     {
-                        if (!connector.Connected)
+                        try
+                        {
+                            // m_log.DebugFormat("[IRC-Watchdog] Connecting {1}:{2}", connector.idn, connector.m_server, connector.m_ircChannel);
+                            connector.Connect();
+                        }
+                        catch (Exception e)
+                        {
+                            m_log.ErrorFormat("[IRC-Watchdog] Exception on connector {0}: {1} ", connector.idn, e.Message);
+                        }
+                    }
+                    else
+                    {
+
+                        if (connector.m_pending)
+                        {
+                            if (connector.m_timeout == 0)
+                            {
+                                m_log.ErrorFormat("[IRC-Watchdog] Login timed-out for connector {0}, reconnecting", connector.idn);
+                                connector.Reconnect();
+                            }
+                            else
+                                connector.m_timeout--;
+                        }
+
+                        // Being marked connected is not enough to ping. Socket establishment can sometimes take a long
+                        // time, in which case the watch dog might try to ping the server before the socket has been 
+                        // set up, with nasty side-effects.
+
+                        else if (_pdk_ == 0)
                         {
                             try
                             {
-                                // m_log.DebugFormat("[IRC-Watchdog] Connecting {1}:{2}", connector.idn, connector.m_server, connector.m_ircChannel);
-                                connector.Connect();
+                                connector.m_writer.WriteLine(String.Format("PING :{0}", connector.m_server));
+                                connector.m_writer.Flush();
                             }
                             catch (Exception e)
                             {
-                                m_log.ErrorFormat("[IRC-Watchdog] Exception on connector {0}: {1} ", connector.idn, e.Message);
+                                m_log.ErrorFormat("[IRC-PingRun] Exception on connector {0}: {1} ", connector.idn, e.Message);
+                                m_log.Debug(e);
+                                connector.Reconnect();
                             }
-                        }
-                        else
-                        {
-
-                            if (connector.m_pending)
-                            {
-                                if (connector.m_timeout == 0)
-                                {
-                                    m_log.ErrorFormat("[IRC-Watchdog] Login timed-out for connector {0}, reconnecting", connector.idn);
-                                    connector.Reconnect();
-                                }
-                                else
-                                    connector.m_timeout--;
-                            }
-
-                            // Being marked connected is not enough to ping. Socket establishment can sometimes take a long
-                            // time, in which case the watch dog might try to ping the server before the socket has been 
-                            // set up, with nasty side-effects.
-
-                            else if (_pdk_ == 0)
-                            {
-                                try
-                                {
-                                    connector.m_writer.WriteLine(String.Format("PING :{0}", connector.m_server));
-                                    connector.m_writer.Flush();
-                                }
-                                catch (Exception e)
-                                {
-                                    m_log.ErrorFormat("[IRC-PingRun] Exception on connector {0}: {1} ", connector.idn, e.Message);
-                                    m_log.Debug(e);
-                                    connector.Reconnect();
-                                }
-                            }
-
                         }
                     }
                 }
+            });
 
             // m_log.InfoFormat("[IRC-Watchdog] Status scan completed");
 

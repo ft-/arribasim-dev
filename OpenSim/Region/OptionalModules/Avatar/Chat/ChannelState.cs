@@ -271,25 +271,20 @@ namespace OpenSim.Region.OptionalModules.Avatar.Chat
             // values that, while independent of the IRC connetion, do still distinguish 
             // this region's behavior.
 
-            lock (IRCBridgeModule.m_channels)
+            foreach (ChannelState xcs in IRCBridgeModule.m_channels)
             {
-
-                foreach (ChannelState xcs in IRCBridgeModule.m_channels)
+                if (cs.IsAPerfectMatchFor(xcs))
                 {
-                    if (cs.IsAPerfectMatchFor(xcs))
-                    {
-                        m_log.DebugFormat("[IRC-Channel-{0}]  Channel state matched", cs.idn);
-                        cs = xcs;
-                        break;
-                    }
-                    if (cs.IsAConnectionMatchFor(xcs))
-                    {
-                        m_log.DebugFormat("[IRC-Channel-{0}]  Channel matched", cs.idn);
-                        cs.irc = xcs.irc;
-                        break;
-                    }
+                    m_log.DebugFormat("[IRC-Channel-{0}]  Channel state matched", cs.idn);
+                    cs = xcs;
+                    break;
                 }
-
+                if (cs.IsAConnectionMatchFor(xcs))
+                {
+                    m_log.DebugFormat("[IRC-Channel-{0}]  Channel matched", cs.idn);
+                    cs.irc = xcs.irc;
+                    break;
+                }
             }
 
             // No entry was found, so this is going to be a new entry.
@@ -536,16 +531,13 @@ namespace OpenSim.Region.OptionalModules.Avatar.Chat
         public void Close(RegionState rs)
         {
             RemoveRegion(rs);
-            lock (IRCBridgeModule.m_channels)
+            if (clientregions.Count == 0)
             {
-                if (clientregions.Count == 0)
-                {
-                    Close();
-                    IRCBridgeModule.m_channels.Remove(this);
-                    m_log.InfoFormat("[IRC-Channel-{0}] Region {1} is last user of channel <{2}> to server <{3}:{4}>",
-                             idn, rs.Region, IrcChannel, Server, Port);
-                    m_log.InfoFormat("[IRC-Channel-{0}] Removed", idn);
-                }
+                Close();
+                IRCBridgeModule.m_channels.Remove(this);
+                m_log.InfoFormat("[IRC-Channel-{0}] Region {1} is last user of channel <{2}> to server <{3}:{4}>",
+                            idn, rs.Region, IrcChannel, Server, Port);
+                m_log.InfoFormat("[IRC-Channel-{0}] Removed", idn);
             }
         }
 
@@ -598,28 +590,25 @@ namespace OpenSim.Region.OptionalModules.Avatar.Chat
                 // Note that this code is responsible for completing some of the
                 // settings for the inbound OSChatMessage
 
-                lock (IRCBridgeModule.m_channels)
+                foreach (ChannelState cs in IRCBridgeModule.m_channels)
                 {
-                    foreach (ChannelState cs in IRCBridgeModule.m_channels)
+                    if (p_irc == cs.irc)
                     {
-                        if (p_irc == cs.irc)
+
+                        // This non-IRC differentiator moved to here
+
+                        if (cmsg && !cs.ClientReporting)
+                            continue;
+
+                        // This non-IRC differentiator moved to here
+
+                        c.Channel = (cs.RelayPrivateChannels ? cs.RelayChannel : 0);
+
+                        foreach (RegionState region in cs.clientregions)
                         {
-
-                            // This non-IRC differentiator moved to here
-
-                            if (cmsg && !cs.ClientReporting)
-                                continue;
-
-                            // This non-IRC differentiator moved to here
-
-                            c.Channel = (cs.RelayPrivateChannels ? cs.RelayChannel : 0);
-
-                            foreach (RegionState region in cs.clientregions)
-                            {
-                                region.OSChat(cs.irc, c);
-                            }
-
+                            region.OSChat(cs.irc, c);
                         }
+
                     }
                 }
             }
