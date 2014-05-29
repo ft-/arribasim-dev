@@ -85,8 +85,6 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
 
         private INPCModule m_npcModule;
 
-        private Object SenseLock = new Object();
-
         private const int AGENT = 1;
         private const int AGENT_BY_USERNAME = 0x10;
         private const int NPC = 0x20;
@@ -187,9 +185,9 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
                 // Time has passed?
                 if (ts.next.ToUniversalTime() < DateTime.Now.ToUniversalTime())
                 {
-                    SensorSweep(ts);
                     // set next interval
                     ts.next = DateTime.Now.ToUniversalTime().AddSeconds(ts.interval);
+                    SensorSweep(ts);
                 }
             });
         }
@@ -236,57 +234,54 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
                 sensedEntities.AddRange(doObjectSensor(ts));
             }
 
-            lock (SenseLock)
+            if (sensedEntities.Count == 0)
             {
-                if (sensedEntities.Count == 0)
+                // send a "no_sensor"
+                // Add it to queue
+                m_CmdManager.m_ScriptEngine.PostScriptEvent(ts.itemID,
+                        new EventParams("no_sensor", new Object[0],
+                        new DetectParams[0]));
+            }
+            else
+            {
+                // Sort the list to get everything ordered by distance
+                sensedEntities.Sort();
+                int count = sensedEntities.Count;
+                int idx;
+                List<DetectParams> detected = new List<DetectParams>();
+                for (idx = 0; idx < count; idx++)
                 {
-                    // send a "no_sensor"
-                    // Add it to queue
+                    try
+                    {
+                        DetectParams detect = new DetectParams();
+                        detect.Key = sensedEntities[idx].itemID;
+                        detect.Populate(m_CmdManager.m_ScriptEngine.World);
+                        detected.Add(detect);
+                    }
+                    catch (Exception)
+                    {
+                        // Ignore errors, the object has been deleted or the avatar has gone and
+                        // there was a problem in detect.Populate so nothing added to the list
+                    }
+                    if (detected.Count == maximumToReturn)
+                        break;
+                }
+
+                if (detected.Count == 0)
+                {
+                    // To get here with zero in the list there must have been some sort of problem
+                    // like the object being deleted or the avatar leaving to have caused some
+                    // difficulty during the Populate above so fire a no_sensor event
                     m_CmdManager.m_ScriptEngine.PostScriptEvent(ts.itemID,
                             new EventParams("no_sensor", new Object[0],
                             new DetectParams[0]));
                 }
                 else
                 {
-                    // Sort the list to get everything ordered by distance
-                    sensedEntities.Sort();
-                    int count = sensedEntities.Count;
-                    int idx;
-                    List<DetectParams> detected = new List<DetectParams>();
-                    for (idx = 0; idx < count; idx++)
-                    {
-                        try
-                        {
-                            DetectParams detect = new DetectParams();
-                            detect.Key = sensedEntities[idx].itemID;
-                            detect.Populate(m_CmdManager.m_ScriptEngine.World);
-                            detected.Add(detect);
-                        }
-                        catch (Exception)
-                        {
-                            // Ignore errors, the object has been deleted or the avatar has gone and
-                            // there was a problem in detect.Populate so nothing added to the list
-                        }
-                        if (detected.Count == maximumToReturn)
-                            break;
-                    }
-
-                    if (detected.Count == 0)
-                    {
-                        // To get here with zero in the list there must have been some sort of problem
-                        // like the object being deleted or the avatar leaving to have caused some
-                        // difficulty during the Populate above so fire a no_sensor event
-                        m_CmdManager.m_ScriptEngine.PostScriptEvent(ts.itemID,
-                                new EventParams("no_sensor", new Object[0],
-                                new DetectParams[0]));
-                    }
-                    else
-                    {
-                        m_CmdManager.m_ScriptEngine.PostScriptEvent(ts.itemID,
-                                new EventParams("sensor",
-                                new Object[] {new LSL_Types.LSLInteger(detected.Count) },
-                                detected.ToArray()));
-                    }
+                    m_CmdManager.m_ScriptEngine.PostScriptEvent(ts.itemID,
+                            new EventParams("sensor",
+                            new Object[] {new LSL_Types.LSLInteger(detected.Count) },
+                            detected.ToArray()));
                 }
             }
         }
