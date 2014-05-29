@@ -51,8 +51,7 @@ namespace OpenSim.Framework.Console
         private IConfigSource m_Config = null;
 
         private List<string> m_Scrollback = new List<string>();
-        private ManualResetEvent m_DataEvent = new ManualResetEvent(false);
-        private List<string> m_InputData = new List<string>();
+        private ThreadedClasses.BlockingQueue<string> m_InputData = new ThreadedClasses.BlockingQueue<string>();
         private long m_LineNumber = 0;
         private Dictionary<UUID, ConsoleConnection> m_Connections =
                 new Dictionary<UUID, ConsoleConnection>();
@@ -111,24 +110,7 @@ namespace OpenSim.Framework.Console
             else
                 Output("-++"+p);
 
-            m_DataEvent.WaitOne();
-
-            string cmdinput;
-
-            lock (m_InputData)
-            {
-                if (m_InputData.Count == 0)
-                {
-                    m_DataEvent.Reset();
-                    return "";
-                }
-
-                cmdinput = m_InputData[0];
-                m_InputData.RemoveAt(0);
-                if (m_InputData.Count == 0)
-                    m_DataEvent.Reset();
-
-            }
+            string cmdinput = m_InputData.Dequeue();
 
             if (isCommand)
             {
@@ -338,11 +320,7 @@ namespace OpenSim.Framework.Console
             if (post["COMMAND"] == null)
                 return reply;
 
-            lock (m_InputData)
-            {
-                m_DataEvent.Set();
-                m_InputData.Add(post["COMMAND"].ToString());
-            }
+            m_InputData.Enqueue(post["COMMAND"].ToString());
 
             XmlDocument xmldoc = new XmlDocument();
             XmlNode xmlnode = xmldoc.CreateNode(XmlNodeType.XmlDeclaration,
