@@ -57,8 +57,8 @@ namespace OpenSim.Region.CoreModules.Avatar.AvatarFactory
 
         private int m_checkTime = 500; // milliseconds to wait between checks for appearance updates
         private System.Timers.Timer m_updateTimer = new System.Timers.Timer();
-        private Dictionary<UUID,long> m_savequeue = new Dictionary<UUID,long>();
-        private Dictionary<UUID,long> m_sendqueue = new Dictionary<UUID,long>();
+        private ThreadedClasses.RwLockedDictionary<UUID, long> m_savequeue = new ThreadedClasses.RwLockedDictionary<UUID, long>();
+        private ThreadedClasses.RwLockedDictionary<UUID, long> m_sendqueue = new ThreadedClasses.RwLockedDictionary<UUID, long>();
 
         private object m_setAppearanceLock = new object();
 
@@ -355,10 +355,13 @@ namespace OpenSim.Region.CoreModules.Avatar.AvatarFactory
 
             // 10000 ticks per millisecond, 1000 milliseconds per second
             long timestamp = DateTime.Now.Ticks + Convert.ToInt64(m_sendtime * 1000 * 10000);
-            lock (m_sendqueue)
+            m_sendqueue[agentid] = timestamp;
+            lock (m_updateTimer)
             {
-                m_sendqueue[agentid] = timestamp;
-                m_updateTimer.Start();
+                if ((m_sendqueue.Count != 0 || m_savequeue.Count != 0) && !m_updateTimer.Enabled)
+                {
+                    m_updateTimer.Start();
+                }
             }
         }
 
@@ -368,10 +371,13 @@ namespace OpenSim.Region.CoreModules.Avatar.AvatarFactory
 
             // 10000 ticks per millisecond, 1000 milliseconds per second
             long timestamp = DateTime.Now.Ticks + Convert.ToInt64(m_savetime * 1000 * 10000);
-            lock (m_savequeue)
+            m_savequeue[agentid] = timestamp;
+            lock (m_updateTimer)
             {
-                m_savequeue[agentid] = timestamp;
-                m_updateTimer.Start();
+                if ((m_sendqueue.Count != 0 || m_savequeue.Count != 0) && !m_updateTimer.Enabled)
+                {
+                    m_updateTimer.Start();
+                }
             }
         }
 
@@ -577,48 +583,24 @@ namespace OpenSim.Region.CoreModules.Avatar.AvatarFactory
         {
             long now = DateTime.Now.Ticks;
 
-            lock (m_sendqueue)
+            KeyValuePair<UUID, long> removalKVP;
+
+            while (m_sendqueue.FindRemoveIf(delegate(UUID avatarID, long sendTime) { return sendTime < now; }, out removalKVP))
             {
-                Dictionary<UUID, long> sends = new Dictionary<UUID, long>(m_sendqueue);
-                foreach (KeyValuePair<UUID, long> kvp in sends)
-                {
-                    // We have to load the key and value into local parameters to avoid a race condition if we loop
-                    // around and load kvp with a different value before FireAndForget has launched its thread.
-                    UUID avatarID = kvp.Key;
-                    long sendTime = kvp.Value;
-
-//                    m_log.DebugFormat("[AVFACTORY]: Handling queued appearance updates for {0}, update delta to now is {1}", avatarID, sendTime - now);
-
-                    if (sendTime < now)
-                    {
-                        Util.FireAndForget(o => SendAppearance(avatarID));
-                        m_sendqueue.Remove(avatarID);
-                    }
-                }
+                Util.FireAndForget(o => SendAppearance(removalKVP.Key));
             }
 
-            lock (m_savequeue)
+            while(m_savequeue.FindRemoveIf(delegate(UUID avatarID, long sendTime) { return sendTime < now; }, out removalKVP))
             {
-                Dictionary<UUID, long> saves = new Dictionary<UUID, long>(m_savequeue);
-                foreach (KeyValuePair<UUID, long> kvp in saves)
-                {
-                    // We have to load the key and value into local parameters to avoid a race condition if we loop
-                    // around and load kvp with a different value before FireAndForget has launched its thread.                    
-                    UUID avatarID = kvp.Key;
-                    long sendTime = kvp.Value;
+                Util.FireAndForget(o => SaveAppearance(removalKVP.Key));
+            }
 
-                    if (sendTime < now)
-                    {
-                        Util.FireAndForget(o => SaveAppearance(avatarID));
-                        m_savequeue.Remove(avatarID);
-                    }
-                }
-
-                // We must lock both queues here so that QueueAppearanceSave() or *Send() don't m_updateTimer.Start() on
-                // another thread inbetween the first count calls and m_updateTimer.Stop() on this thread.
-                lock (m_sendqueue)
-                    if (m_savequeue.Count == 0 && m_sendqueue.Count == 0)
-                        m_updateTimer.Stop();
+            // We must lock both queues here so that QueueAppearanceSave() or *Send() don't m_updateTimer.Start() on
+            // another thread inbetween the first count calls and m_updateTimer.Stop() on this thread.
+            lock (m_updateTimer)
+            {
+                if (m_savequeue.Count == 0 && m_sendqueue.Count == 0)
+                    m_updateTimer.Stop();
             }
         }
 
@@ -1091,12 +1073,12 @@ namespace OpenSim.Region.CoreModules.Avatar.AvatarFactory
                 // shouldn't overwrite the changes made in SetAppearance.
                 sp.Appearance.Wearables = avatAppearance.Wearables;
                 sp.Appearance.Texture = avatAppearance.Texture;
-
-                // We don't need to send the appearance here since the "iswearing" will trigger a new set
-                // of visual param and baked texture changes. When those complete, the new appearance will be sent
-
-                QueueAppearanceSave(client.AgentId);
             }
+
+            // We don't need to send the appearance here since the "iswearing" will trigger a new set
+            // of visual param and baked texture changes. When those complete, the new appearance will be sent
+
+            QueueAppearanceSave(client.AgentId);
         }
 
         /// <summary>
