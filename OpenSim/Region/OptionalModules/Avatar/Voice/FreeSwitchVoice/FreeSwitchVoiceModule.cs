@@ -600,10 +600,10 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.FreeSwitchVoice
             string auth_token = (string)requestBody["auth_token"];
             int strcount = 0;
 
-            string[] ids = new string[strcount];
 
             ICollection<string> avkeys = m_UUIDName.Keys;
             strcount = avkeys.Count;
+            string[] ids = new string[strcount];
             ids = new string[strcount];
             avkeys.CopyTo(ids, 0);
 
