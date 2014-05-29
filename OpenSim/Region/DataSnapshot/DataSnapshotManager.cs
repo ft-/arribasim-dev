@@ -65,7 +65,6 @@ namespace OpenSim.Region.DataSnapshot
 
         //Various internal objects
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
-        internal object m_syncInit = new object();
 
         //DataServices and networking
         private string m_dataServices = "noservices";
@@ -108,46 +107,42 @@ namespace OpenSim.Region.DataSnapshot
                 m_configLoaded = true;
                 //m_log.Debug("[DATASNAPSHOT]: Loading configuration");
                 //Read from the config for options
-                lock (m_syncInit)
+                try
                 {
-                    try
+                    m_enabled = config.Configs["DataSnapshot"].GetBoolean("index_sims", m_enabled);
+                    string gatekeeper = Util.GetConfigVarFromSections<string>(config, "GatekeeperURI",
+                        new string[] { "Startup", "Hypergrid", "GridService" }, String.Empty);
+                    // Legacy. Remove soon!
+                    if (string.IsNullOrEmpty(gatekeeper))
                     {
-                        m_enabled = config.Configs["DataSnapshot"].GetBoolean("index_sims", m_enabled);
-                        string gatekeeper = Util.GetConfigVarFromSections<string>(config, "GatekeeperURI",
-                            new string[] { "Startup", "Hypergrid", "GridService" }, String.Empty);
-                        // Legacy. Remove soon!
-                        if (string.IsNullOrEmpty(gatekeeper))
-                        {
-                            IConfig conf = config.Configs["GridService"];
-                            if (conf != null)
-                                gatekeeper = conf.GetString("Gatekeeper", gatekeeper);
-                        }
-                        if (!string.IsNullOrEmpty(gatekeeper))
-                            m_gridinfo.Add("gatekeeperURL", gatekeeper);
-
-                        m_gridinfo.Add(
-                            "name", config.Configs["DataSnapshot"].GetString("gridname", "the lost continent of hippo"));
-                        m_exposure_level = config.Configs["DataSnapshot"].GetString("data_exposure", m_exposure_level);
-                        m_period = config.Configs["DataSnapshot"].GetInt("default_snapshot_period", m_period);
-                        m_maxStales = config.Configs["DataSnapshot"].GetInt("max_changes_before_update", m_maxStales);
-                        m_snapsDir = config.Configs["DataSnapshot"].GetString("snapshot_cache_directory", m_snapsDir);
-                        m_dataServices = config.Configs["DataSnapshot"].GetString("data_services", m_dataServices);
-                        m_listener_port = config.Configs["Network"].GetString("http_listener_port", m_listener_port);
-
-                        String[] annoying_string_array = config.Configs["DataSnapshot"].GetString("disable_modules", "").Split(".".ToCharArray());
-                        foreach (String bloody_wanker in annoying_string_array)
-                        {
-                            m_disabledModules.Add(bloody_wanker);
-                        }
-                        m_lastUpdate = Environment.TickCount;
+                        IConfig conf = config.Configs["GridService"];
+                        if (conf != null)
+                            gatekeeper = conf.GetString("Gatekeeper", gatekeeper);
                     }
-                    catch (Exception)
+                    if (!string.IsNullOrEmpty(gatekeeper))
+                        m_gridinfo.Add("gatekeeperURL", gatekeeper);
+
+                    m_gridinfo.Add(
+                        "name", config.Configs["DataSnapshot"].GetString("gridname", "the lost continent of hippo"));
+                    m_exposure_level = config.Configs["DataSnapshot"].GetString("data_exposure", m_exposure_level);
+                    m_period = config.Configs["DataSnapshot"].GetInt("default_snapshot_period", m_period);
+                    m_maxStales = config.Configs["DataSnapshot"].GetInt("max_changes_before_update", m_maxStales);
+                    m_snapsDir = config.Configs["DataSnapshot"].GetString("snapshot_cache_directory", m_snapsDir);
+                    m_dataServices = config.Configs["DataSnapshot"].GetString("data_services", m_dataServices);
+                    m_listener_port = config.Configs["Network"].GetString("http_listener_port", m_listener_port);
+
+                    String[] annoying_string_array = config.Configs["DataSnapshot"].GetString("disable_modules", "").Split(".".ToCharArray());
+                    foreach (String bloody_wanker in annoying_string_array)
                     {
-                        m_log.Warn("[DATASNAPSHOT]: Could not load configuration. DataSnapshot will be disabled.");
-                        m_enabled = false;
-                        return;
+                        m_disabledModules.Add(bloody_wanker);
                     }
-
+                    m_lastUpdate = Environment.TickCount;
+                }
+                catch (Exception)
+                {
+                    m_log.Warn("[DATASNAPSHOT]: Could not load configuration. DataSnapshot will be disabled.");
+                    m_enabled = false;
+                    return;
                 }
 
             }
