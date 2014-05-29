@@ -777,8 +777,8 @@ namespace OpenSim.Region.Framework.Scenes
             set { m_LoopSoundMasterPrim = value; }
         }
 
-        private List<SceneObjectPart> m_LoopSoundSlavePrims = new List<SceneObjectPart>();
-        public List<SceneObjectPart> LoopSoundSlavePrims
+        private ThreadedClasses.RwLockedList<SceneObjectPart> m_LoopSoundSlavePrims = new ThreadedClasses.RwLockedList<SceneObjectPart>();
+        public ThreadedClasses.RwLockedList<SceneObjectPart> LoopSoundSlavePrims
         {
             get { return m_LoopSoundSlavePrims; }
             set { m_LoopSoundSlavePrims = value; }
