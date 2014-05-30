@@ -60,11 +60,6 @@
     AssetCaching = "FlotsamAssetCache"
     Include-FlotsamCache = "config-include/FlotsamCache.ini"
 
-    ;AssetCaching = "CenomeMemoryAssetCache"
-    ;Include-CenomeCache = "config-include/CenomeCache.ini"
-
-    ;AssetCaching = "GlynnTuckerAssetCache"
-
     ;; Optionally, the port for the LLProxyLoginModule module can be changed
     ;Setup_LLProxyLoginModule = "9090/"
 
