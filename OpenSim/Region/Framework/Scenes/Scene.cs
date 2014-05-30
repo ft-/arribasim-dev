@@ -1040,6 +1040,7 @@ namespace OpenSim.Region.Framework.Scenes
                 m_eventManager.OnPermissionError += dm.SendAlertToUser;
 
             m_eventManager.OnSignificantClientMovement += HandleOnSignificantClientMovement;
+            m_eventManager.OnSimulatorIPChanged += SimulatorIPChanged;
         }
 
         public override string GetSimulatorVersion()
@@ -1896,6 +1897,23 @@ namespace OpenSim.Region.Framework.Scenes
                                 RegionInfo.RegionSizeX, RegionInfo.RegionSizeY);
             if (error != String.Empty)
                 throw new Exception(error);
+        }
+
+        private string lastEpAddress = string.Empty;
+        public void SimulatorIPChanged(System.Net.EndPoint ep)
+        {
+            if(ep.ToString() != lastEpAddress)
+            {
+                /* re register region */
+                lastEpAddress = ep.ToString();
+                GridRegion region = new GridRegion(RegionInfo);
+                string error = GridService.RegisterRegion(RegionInfo.ScopeID, region);
+                m_log.DebugFormat("{0} Re-do RegisterRegionWithGrid. name={1},id={2},loc=<{3},{4}>,size=<{5},{6}>",
+                                    LogHeader, m_regionName,
+                                    RegionInfo.RegionID,
+                                    RegionInfo.RegionLocX, RegionInfo.RegionLocY,
+                                    RegionInfo.RegionSizeX, RegionInfo.RegionSizeY);
+            }
         }
 
         #endregion
