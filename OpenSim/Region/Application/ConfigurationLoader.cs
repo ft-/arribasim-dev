@@ -412,7 +412,7 @@ namespace OpenSim
 
         private void AddConfigParam(string module, string variable, object value)
         {
-            if(!m_config.Source.Configs.Contains(module))
+            if(null == m_config.Source.Configs[module])
             {
                 m_config.Source.Configs.Add(module);
             }
@@ -423,38 +423,46 @@ namespace OpenSim
             }
         }
 
+        private void InitializeDefaultConfig(string cfgresource, string variant)
+        {
+            if (variant != string.Empty)
+            {
+                IniConfigSource dbDefaultConfig;
+                try
+                {
+                    string variantresourcename = string.Format(cfgresource, variant);
+                    using (Stream resource = GetType().Assembly.GetManifestResourceStream(variantresourcename))
+                        dbDefaultConfig = new IniConfigSource(resource);
+                }
+                catch
+                {
+                    m_log.ErrorFormat("DBDefault variant {0} is not supported", variant);
+                    throw new Exception("Failed to initialize");
+                }
+
+                foreach (IConfig cfg in dbDefaultConfig.Configs)
+                {
+                    foreach (string key in cfg.GetKeys())
+                    {
+                        AddConfigParam(cfg.Name, key, cfg.Get(key));
+                    }
+                }
+            }
+        }
+
         private void InitializeDefaultConfigs()
         {
             IConfig dbConfig = m_config.Source.Configs["DatabaseService"];
             IConfig startupConfig = m_config.Source.Configs["Architecture"];
+
+            string[] resources = GetType().Assembly.GetManifestResourceNames();
 
             if (dbConfig != null)
             {
                 string variant;
 
                 variant = dbConfig.GetString("Type", string.Empty);
-                if(variant != string.Empty)
-                {
-                    IniConfigSource dbDefaultConfig;
-                    try
-                    {
-                        using (Stream resource = GetType().Assembly.GetManifestResourceStream("OpenSim.Resources.Database." + variant + ".ini"))
-                            dbDefaultConfig = new IniConfigSource(resource);
-                    }
-                    catch
-                    {
-                        m_log.ErrorFormat("DBDefault variant {0} is not supported", variant);
-                        throw new Exception("Failed to initialize");
-                    }
-
-                    foreach (IConfig cfg in dbDefaultConfig.Configs)
-                    {
-                        foreach (string key in cfg.GetKeys())
-                        {
-                            AddConfigParam(cfg.Name, key, cfg.Get(key));
-                        }
-                    }
-                }
+                InitializeDefaultConfig("OpenSim.Resources.Architecture.Database.{0}.ini", variant);
             }
 
             if(startupConfig != null)
@@ -462,126 +470,20 @@ namespace OpenSim
                 string variant;
 
                 variant = startupConfig.GetString("HGInventoryVersion", string.Empty);
-                if(variant != string.Empty)
-                {
-                    IniConfigSource invConfig;
-                    try
-                    {
-                        using (Stream resource = GetType().Assembly.GetManifestResourceStream("OpenSim.Resources.HGInventory." + variant + ".ini"))
-                            invConfig = new IniConfigSource(resource);
-                    }
-                    catch
-                    {
-                        m_log.ErrorFormat("HGInventory Version variant {0} is not supported", variant);
-                        throw new Exception("Failed to initialize");
-                    }
-
-                    foreach (IConfig cfg in invConfig.Configs)
-                    {
-                        foreach (string key in cfg.GetKeys())
-                        {
-                            AddConfigParam(cfg.Name, key, cfg.Get(key));
-                        }
-                    }
-                }
+                InitializeDefaultConfig("OpenSim.Resources.Architecture.HGInventory.{0}.ini", variant);
 
                 variant = startupConfig.GetString("SearchVariant", string.Empty);
-                if (variant != string.Empty)
-                {
-                    IniConfigSource searchConfig;
-                    try
-                    {
-                        using (Stream resource = GetType().Assembly.GetManifestResourceStream("OpenSim.Resources.Search." + variant + ".ini"))
-                            searchConfig = new IniConfigSource(resource);
-                    }
-                    catch
-                    {
-                        m_log.ErrorFormat("Search variant {0} is not supported", variant);
-                        throw new Exception("Failed to initialize");
-                    }
-
-                    foreach (IConfig cfg in searchConfig.Configs)
-                    {
-                        foreach (string key in cfg.GetKeys())
-                        {
-                            AddConfigParam(cfg.Name, key, cfg.Get(key));
-                        }
-                    }
-                }
+                InitializeDefaultConfig("OpenSim.Resources.Architecture.Search.{0}.ini", variant);
 
                 variant = startupConfig.GetString("GroupsVariant", string.Empty);
-                if (variant != string.Empty)
-                {
-                    IniConfigSource groupsConfig;
-                    try
-                    {
-                        using (Stream resource = GetType().Assembly.GetManifestResourceStream("OpenSim.Resources.Groups." + variant + ".ini"))
-                            groupsConfig = new IniConfigSource(resource);
-                    }
-                    catch
-                    {
-                        m_log.ErrorFormat("Groups variant {0} is not supported", variant);
-                        throw new Exception("Failed to initialize");
-                    }
-
-                    foreach (IConfig cfg in groupsConfig.Configs)
-                    {
-                        foreach (string key in cfg.GetKeys())
-                        {
-                            AddConfigParam(cfg.Name, key, cfg.Get(key));
-                        }
-                    }
-                }
+                InitializeDefaultConfig("OpenSim.Resources.Architecture.Groups.{0}.ini", variant);
 
                 variant = startupConfig.GetString("ProfilesVariant", string.Empty);
-                if (variant != string.Empty)
-                {
-                    IniConfigSource profileConfig;
-                    try
-                    {
-                        using (Stream resource = GetType().Assembly.GetManifestResourceStream("OpenSim.Resources.Profile." + variant + ".ini"))
-                            profileConfig = new IniConfigSource(resource);
-                    }
-                    catch
-                    {
-                        m_log.ErrorFormat("Profiles variant {0} is not supported", variant);
-                        throw new Exception("Failed to initialize");
-                    }
-
-                    foreach (IConfig cfg in profileConfig.Configs)
-                    {
-                        foreach (string key in cfg.GetKeys())
-                        {
-                            AddConfigParam(cfg.Name, key, cfg.Get(key));
-                        }
-                    }
-                }
+                InitializeDefaultConfig("OpenSim.Resources.Architecture.Profile.{0}.ini", variant);
                 
                 /* Architecture Type must be last */
                 variant = startupConfig.GetString("Type", string.Empty);
-                if(variant != string.Empty)
-                {
-                    /* new style config */
-                    IniConfigSource archConfig;
-                    try
-                    {
-                        using (Stream resource = GetType().Assembly.GetManifestResourceStream("OpenSim.Resources.Architecture." + variant + ".ini"))
-                            archConfig = new IniConfigSource(resource);
-                    }
-                    catch
-                    {
-                        m_log.ErrorFormat("Architecture type {0} is not supported", variant);
-                        throw new Exception("Failed to initialize");
-                    }
-
-                    foreach(IConfig cfg in archConfig.Configs)
-                    {
-                        foreach(string key in cfg.GetKeys())
-                        {
-                            AddConfigParam(cfg.Name, key, cfg.Get(key));
-                        }
-                    }
-                }
+                InitializeDefaultConfig("OpenSim.Resources.Architecture.Type.{0}.ini", variant);
             }
         }
 
