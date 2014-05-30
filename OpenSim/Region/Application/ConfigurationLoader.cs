@@ -154,8 +154,15 @@ namespace OpenSim
             if(inimaster_from_resources)
             {
                 m_log.InfoFormat("[CONFIG]: Reading embedded OpenSimDefaults.ini");
-                using (Stream resource = GetType().Assembly.GetManifestResourceStream("OpenSim.Resources.OpenSimDefaults.ini"))
-                    m_config.Source.Merge(new IniConfigSource(resource));
+                try
+                {
+                    using (Stream resource = GetType().Assembly.GetManifestResourceStream("OpenSim.Resources.OpenSimDefaults.ini"))
+                        m_config.Source.Merge(new IniConfigSource(resource));
+                }
+                catch
+                {
+                    /* support for special compile variants */
+                }
             }
 
             for (int i = 0 ; i < sources.Count ; i++)
