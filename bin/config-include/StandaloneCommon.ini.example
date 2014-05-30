@@ -407,3 +407,12 @@
 
     UserAccountService = OpenSim.Services.UserAccountService.dll:UserAccountService
     AuthenticationServiceModule = "OpenSim.Services.AuthenticationService.dll:PasswordAuthenticationService"
+
+
+[Architecture]
+	;; Select HG Inventory Version
+	
+	; HG Inventory Version
+	HGInventoryVersion = "2.0"
+	; HGInventoryVersion = "1.5"
+	; HGInventoryVersion = "1.0"

@@ -1091,11 +1091,6 @@
     ;; editing it to set the database and backend services that OpenSim will use.
     ;;
 
-	; HG Inventory Version
-	HGInventoryVersion = "2.0"
-	; HGInventoryVersion = "1.5"
-	; HGInventoryVersion = "1.0"
-
 	; Search Module Variant
 	; SearchVariant = "Basic"
 	; SearchVariant = "OpenSimSearch"
