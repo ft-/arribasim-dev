@@ -3769,6 +3769,13 @@ namespace OpenSim.Region.Framework.Scenes
                             RegionInfo.RegionSettings.TelehubObject, acd.Name, Name);
                     }
 
+                    // Final permissions check; this time we don't allow changing the position
+                    if (!IsPositionAllowed(acd.AgentID, acd.startpos, ref reason))
+                    {
+                        m_authenticateHandler.RemoveCircuit(acd.circuitcode);
+                        return false;
+                    }
+
                     return true;
                 }
 
@@ -3778,8 +3785,30 @@ namespace OpenSim.Region.Framework.Scenes
                     if (land.LandData.LandingType == (byte)1 && land.LandData.UserLocation != Vector3.Zero)
                     {
                         acd.startpos = land.LandData.UserLocation;
+
+                        // Final permissions check; this time we don't allow changing the position
+                        if (!IsPositionAllowed(acd.AgentID, acd.startpos, ref reason))
+                        {
+                            m_authenticateHandler.RemoveCircuit(acd.circuitcode);
+                            return false;
+                        }
                     }
                 }
+            }
+
+            return true;
+        }
+
+        private bool IsPositionAllowed(UUID agentID, Vector3 pos, ref string reason)
+        {
+            ILandObject land = LandChannel.GetLandObject(pos);
+            if (land == null)
+                return true;
+
+            if (land.IsBannedFromLand(agentID) || land.IsRestrictedFromLand(agentID))
+            {
+                reason = "You are banned from the region.";
+                return false;
             }
 
             return true;
