@@ -181,7 +181,11 @@ namespace OpenSim.Region.CoreModules.Avatar.Friends
                             {
                                 IUserManagement uMan = m_Scenes[0].RequestModuleInterface<IUserManagement>();
                                 m_log.DebugFormat("[HGFRIENDS MODULE]: caching {0}", finfo.Friend);
-                                uMan.AddUser(id, url + ";" + first + " " + last);
+                                if (url != string.Empty)
+                                {
+                                    /* only add HG friends to have those correctly showing up, others can be requested through UUIDNameRequest */
+                                    uMan.AddUser(id, first, last, url);
+                                }
                             }
                         }
                     }

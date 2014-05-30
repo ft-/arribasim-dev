@@ -592,16 +592,6 @@ namespace OpenSim.Region.CoreModules.Framework.UserManagement
                 newUser.IsUnknownUser = false;
                 newUser.HasGridUserTried = false;
 
-                UserAccount account = m_Scenes[0].UserAccountService.GetUserAccount(m_Scenes[0].RegionInfo.ScopeID, uuid);
-                if (account != null && !oldUser.HasGridUserTried)
-                {
-                    newUser.FirstName = account.FirstName;
-                    newUser.LastName = account.LastName;
-                    newUser.HomeURL = string.Empty;
-                    newUser.IsUnknownUser = false;
-                    newUser.HasGridUserTried = true;
-                }
-
                 m_UserCache.AddOrReplaceValueIf(uuid, newUser, delegate(UserData ud)
                 {
                     if (ud.IsUnknownUser)
