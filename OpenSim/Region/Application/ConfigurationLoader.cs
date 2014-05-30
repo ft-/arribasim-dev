@@ -423,7 +423,7 @@ namespace OpenSim
             }
         }
 
-        private void InitializeDefaultConfig(string cfgresource, string variant)
+        private void InitializeDefaultConfig(string cfgresource, string variant, bool optional, string text)
         {
             if (variant != string.Empty)
             {
@@ -436,7 +436,11 @@ namespace OpenSim
                 }
                 catch
                 {
-                    m_log.ErrorFormat("DBDefault variant {0} is not supported", variant);
+                    if(optional)
+                    {
+                        return;
+                    }
+                    m_log.ErrorFormat("{0} variant {1} is not supported", text, variant);
                     throw new Exception("Failed to initialize");
                 }
 
@@ -453,37 +457,38 @@ namespace OpenSim
         private void InitializeDefaultConfigs()
         {
             IConfig dbConfig = m_config.Source.Configs["DatabaseService"];
-            IConfig startupConfig = m_config.Source.Configs["Architecture"];
-
-            string[] resources = GetType().Assembly.GetManifestResourceNames();
+            IConfig archConfig = m_config.Source.Configs["Architecture"];
 
             if (dbConfig != null)
             {
                 string variant;
 
                 variant = dbConfig.GetString("Type", string.Empty);
-                InitializeDefaultConfig("OpenSim.Resources.Architecture.Database.{0}.ini", variant);
+                InitializeDefaultConfig("OpenSim.Resources.Architecture.Database.{0}.ini", variant, false, "DatabaseService.Type");
             }
 
-            if(startupConfig != null)
+            if (archConfig != null)
             {
                 string variant;
 
-                variant = startupConfig.GetString("HGInventoryVersion", string.Empty);
-                InitializeDefaultConfig("OpenSim.Resources.Architecture.HGInventory.{0}.ini", variant);
+                variant = archConfig.GetString("physics", string.Empty);
+                InitializeDefaultConfig("OpenSim.Resources.Architecture.Physics.{0}.ini", variant, false, "Architecture.Physics");
 
-                variant = startupConfig.GetString("SearchVariant", string.Empty);
-                InitializeDefaultConfig("OpenSim.Resources.Architecture.Search.{0}.ini", variant);
+                variant = archConfig.GetString("HGInventoryVersion", string.Empty);
+                InitializeDefaultConfig("OpenSim.Resources.Architecture.HGInventory.{0}.ini", variant, false, "Architecture.HGInventoryVersion");
 
-                variant = startupConfig.GetString("GroupsVariant", string.Empty);
-                InitializeDefaultConfig("OpenSim.Resources.Architecture.Groups.{0}.ini", variant);
+                variant = archConfig.GetString("SearchVariant", string.Empty);
+                InitializeDefaultConfig("OpenSim.Resources.Architecture.Search.{0}.ini", variant, false, "Architecture.SearchVariant");
 
-                variant = startupConfig.GetString("ProfilesVariant", string.Empty);
-                InitializeDefaultConfig("OpenSim.Resources.Architecture.Profile.{0}.ini", variant);
+                variant = archConfig.GetString("GroupsVariant", string.Empty);
+                InitializeDefaultConfig("OpenSim.Resources.Architecture.Groups.{0}.ini", variant, false, "Architecture.GroupsVariant");
+
+                variant = archConfig.GetString("ProfilesVariant", string.Empty);
+                InitializeDefaultConfig("OpenSim.Resources.Architecture.Profile.{0}.ini", variant, false, "Architecture.ProfilesVariant");
                 
                 /* Architecture Type must be last */
-                variant = startupConfig.GetString("Type", string.Empty);
-                InitializeDefaultConfig("OpenSim.Resources.Architecture.Type.{0}.ini", variant);
+                variant = archConfig.GetString("Type", string.Empty);
+                InitializeDefaultConfig("OpenSim.Resources.Architecture.Type.{0}.ini", variant, false, "Architecture.Type");
             }
         }
 
