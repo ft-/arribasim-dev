@@ -108,7 +108,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         private static string m_vivoxChannelType;
         private static int    m_vivoxChannelClampingDistance;
 
-        private static Dictionary<string,string> m_parents = new Dictionary<string,string>();
+        private static ThreadedClasses.RwLockedDictionary<string, string> m_parents = new ThreadedClasses.RwLockedDictionary<string, string>();
         private static bool m_dumpXml;
         
         private IConfig m_config;
@@ -223,6 +223,21 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             }
         }
 
+        private string lastEpAddress = string.Empty;
+
+        public void SimulatorIPChanged(EndPoint ep)
+        {
+            if(!m_pluginEnabled)
+            {
+                return;
+            }
+            if(ep.ToString() != lastEpAddress)
+            {
+                m_adminConnected = false;
+                DoAdminLogin();
+            }
+        }
+
         public void AddRegion(Scene scene)
         {
             if (m_pluginEnabled) 
@@ -276,18 +291,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                     // need to check for a parent in the core code. The end result is
                     // the same, if the parent table entry is an empty string, then
                     // region channels will be created as first-level channels.
-                    lock (m_parents)
-                    {
-                        if (m_parents.ContainsKey(sceneUUID))
-                        {
-                            RemoveRegion(scene);
-                            m_parents.Add(sceneUUID, channelId);
-                        }
-                        else
-                        {
-                            m_parents.Add(sceneUUID, channelId);
-                        }
-                    }
+                    m_parents[sceneUUID] = channelId;
                 }
 
                 // we need to capture scene in an anonymous method
@@ -296,6 +300,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                     {
                         OnRegisterCaps(scene, agentID, caps);
                     };
+                scene.EventManager.OnSimulatorIPChanged += SimulatorIPChanged;
             }
         }
 
@@ -348,13 +353,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
                     // Remove the channel umbrella entry
 
-                    lock (m_parents) 
-                    {
-                        if (m_parents.ContainsKey(sceneUUID))
-                        {
-                            m_parents.Remove(sceneUUID);
-                        }
-                    }
+                    m_parents.Remove(sceneUUID);
                 }
             }
         }
@@ -703,8 +702,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             string landName;
             string parentId;
 
-            lock (m_parents)
-                parentId = m_parents[scene.RegionInfo.RegionID.ToString()];
+            parentId = m_parents[scene.RegionInfo.RegionID.ToString()];
 
             // Create parcel voice channel. If no parcel exists, then the voice channel ID is the same
             // as the directory ID. Otherwise, it reflects the parcel's ID.

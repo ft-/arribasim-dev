@@ -433,6 +433,12 @@ namespace OpenSim.Region.Framework.Scenes
         public delegate void CrossAgentToNewRegion(ScenePresence sp, bool isFlying, GridRegion newRegion);
         public event CrossAgentToNewRegion OnCrossAgentToNewRegion;
 
+        public delegate void SimulatorIPChanged(System.Net.EndPoint ep);
+        /// <summary>
+        /// Fired when a Dyn IP detector detects an IP address change
+        /// </summary>
+        public event SimulatorIPChanged OnSimulatorIPChanged;
+
         public event IncomingInstantMessage OnUnhandledInstantMessage;
 
         public delegate void ClientClosed(UUID clientID, Scene scene);
