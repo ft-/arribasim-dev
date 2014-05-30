@@ -1809,6 +1809,7 @@
 
       <Files>
         <Match pattern="*.cs" recurse="true"/>
+        <Match buildAction="EmbeddedResource" path="Resources" pattern="*.ini" recurse="true"/>
       </Files>
     </Project>
 
