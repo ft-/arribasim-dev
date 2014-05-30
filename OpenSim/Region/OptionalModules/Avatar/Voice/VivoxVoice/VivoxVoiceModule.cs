@@ -233,6 +233,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             }
             if(ep.ToString() != lastEpAddress)
             {
+                lastEpAddress = ep.ToString();
                 m_adminConnected = false;
                 DoAdminLogin();
             }
