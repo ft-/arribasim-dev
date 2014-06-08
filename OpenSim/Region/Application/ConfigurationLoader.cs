@@ -82,7 +82,7 @@ namespace OpenSim
             List<string> sources = new List<string>();
             bool inimaster_from_resources = true;
 
-            if (startupConfig.Contains("inimaster"))
+            if (startupConfig.Contains("inimaster") || File.Exists(Path.GetFullPath("OpenSimDefaults.ini")))
             {
                 string masterFileName = startupConfig.GetString("inimaster", "OpenSimDefaults.ini");
 
