@@ -1090,30 +1090,9 @@
     ;; "config-include/StandaloneCommon.ini.example" to "config-include/StandaloneCommon.ini" before
     ;; editing it to set the database and backend services that OpenSim will use.
     ;;
-
-	; Search Module Variant
-	; SearchVariant = "Basic"
-	; SearchVariant = "OpenSimSearch"
-
-	; Profile Module Variant
-	; ProfilesVariant = "Basic"
-	; ProfilesVariant = "Core"
-	; ProfilesVariant = "OpenSimProfile"
-
-	; Type = "Standalone"
-    ; Include-Architecture = "config-include/StandaloneCommon.ini"
-
-	; Type = "StandaloneHypergrid"
-    ; Include-Architecture = "config-include/StandaloneCommon.ini"
-
-	; Type = "Grid"
-    ; Include-Architecture = "config-include/GridCommon.ini"
-
-	; Type = "GridHypergrid"
-    ; Include-Architecture = "config-include/GridCommon.ini"
-
-	; Type = "SimianGrid"
-    ; Include-Architecture = "config-include/GridCommon.ini"
-
-	; Type = "HyperSimianGrid"
-    ; Include-Architecture = "config-include/GridCommon.ini"
+    ; Include-Architecture = "config-include/Standalone.ini"
+    ; Include-Architecture = "config-include/StandaloneHypergrid.ini"
+    ; Include-Architecture = "config-include/Grid.ini"
+    ; Include-Architecture = "config-include/GridHypergrid.ini"
+    ; Include-Architecture = "config-include/SimianGrid.ini"
+    ; Include-Architecture = "config-include/HyperSimianGrid.ini"
