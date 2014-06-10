@@ -698,7 +698,10 @@ public sealed class BSScene : PhysicsScene, IPhysicsParameters
     //    this is is under UpdateLock.
     public void PostUpdate(BSPhysObject updatee)
     {
-        ObjectsWithUpdates.Add(updatee);
+        lock (UpdateLock)
+        {
+            ObjectsWithUpdates.Add(updatee);
+        }
     }
 
     // The simulator thinks it is physics time so return all the collisions and position
