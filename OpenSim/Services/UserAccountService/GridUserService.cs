@@ -120,6 +120,7 @@ namespace OpenSim.Services.UserAccountService
 
         private GridUserData GetGridUserData(string userID)
         {
+            /* this is the damn code by the OpenSim Devs going into all issues of not correctly setting the home and/or last location
             GridUserData d = null;
             if (userID.Length > 36) // it's a UUI
             {
@@ -141,6 +142,10 @@ namespace OpenSim.Services.UserAccountService
             }
 
             return d;
+             */
+
+            /* and this is really all what we want to do */
+            return m_Database.Get(userID.Substring(0, 36));
         }
 
         public virtual GridUserInfo GetGridUserInfo(string userID)
