@@ -63,7 +63,7 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.GridUser
         {
             if (sp.PresenceType != PresenceType.Npc)
             {
-                string userid = sp.Scene.UserManagementModule.GetUserUUI(sp.UUID);
+                string userid = sp.UUID.ToString();
                 //m_log.DebugFormat("[ACTIVITY DETECTOR]: Detected root presence {0} in {1}", userid, sp.Scene.RegionInfo.RegionName);
                 m_GridUserService.SetLastPosition(
                     userid, UUID.Zero, sp.Scene.RegionInfo.RegionID, sp.AbsolutePosition, sp.Lookat);
@@ -89,7 +89,7 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.GridUser
             if (client.Scene is Scene)
             {
                 Scene s = (Scene)client.Scene;
-                userId = s.UserManagementModule.GetUserUUI(client.AgentId);
+//                userId = s.UserManagementModule.GetUserUUI(client.AgentId);
             }
             //m_log.DebugFormat("[ACTIVITY DETECTOR]: Detected client logout {0} in {1}", userId, client.Scene.RegionInfo.RegionName);
 
