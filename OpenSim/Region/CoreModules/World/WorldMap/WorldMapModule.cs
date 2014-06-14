@@ -609,6 +609,7 @@ namespace OpenSim.Region.CoreModules.World.WorldMap
 
                     if (dorequest && !m_blacklistedregions.ContainsKey(st.regionhandle))
                     {
+/*
                         if (nAsyncRequests >= MAX_ASYNC_REQUESTS) // hit the break
                         {
                             // AH!!! Recursive !
@@ -616,6 +617,7 @@ namespace OpenSim.Region.CoreModules.World.WorldMap
                             EnqueueMapItemRequest(st);
                             return;
                         }
+*/
 
                         RequestMapItemsDelegate d = RequestMapItemsAsync;
                         d.BeginInvoke(st.agentID, st.flags, st.EstateID, st.godlike, st.itemtype, st.regionhandle, RequestMapItemsCompleted, null);
