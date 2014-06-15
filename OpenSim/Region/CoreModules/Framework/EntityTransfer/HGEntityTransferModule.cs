@@ -250,8 +250,12 @@ namespace OpenSim.Region.CoreModules.Framework.EntityTransfer
             {
                 // Log them out of this grid
                 Scene.PresenceService.LogoutAgent(sp.ControllingClient.SessionId);
-                string userId = sp.UUID.ToString();
-                Scene.GridUserService.LoggedOut(userId, UUID.Zero, Scene.RegionInfo.RegionID, sp.AbsolutePosition, sp.Lookat);
+                string userId;
+                /* Unknown users cannot be logged out so we guard for that */
+                if (Scene.UserManagementModule.GetUserUUI(sp.UUID, out userId))
+                {
+                    Scene.GridUserService.LoggedOut(userId, UUID.Zero, Scene.RegionInfo.RegionID, sp.AbsolutePosition, sp.Lookat);
+                }
             }
         }
 

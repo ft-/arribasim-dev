@@ -2152,7 +2152,12 @@ namespace OpenSim.Region.CoreModules.World.Land
                 // (d) parcels with telehubs can be the home of anyone
                 (telehub != null && land.ContainsPoint((int)telehub.AbsolutePosition.X, (int)telehub.AbsolutePosition.Y)))
             {
-                if (m_scene.GridUserService.SetHome(remoteClient.AgentId.ToString(), land.RegionUUID, position, lookAt))
+                string userId;
+                if(!m_scene.UserManagementModule.GetUserUUI(remoteClient.AgentId, out userId))
+                {
+                    m_Dialog.SendAlertToUser(remoteClient, "Set Home request failed. (User Lookup)");
+                }
+                else if (m_scene.GridUserService.SetHome(userId, land.RegionUUID, position, lookAt))
                     // FUBAR ALERT: this needs to be "Home position set." so the viewer saves a home-screenshot.
                     m_Dialog.SendAlertToUser(remoteClient, "Home position set.");
                 else
