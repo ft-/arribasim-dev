@@ -54,7 +54,7 @@ namespace OpenSim.Data.PGSQL
 
         public GridUserData[] GetAll(string userID)
         {
-            return base.Get(String.Format("\"UserID\" LIKE '{0}'", userID.Substring(0, 36)));
+            return base.Get(String.Format("\"UserID\" LIKE '{0}%'", userID));
         }
 
     }
