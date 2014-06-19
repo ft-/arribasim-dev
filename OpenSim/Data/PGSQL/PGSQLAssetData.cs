@@ -153,7 +153,7 @@ namespace OpenSim.Data.PGSQL
             string sql =
                 @"UPDATE assets set name = :name, description = :description, " + "\"assetType\" " + @" = :assetType,
                          local = :local, temporary = :temporary, creatorid = :creatorid, data = :data
-                    WHERE id=:id;
+                    WHERE id=:id AND asset_flags <> 0;
 
                   INSERT INTO assets
                     (id, name, description, " + "\"assetType\" " + @", local, 

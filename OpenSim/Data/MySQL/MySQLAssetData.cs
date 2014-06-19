@@ -159,7 +159,7 @@ namespace OpenSim.Data.MySQL
 
                 using (MySqlCommand cmd =
                     new MySqlCommand(
-                        "replace INTO assets(id, name, description, assetType, local, temporary, create_time, access_time, asset_flags, CreatorID, data)" +
+                        "INTO assets(id, name, description, assetType, local, temporary, create_time, access_time, asset_flags, CreatorID, data)" +
                         "VALUES(?id, ?name, ?description, ?assetType, ?local, ?temporary, ?create_time, ?access_time, ?asset_flags, ?CreatorID, ?data)",
                         dbcon))
                 {
@@ -208,6 +208,26 @@ namespace OpenSim.Data.MySQL
                                 "[ASSET DB]: MySQL failure creating asset {0} with name {1}.  Exception  ",
                                 asset.FullID, asset.Name)
                             , e);
+                        cmd.Dispose();
+
+                        using (MySqlCommand updatecmd = new MySqlCommand(
+                                "UPDATE assets SET name = ?name, description = ?description, assetType = ?assetType, local = ?local, temporary = ?temporary, create_time = ?create_time, access_time = ?access_time, asset_flags = ?access_flags, CreatorID = ?CreatorID, data = ?data" +
+                                "WHERE id = ?id AND asset_flags <> 0", dbcon))
+                        {
+                            int now = (int)Utils.DateTimeToUnixTime(DateTime.UtcNow);
+                            updatecmd.Parameters.AddWithValue("?id", asset.ID);
+                            updatecmd.Parameters.AddWithValue("?name", assetName);
+                            updatecmd.Parameters.AddWithValue("?description", assetDescription);
+                            updatecmd.Parameters.AddWithValue("?assetType", asset.Type);
+                            updatecmd.Parameters.AddWithValue("?local", asset.Local);
+                            updatecmd.Parameters.AddWithValue("?temporary", asset.Temporary);
+                            updatecmd.Parameters.AddWithValue("?create_time", now);
+                            updatecmd.Parameters.AddWithValue("?access_time", now);
+                            updatecmd.Parameters.AddWithValue("?CreatorID", asset.Metadata.CreatorID);
+                            updatecmd.Parameters.AddWithValue("?asset_flags", (int)asset.Flags);
+                            updatecmd.Parameters.AddWithValue("?data", asset.Data);
+                            updatecmd.ExecuteNonQuery();
+                        }
                     }
                 }
             }
@@ -349,7 +369,7 @@ namespace OpenSim.Data.MySQL
             {
                 dbcon.Open();
 
-                using (MySqlCommand cmd = new MySqlCommand("delete from assets where id=?id", dbcon))
+                using (MySqlCommand cmd = new MySqlCommand("delete from assets where id=?id AND flags<>0", dbcon))
                 {
                     cmd.Parameters.AddWithValue("?id", id);
                     cmd.ExecuteNonQuery();

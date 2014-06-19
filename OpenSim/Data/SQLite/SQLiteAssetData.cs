@@ -50,7 +50,7 @@ namespace OpenSim.Data.SQLite
 
         private const string SelectAssetSQL = "select * from assets where UUID=:UUID";
         private const string SelectAssetMetadataSQL = "select Name, Description, Type, Temporary, asset_flags, UUID, CreatorID from assets limit :start, :count";
-        private const string DeleteAssetSQL = "delete from assets where UUID=:UUID";
+        private const string DeleteAssetSQL = "delete from assets where UUID=:UUID AND asset_flags <> 0";
         private const string InsertAssetSQL = "insert into assets(UUID, Name, Description, Type, Local, Temporary, asset_flags, CreatorID, Data) values(:UUID, :Name, :Description, :Type, :Local, :Temporary, :Flags, :CreatorID, :Data)";
         private const string UpdateAssetSQL = "update assets set Name=:Name, Description=:Description, Type=:Type, Local=:Local, Temporary=:Temporary, asset_flags=:Flags, CreatorID=:CreatorID, Data=:Data where UUID=:UUID";
         private const string assetSelect = "select * from assets";
