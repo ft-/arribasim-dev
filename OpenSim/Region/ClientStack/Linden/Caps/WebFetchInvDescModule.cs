@@ -30,7 +30,6 @@ using Mono.Addins;
 using Nini.Config;
 using OpenMetaverse;
 using OpenSim.Capabilities.Handlers;
-using OpenSim.Framework;
 using OpenSim.Framework.Capabilities;
 using OpenSim.Framework.Monitoring;
 using OpenSim.Framework.Servers.HttpServer;
@@ -61,7 +60,7 @@ namespace OpenSim.Region.ClientStack.Linden
             public List<UUID> folders;
         }
 
-        // private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+        private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
 
         /// <summary>
@@ -422,7 +421,18 @@ namespace OpenSim.Region.ClientStack.Linden
             aPollRequest poolreq = m_queue.Dequeue();
 
             if (poolreq != null && poolreq.thepoll != null)
-                poolreq.thepoll.Process(poolreq);
+            {
+                try
+                {
+                    poolreq.thepoll.Process(poolreq);
+                }
+                catch (Exception e)
+                {
+                    m_log.ErrorFormat(
+                        "[INVENTORY]: Failed to process queued inventory request {0} for {1} in {2}.  Exception {3}",
+                        poolreq.reqID, poolreq.presence != null ? poolreq.presence.Name : "unknown", Scene.Name, e);
+                }
+            }
         }
     }
 }
