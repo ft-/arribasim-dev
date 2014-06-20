@@ -133,7 +133,8 @@ public static class BSParam
     public static float AvatarHeightLowFudge { get; private set; }
     public static float AvatarHeightMidFudge { get; private set; }
     public static float AvatarHeightHighFudge { get; private set; }
-	public static float AvatarContactProcessingThreshold { get; private set; }
+    public static float AvatarTerminalVelocity { get; private set; }
+    public static float AvatarContactProcessingThreshold { get; private set; }
     public static float AvatarStopZeroThreshold { get; private set; }
 	public static int AvatarJumpFrames { get; private set; }
 	public static float AvatarBelowGroundUpCorrectionMeters { get; private set; }
@@ -580,6 +581,8 @@ public static class BSParam
             0f ),
         new ParameterDefn<float>("AvatarHeightHighFudge", "A fudge factor to make tall avatars stand on the ground",
             0f ),
+        new ParameterDefn<float>("AvatarTerminalVelocity", "Terminal Velocity of falling avatar",
+            -54.0f ),
 	    new ParameterDefn<float>("AvatarContactProcessingThreshold", "Distance from capsule to check for collisions",
             0.1f ),
 	    new ParameterDefn<float>("AvatarStopZeroThreshold", "Movement velocity below which avatar is assumed to be stopped",
