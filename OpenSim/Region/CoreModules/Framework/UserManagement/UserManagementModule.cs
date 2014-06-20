@@ -559,8 +559,24 @@ namespace OpenSim.Region.CoreModules.Framework.UserManagement
                     oldUser = new UserData();
                     oldUser.HasGridUserTried = false;
                     oldUser.IsUnknownUser = false;
-                    oldUser.FirstName = first;
-                    oldUser.LastName = last;
+                    if (homeURL != string.Empty)
+                    {
+                        oldUser.FirstName = first.Replace(" ", ".") + "." + last.Replace(" ", ".");
+                        try
+                        {
+                            oldUser.LastName = "@" + new Uri(homeURL).Authority;
+                            oldUser.IsUnknownUser = false;
+                        }
+                        catch
+                        {
+                            oldUser.LastName = "@unknown";
+                        }
+                    }
+                    else
+                    {
+                        oldUser.FirstName = first;
+                        oldUser.LastName = last;
+                    }
                     oldUser.HomeURL = homeURL;
                     oldUser.Id = uuid;
                     return oldUser;
