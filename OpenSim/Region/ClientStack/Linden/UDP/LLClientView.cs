@@ -1444,8 +1444,8 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
                 // TODO: hookup varregion sim size here
                 mapReply.Size[i] = new MapBlockReplyPacket.SizeBlock();
-                mapReply.Size[i].SizeX = 256;
-                mapReply.Size[i].SizeY = 256;
+                mapReply.Size[i].SizeX = mapBlocks2[i].SizeX;
+                mapReply.Size[i].SizeY = mapBlocks2[i].SizeY;
             }
             OutPacket(mapReply, ThrottleOutPacketType.Land);
         }
