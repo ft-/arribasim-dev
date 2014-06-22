@@ -459,7 +459,8 @@ public abstract class BSPhysObject : PhysicsActor
 
         // If someone has subscribed for collision events log the collision so it will be reported up
         if (SubscribedEvents()) {
-            CollisionCollection.AddCollider(collidingWith, new ContactPoint(contactPoint, contactNormal, pentrationDepth));
+            lock(PhysScene.CollisionLock)
+                CollisionCollection.AddCollider(collidingWith, new ContactPoint(contactPoint, contactNormal, pentrationDepth));
             DetailLog("{0},{1}.Collison.AddCollider,call,with={2},point={3},normal={4},depth={5},colliderMoving={6}",
                             LocalID, TypeName, collidingWith, contactPoint, contactNormal, pentrationDepth, ColliderIsMoving);
 

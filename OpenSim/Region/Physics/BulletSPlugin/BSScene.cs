@@ -807,7 +807,10 @@ public sealed class BSScene : PhysicsScene, IPhysicsParameters
             if (collider.Collide(collidingWith, collidee, collidePoint, collideNormal, penetration))
             {
                 // If a collision was 'good', remember to send it to the simulator
-                ObjectsWithCollisions.Add(collider);
+                lock (CollisionLock)
+                {
+                    ObjectsWithCollisions.Add(collider);
+                }
             }
         }
 
