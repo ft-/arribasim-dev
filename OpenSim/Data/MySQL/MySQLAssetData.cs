@@ -211,7 +211,7 @@ namespace OpenSim.Data.MySQL
                         cmd.Dispose();
 
                         using (MySqlCommand updatecmd = new MySqlCommand(
-                                "UPDATE assets SET name = ?name, description = ?description, assetType = ?assetType, local = ?local, temporary = ?temporary, create_time = ?create_time, access_time = ?access_time, asset_flags = ?access_flags, CreatorID = ?CreatorID, data = ?data" +
+                                "UPDATE assets SET name = ?name, description = ?description, assetType = ?assetType, local = ?local, temporary = ?temporary, create_time = ?create_time, access_time = ?access_time, asset_flags = ?asset_flags, CreatorID = ?CreatorID, data = ?data" +
                                 "WHERE id = ?id AND asset_flags <> 0", dbcon))
                         {
                             int now = (int)Utils.DateTimeToUnixTime(DateTime.UtcNow);
