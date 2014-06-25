@@ -159,7 +159,7 @@ namespace OpenSim.Data.MySQL
 
                 using (MySqlCommand cmd =
                     new MySqlCommand(
-                        "INTO assets(id, name, description, assetType, local, temporary, create_time, access_time, asset_flags, CreatorID, data)" +
+                        "INSERT INTO assets(id, name, description, assetType, local, temporary, create_time, access_time, asset_flags, CreatorID, data)" +
                         "VALUES(?id, ?name, ?description, ?assetType, ?local, ?temporary, ?create_time, ?access_time, ?asset_flags, ?CreatorID, ?data)",
                         dbcon))
                 {
