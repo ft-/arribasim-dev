@@ -652,7 +652,7 @@ namespace OpenSim.Region.CoreModules.World.WorldMap
                 MapRequestState mrs = new MapRequestState();
                 MapRequestState mrsout;
                 mrs.agentID = UUID.Zero;
-                if(!m_openRequests.Remove(requestID, out mrsout))
+                if(m_openRequests.Remove(requestID, out mrsout))
                 {
                     mrs = mrsout;
                 }
