@@ -367,7 +367,7 @@ namespace OpenSim.Region.CoreModules.Avatar.AvatarFactory
 
         public void QueueAppearanceSave(UUID agentid)
         {
-//            m_log.DebugFormat("[AVFACTORY]: Queueing appearance save for {0}", agentid);
+            //m_log.DebugFormat("[AVFACTORY]: Queueing appearance save for {0}", agentid);
 
             // 10000 ticks per millisecond, 1000 milliseconds per second
             long timestamp = DateTime.Now.Ticks + Convert.ToInt64(m_savetime * 1000 * 10000);
@@ -587,12 +587,12 @@ namespace OpenSim.Region.CoreModules.Avatar.AvatarFactory
 
             while (m_sendqueue.FindRemoveIf(delegate(UUID avatarID, long sendTime) { return sendTime < now; }, out removalKVP))
             {
-                Util.FireAndForget(o => SendAppearance(removalKVP.Key));
+                SendAppearance(removalKVP.Key);
             }
 
             while(m_savequeue.FindRemoveIf(delegate(UUID avatarID, long sendTime) { return sendTime < now; }, out removalKVP))
             {
-                Util.FireAndForget(o => SaveAppearance(removalKVP.Key));
+                SaveAppearance(removalKVP.Key);
             }
 
             // We must lock both queues here so that QueueAppearanceSave() or *Send() don't m_updateTimer.Start() on
@@ -615,11 +615,11 @@ namespace OpenSim.Region.CoreModules.Avatar.AvatarFactory
             if (sp == null)
             {
                 // This is expected if the user has gone away.
-//                m_log.DebugFormat("[AVFACTORY]: Agent {0} no longer in the scene", agentid);
+                //m_log.DebugFormat("[AVFACTORY]: Agent {0} no longer in the scene", agentid);
                 return;
             }
 
-//            m_log.DebugFormat("[AVFACTORY]: Saving appearance for avatar {0}", agentid);
+            //m_log.DebugFormat("[AVFACTORY]: Saving appearance for avatar {0}", agentid);
 
             // This could take awhile since it needs to pull inventory
             // We need to do it at the point of save so that there is a sufficient delay for any upload of new body part/shape

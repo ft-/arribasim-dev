@@ -86,9 +86,9 @@ namespace OpenSim.Framework
 
 //        public static readonly UUID DEFAULT_TATTOO_ITEM = new UUID("c47e22bd-3021-4ba4-82aa-2b5cb34d35e1");
 //        public static readonly UUID DEFAULT_TATTOO_ASSET = new UUID("00000000-0000-2222-3333-100000001007");
- 
-        protected Dictionary<UUID, UUID> m_items = new Dictionary<UUID, UUID>();
-        protected List<UUID> m_ids = new List<UUID>();
+
+        protected ThreadedClasses.RwLockedDictionary<UUID, UUID> m_items = new ThreadedClasses.RwLockedDictionary<UUID, UUID>();
+        protected ThreadedClasses.RwLockedList<UUID> m_ids = new ThreadedClasses.RwLockedList<UUID>();
 
         public AvatarWearable()
         {
@@ -169,11 +169,8 @@ namespace OpenSim.Framework
 
         public void RemoveItem(UUID itemID)
         {
-            if (m_items.ContainsKey(itemID))
-            {
-                m_ids.Remove(itemID);
-                m_items.Remove(itemID);
-            }
+            m_ids.Remove(itemID);
+            m_items.Remove(itemID);
         }
 
         public void RemoveAsset(UUID assetID)
@@ -209,9 +206,12 @@ namespace OpenSim.Framework
 
         public UUID GetAsset(UUID itemID)
         {
-            if (!m_items.ContainsKey(itemID))
-                return UUID.Zero;
-            return m_items[itemID];
+            UUID result;
+            if (m_items.TryGetValue(itemID, out result))
+            {
+                return result;
+            }
+            return UUID.Zero;
         }
 
         public static AvatarWearable[] DefaultWearables
