@@ -1076,7 +1076,10 @@ namespace OpenSim.Region.CoreModules.Avatar.Attachments
             InventoryItemBase item = new InventoryItemBase(itemID, sp.UUID);
             item = m_scene.InventoryService.GetItem(item);
             if (item == null)
+            {
+                m_log.ErrorFormat("[ATTACHMENTS MODULE]: Failed to get Inventory item {1} for agent {0}", sp.UUID, itemID);
                 return;
+            }
 
             int attFlag = append ? 0x80 : 0;
             bool changed = sp.Appearance.SetAttachment((int)AttachmentPt | attFlag, itemID, item.AssetID);

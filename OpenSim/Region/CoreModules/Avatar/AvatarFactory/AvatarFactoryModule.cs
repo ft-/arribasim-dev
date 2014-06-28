@@ -478,7 +478,10 @@ namespace OpenSim.Region.CoreModules.Avatar.AvatarFactory
                 defonly = false; // found a non-default texture reference
 
                 if (m_scene.AssetService.Get(face.TextureID.ToString()) == null)
+                {
+                    m_log.WarnFormat("[AVFACTORY]: Missing baked texture {1} for appearance of {0}", sp.Name, face.TextureID);
                     return false;
+                }
             }
 
 //            m_log.DebugFormat("[AVFACTORY]: Completed texture check for {0} {1}", sp.Name, sp.UUID);
@@ -1008,6 +1011,7 @@ namespace OpenSim.Region.CoreModules.Avatar.AvatarFactory
         /// <param name="client"></param>
         private void Client_OnRequestWearables(IClientAPI client)
         {
+            //m_log.DebugFormat("[AVFACTORY]: Client_OnRequestWearables called for {0} ({1})", client.Name, client.AgentId);
             Util.FireAndForget(delegate(object x)
             {
                 Thread.Sleep(4000);
@@ -1029,7 +1033,7 @@ namespace OpenSim.Region.CoreModules.Avatar.AvatarFactory
         /// <param name="visualParam"></param>
         private void Client_OnSetAppearance(IClientAPI client, Primitive.TextureEntry textureEntry, byte[] visualParams, Vector3 avSize, WearableCacheItem[] cacheItems)
         {
-            // m_log.WarnFormat("[AVFACTORY]: Client_OnSetAppearance called for {0} ({1})", client.Name, client.AgentId);
+            //m_log.DebugFormat("[AVFACTORY]: Client_OnSetAppearance called for {0} ({1})", client.Name, client.AgentId);
             ScenePresence sp = m_scene.GetScenePresence(client.AgentId);
             if (sp != null)
                 SetAppearance(sp, textureEntry, visualParams,avSize, cacheItems);
@@ -1044,7 +1048,7 @@ namespace OpenSim.Region.CoreModules.Avatar.AvatarFactory
         /// <param name="e"></param>
         private void Client_OnAvatarNowWearing(IClientAPI client, AvatarWearingArgs e)
         {
-            // m_log.WarnFormat("[AVFACTORY]: Client_OnAvatarNowWearing called for {0} ({1})", client.Name, client.AgentId);
+            //m_log.DebugFormat("[AVFACTORY]: Client_OnAvatarNowWearing called for {0} ({1})", client.Name, client.AgentId);
             ScenePresence sp = m_scene.GetScenePresence(client.AgentId);
             if (sp == null)
             {
@@ -1089,7 +1093,7 @@ namespace OpenSim.Region.CoreModules.Avatar.AvatarFactory
         /// <param name="cachedTextureRequest"></param>
         private void Client_OnCachedTextureRequest(IClientAPI client, int serial, List<CachedTextureRequestArg> cachedTextureRequest)
         {
-            // m_log.WarnFormat("[AVFACTORY]: Client_OnCachedTextureRequest called for {0} ({1})", client.Name, client.AgentId);
+            //m_log.DebugFormat("[AVFACTORY]: Client_OnCachedTextureRequest called for {0} ({1})", client.Name, client.AgentId);
             ScenePresence sp = m_scene.GetScenePresence(client.AgentId);
 
             List<CachedTextureResponseArg> cachedTextureResponse = new List<CachedTextureResponseArg>();

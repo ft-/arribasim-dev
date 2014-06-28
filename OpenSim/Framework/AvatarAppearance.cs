@@ -245,9 +245,8 @@ namespace OpenSim.Framework
 
         public void ClearWearables()
         {
-            m_wearables = new AvatarWearable[AvatarWearable.MAX_WEARABLES];
             for (int i = 0; i < AvatarWearable.MAX_WEARABLES; i++)
-                m_wearables[i] = new AvatarWearable();
+                m_wearables[i].Clear();
         }
 
         protected virtual void SetDefaultWearables()
