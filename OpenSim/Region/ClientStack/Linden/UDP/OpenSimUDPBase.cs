@@ -153,7 +153,17 @@ namespace OpenMetaverse
                     AddressFamily.InterNetwork,
                     SocketType.Dgram,
                     ProtocolType.Udp);
-
+                try
+                {
+                    if(m_udpSocket.Ttl < 128)
+                    {
+                        m_udpSocket.Ttl = 128;
+                    }
+                }
+                catch(SocketException)
+                {
+                    m_log.Debug("[UDPBASE]: Failed to increase default TTL");
+                }
                 try
                 {
                     // This udp socket flag is not supported under mono, 
