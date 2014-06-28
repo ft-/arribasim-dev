@@ -235,7 +235,7 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Asset
 
                 if (asset != null)
                 {
-                    Util.FireAndForget(delegate { handler(id, sender, asset); });
+                    handler(id, sender, asset);
                     return true;
                 }
             }
@@ -248,7 +248,7 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Asset
 //                if (null == a)
 //                    m_log.WarnFormat("[LOCAL ASSET SERVICES CONNECTOR]: Could not asynchronously find asset with id {0}", id);
 
-                Util.FireAndForget(delegate { handler(assetID, s, a); });
+                handler(assetID, s, a);
             });
         }
 

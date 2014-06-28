@@ -285,7 +285,7 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Asset
 
             if (asset != null)
             {
-                Util.FireAndForget(delegate { handler(id, sender, asset); });
+                handler(id, sender, asset);
                 return true;
             }
 
