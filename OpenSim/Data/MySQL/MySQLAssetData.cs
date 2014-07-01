@@ -369,7 +369,7 @@ namespace OpenSim.Data.MySQL
             {
                 dbcon.Open();
 
-                using (MySqlCommand cmd = new MySqlCommand("delete from assets where id=?id AND flags<>0", dbcon))
+                using (MySqlCommand cmd = new MySqlCommand("delete from assets where id=?id AND asset_flags<>0", dbcon))
                 {
                     cmd.Parameters.AddWithValue("?id", id);
                     cmd.ExecuteNonQuery();
