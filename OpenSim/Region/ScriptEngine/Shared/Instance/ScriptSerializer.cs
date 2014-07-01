@@ -73,13 +73,18 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
 
             XmlElement queue = xmldoc.CreateElement("", "Queue", "");
 
-            long count = instance.EventsQueued;
-
-            while (count > 0)
+            for (; ;)
             {
-                EventParams ep = (EventParams)instance.DequeueEvent();
+                EventParams ep;
+                try
+                {
+                    ep = (EventParams)instance.DequeueEvent();
+                }
+                catch (InvalidOperationException)
+                {
+                    break;
+                }
                 instance.EnqueueEvent(ep);
-                count--;
 
                 XmlElement item = xmldoc.CreateElement("", "Item", "");
                 XmlAttribute itemEvent = xmldoc.CreateAttribute("", "event",
