@@ -6,7 +6,4 @@
     <ExtensionPoint path = "/OpenSim/AssetData">
         <ExtensionNode name="Plugin" type="OpenSim.Framework.PluginExtensionNode" objectType="OpenSim.Data.IAssetDataPlugin" />
     </ExtensionPoint>
-    <ExtensionPoint path = "/OpenSim/InventoryData">
-        <ExtensionNode name="Plugin" type="OpenSim.Framework.PluginExtensionNode" objectType="OpenSim.Data.IInventoryDataPlugin" />
-    </ExtensionPoint>
 </Addin>
