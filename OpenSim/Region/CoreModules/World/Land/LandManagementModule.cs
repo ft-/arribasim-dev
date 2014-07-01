@@ -2159,7 +2159,7 @@ namespace OpenSim.Region.CoreModules.World.Land
                     /* Do not set a home position in this grid for a HG visitor */
                     m_Dialog.SendAlertToUser(remoteClient, "Set Home request failed. (User Lookup)");
                 }
-                else if(UUID.TryParse(userId, out test))
+                else if(!UUID.TryParse(userId, out test))
                 {
                     m_Dialog.SendAlertToUser(remoteClient, "Set Home request failed. (HG visitor)");
                 }
