@@ -697,18 +697,18 @@
 
 
 [LightShare]
-    ;# {enable_windlight} {} {Enable LightShare technology?} {true false} false
+    ;# {enable_windlight} {} {Enable LightShare technology?} {true false} true
     ;; This enables the transmission of Windlight scenes to supporting clients,
     ;; such as the Meta7 viewer.
     ;; It has no ill effect on viewers which do not support server-side
     ;; windlight settings.
-    ; enable_windlight = false
+    enable_windlight = truee
 
 
 [Materials]
     ;# {enable_materials} {} {Enable Materials support?} {true false} true
     ;; This enables the use of Materials.
-    ; enable_materials = true
+    enable_materials = true
 
 
 [DataSnapshot]
@@ -848,7 +848,7 @@
     ;# {AllowLightShareFunctions} {Enabled:false [LightShare]enable_windlight:true} {Allow LightShare functions?} {true false} false
     ; Allow the use of LightShare functions.
     ; The setting enable_windlight = true must also be enabled in the [LightShare] section.
-    ; AllowLightShareFunctions = false
+    AllowLightShareFunctions = true
 
     ;# {OSFunctionThreatLevel} {Enabled:true AllowOSFunctions:true} {OSFunction threat level? (DANGEROUS!)} {None VeryLow Low Moderate High VeryHigh Severe} VeryLow
     ;; Threat level to allow, one of None, VeryLow, Low, Moderate, High, VeryHigh, Severe
