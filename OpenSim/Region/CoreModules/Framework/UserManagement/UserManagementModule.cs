@@ -630,32 +630,46 @@ namespace OpenSim.Region.CoreModules.Framework.UserManagement
                     {
                         m_log.DebugFormat("[SCENE]: Unable to parse Uri {0} for CreatorID {1}", parts[0], creatorData);
 
-                        m_UserCache.AddIfNotExists(id, delegate()
+                        try
                         {
-                            UserData newUser = new UserData();
-                            newUser.Id = id;
-                            newUser.FirstName = firstname + "." + lastname.Replace(' ', '.');
-                            newUser.LastName = "@unknown";
-                            newUser.HomeURL = string.Empty;
-                            newUser.HasGridUserTried = false;
-                            newUser.IsUnknownUser = true; /* we mark those users as Unknown user so a re-retrieve may be activated */
-                            return newUser;
-                        });
+                            m_UserCache.AddIfNotExists(id, delegate()
+                            {
+                                UserData newUser = new UserData();
+                                newUser.Id = id;
+                                newUser.FirstName = firstname + "." + lastname.Replace(' ', '.');
+                                newUser.LastName = "@unknown";
+                                newUser.HomeURL = string.Empty;
+                                newUser.HasGridUserTried = false;
+                                newUser.IsUnknownUser = true; /* we mark those users as Unknown user so a re-retrieve may be activated */
+                                return newUser;
+                            });
+                        }
+                        catch
+                        {
+
+                        }
                     }
                 }
                 else
                 {
-                    m_UserCache.AddIfNotExists(id, delegate()
+                    try
                     {
-                        UserData newUser = new UserData();
-                        newUser.Id = id;
-                        newUser.FirstName = "Unknown";
-                        newUser.LastName = "UserUMMAU4";
-                        newUser.HomeURL = string.Empty;
-                        newUser.IsUnknownUser = true;
-                        newUser.HasGridUserTried = false;
-                        return newUser;
-                    });
+                        m_UserCache.AddIfNotExists(id, delegate()
+                        {
+                            UserData newUser = new UserData();
+                            newUser.Id = id;
+                            newUser.FirstName = "Unknown";
+                            newUser.LastName = "UserUMMAU4";
+                            newUser.HomeURL = string.Empty;
+                            newUser.IsUnknownUser = true;
+                            newUser.HasGridUserTried = false;
+                            return newUser;
+                        });
+                    }
+                    catch
+                    {
+
+                    }
                 }
             }
         }
