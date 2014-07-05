@@ -817,7 +817,9 @@ namespace OpenSim.Region.CoreModules.Framework.EntityTransfer
                 agentCircuit.Id0 = currentAgentCircuit.Id0;
             }
 
-            if (NeedsNewAgent(sp.DrawDistance, oldRegionX, newRegionX, oldRegionY, newRegionY))
+            float dist = (float)Math.Max(sp.Scene.DefaultDrawDistance,
+                (float)Math.Max(sp.Scene.RegionInfo.RegionSizeX, sp.Scene.RegionInfo.RegionSizeY));
+            if (NeedsNewAgent(dist, oldRegionX, newRegionX, oldRegionY, newRegionY))
             {
                 // brand new agent, let's create a new caps seed
                 agentCircuit.CapsPath = CapsUtil.GetRandomCapsObjectPath();
@@ -891,7 +893,9 @@ namespace OpenSim.Region.CoreModules.Framework.EntityTransfer
 
             IClientIPEndpoint ipepClient;
             string capsPath = String.Empty;
-            if (NeedsNewAgent(sp.DrawDistance, oldRegionX, newRegionX, oldRegionY, newRegionY))
+            float dist = (float)Math.Max(sp.Scene.DefaultDrawDistance,
+                (float)Math.Max(sp.Scene.RegionInfo.RegionSizeX, sp.Scene.RegionInfo.RegionSizeY));
+            if (NeedsNewAgent(dist, oldRegionX, newRegionX, oldRegionY, newRegionY))
             {
                 m_log.DebugFormat(
                     "[ENTITY TRANSFER MODULE]: Determined that region {0} at {1},{2} needs new child agent for incoming agent {3} from {4}",
@@ -1137,7 +1141,9 @@ namespace OpenSim.Region.CoreModules.Framework.EntityTransfer
 
             IClientIPEndpoint ipepClient;
             string capsPath = String.Empty;
-            if (NeedsNewAgent(sp.DrawDistance, oldRegionX, newRegionX, oldRegionY, newRegionY))
+            float dist = (float)Math.Max(sp.Scene.DefaultDrawDistance,
+                (float)Math.Max(sp.Scene.RegionInfo.RegionSizeX, sp.Scene.RegionInfo.RegionSizeY));
+            if (NeedsNewAgent(dist, oldRegionX, newRegionX, oldRegionY, newRegionY))
             {
                 m_log.DebugFormat(
                     "[ENTITY TRANSFER MODULE]: Determined that region {0} at {1},{2} needs new child agent for agent {3} from {4}",
@@ -1862,7 +1868,7 @@ namespace OpenSim.Region.CoreModules.Framework.EntityTransfer
             //foreach (ulong h in agent.ChildrenCapSeeds.Keys)
             //    m_log.DebugFormat("[XXX] --> {0}", h);
             //m_log.DebugFormat("[XXX] Adding {0}", region.RegionHandle);
-            agent.ChildrenCapSeeds.Add(region.RegionHandle, agent.CapsPath);
+            agent.ChildrenCapSeeds[region.RegionHandle] = agent.CapsPath;
 
             if (sp.Scene.CapsModule != null)
             {
