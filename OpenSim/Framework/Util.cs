@@ -2022,7 +2022,7 @@ namespace OpenSim.Framework
             {
                 ThreadFuncNum = threadFuncNum;
                 this.context = context;
-                LogThread = true;
+                LogThread = false;
                 Thread = null;
                 Running = false;
                 Aborted = false;
