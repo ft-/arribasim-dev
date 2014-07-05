@@ -80,6 +80,7 @@ namespace OpenSim.Region.CoreModules.World.WorldMap
         private ThreadedClasses.RwLockedDictionary<ulong, string> m_cachedRegionMapItemsAddress = new ThreadedClasses.RwLockedDictionary<ulong, string>();
         private ThreadedClasses.RwLockedList<UUID> m_rootAgents = new ThreadedClasses.RwLockedList<UUID>();
         private volatile bool threadrunning = false;
+        protected bool m_DisableMapItemsRequest = false;
 
         private IServiceThrottleModule m_ServiceThrottle;
 
@@ -96,6 +97,8 @@ namespace OpenSim.Region.CoreModules.World.WorldMap
 
             blacklistTimeout 
                 = Util.GetConfigVarFromSections<int>(config, "BlacklistTimeout", configSections, 10 * 60) * 1000;
+
+            m_DisableMapItemsRequest = Util.GetConfigVarFromSections<bool>(config, "DisableMapItemsRequest", configSections, false);
         }
 
         public virtual void AddRegion (Scene scene)
@@ -768,7 +771,7 @@ namespace OpenSim.Region.CoreModules.World.WorldMap
 
             blacklisted = m_blacklistedregions.ContainsKey(regionhandle);
 
-            if (blacklisted)
+            if (blacklisted || m_DisableMapItemsRequest)
                 return new OSDMap();
 
             UUID requestID = UUID.Random();
