@@ -408,6 +408,7 @@
     UserAccountService = OpenSim.Services.UserAccountService.dll:UserAccountService
     AuthenticationServiceModule = "OpenSim.Services.AuthenticationService.dll:PasswordAuthenticationService"
 
+[UserProfiles]
     ; This needs to be specified to have sim local access to Profile when Enabled = true
     ; ProfileServiceURL = "http://127.0.0.1:9000"
 
