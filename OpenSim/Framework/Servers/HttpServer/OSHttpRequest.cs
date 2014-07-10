@@ -154,12 +154,12 @@ namespace OpenSim.Framework.Servers.HttpServer
         }
         private string _userAgent;
 
-        internal HttpServerLib.HttpRequest IHttpRequest
+        internal HttpServerLib.HttpRequest HttpRequest
         { 
             get { return _request; }
         }
 
-        internal HttpServerLib.HttpClientContext IHttpClientContext 
+        internal HttpServerLib.HttpClientContext HttpClientContext 
         {
             get { return _context; }
         }

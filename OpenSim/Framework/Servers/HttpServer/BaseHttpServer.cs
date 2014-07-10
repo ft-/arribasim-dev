@@ -958,6 +958,7 @@ namespace OpenSim.Framework.Servers.HttpServer
                             }
                         }
                         xmlRprcRequest.Params.Add(request.Headers.Get(xff)); // Param[3]
+                        xmlRprcRequest.Params.Add(request.HttpClientContext.SSLCommonName); // Param[4]
 
                         try
                         {
