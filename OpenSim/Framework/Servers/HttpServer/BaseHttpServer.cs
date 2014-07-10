@@ -25,7 +25,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using HttpServer;
+using HttpServerLib=HttpServer;
 using log4net;
 using Nwc.XmlRpc;
 using OpenMetaverse.StructuredData;
@@ -338,14 +338,14 @@ namespace OpenSim.Framework.Servers.HttpServer
             return true;
         }
 
-        public void OnRequest(object source, RequestEventArgs args)
+        public void OnRequest(object source, HttpServerLib.RequestEventArgs args)
         {
             RequestNumber++;
 
             try
             {
-                IHttpClientContext context = (IHttpClientContext)source;
-                IHttpRequest request = args.Request;
+                HttpServerLib.HttpClientContext context = (HttpServerLib.HttpClientContext)source;
+                HttpServerLib.HttpRequest request = args.Request;
 
                 PollServiceEventArgs psEvArgs;
 
@@ -406,7 +406,7 @@ namespace OpenSim.Framework.Servers.HttpServer
             }
         }
 
-        private void OnHandleRequestIOThread(IHttpClientContext context, IHttpRequest request)
+        private void OnHandleRequestIOThread(HttpServerLib.HttpClientContext context, HttpServerLib.HttpRequest request)
         {
             OSHttpRequest req = new OSHttpRequest(context, request);
             WebSocketRequestDelegate dWebSocketRequestDelegate = null;
@@ -416,7 +416,7 @@ namespace OpenSim.Framework.Servers.HttpServer
             }
             catch(KeyNotFoundException)
             {
-                OSHttpResponse resp = new OSHttpResponse(new HttpResponse(context, request), context);
+                OSHttpResponse resp = new OSHttpResponse(new HttpServerLib.HttpResponse(context, request), context);
                 resp.ReuseContext = true;
                 HandleRequest(req, resp);
 
@@ -1788,7 +1788,7 @@ namespace OpenSim.Framework.Servers.HttpServer
             StatsManager.RegisterStat(m_requestsProcessedStat);
         }
 
-        public void httpServerDisconnectMonitor(IHttpClientContext source, SocketError err)
+        public void httpServerDisconnectMonitor(HttpServerLib.HttpClientContext source, SocketError err)
         {
             switch (err)
             {
@@ -1914,12 +1914,12 @@ namespace OpenSim.Framework.Servers.HttpServer
 
     public class HttpServerContextObj
     {
-        public IHttpClientContext context = null;
-        public IHttpRequest req = null;
+        public HttpServerLib.HttpClientContext context = null;
+        public HttpServerLib.HttpRequest req = null;
         public OSHttpRequest oreq = null;
         public OSHttpResponse oresp = null;
 
-        public HttpServerContextObj(IHttpClientContext contxt, IHttpRequest reqs)
+        public HttpServerContextObj(HttpServerLib.HttpClientContext contxt, HttpServerLib.HttpRequest reqs)
         {
             context = contxt;
             req = reqs;
@@ -1939,7 +1939,7 @@ namespace OpenSim.Framework.Servers.HttpServer
     ///
     /// You may also be able to get additional trace information from HttpServer if you uncomment the UseTraceLogs
     /// property in StartHttp() for the HttpListener
-    public class HttpServerLogWriter : ILogWriter
+    public class HttpServerLogWriter : HttpServerLib.ILogWriter
     {
 //        private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 

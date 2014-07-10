@@ -25,7 +25,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using HttpServer;
+using HttpServerLib=HttpServer;
 using System.IO;
 using System.Net;
 using System.Text;
@@ -117,15 +117,15 @@ namespace OpenSim.Framework.Servers.HttpServer
         {
             get 
             {
-                return _httpResponse.Connection == ConnectionType.KeepAlive;
+                return _httpResponse.Connection == HttpServerLib.ConnectionType.KeepAlive;
             }
 
             set
             {
                 if (value)
-                    _httpResponse.Connection = ConnectionType.KeepAlive;
+                    _httpResponse.Connection = HttpServerLib.ConnectionType.KeepAlive;
                 else
-                    _httpResponse.Connection = ConnectionType.Close;
+                    _httpResponse.Connection = HttpServerLib.ConnectionType.Close;
             }
         }
 
@@ -145,12 +145,12 @@ namespace OpenSim.Framework.Servers.HttpServer
             {
                 if (value == 0)
                 {
-                    _httpResponse.Connection = ConnectionType.Close;
+                    _httpResponse.Connection = HttpServerLib.ConnectionType.Close;
                     _httpResponse.KeepAlive = 0;
                 }
                 else
                 {
-                    _httpResponse.Connection = ConnectionType.KeepAlive;
+                    _httpResponse.Connection = HttpServerLib.ConnectionType.KeepAlive;
                     _httpResponse.KeepAlive = value;
                 }
             }
@@ -275,12 +275,12 @@ namespace OpenSim.Framework.Servers.HttpServer
             }
         }
 
-        protected IHttpResponse _httpResponse;
-        private IHttpClientContext _httpClientContext;
+        protected HttpServerLib.HttpResponse _httpResponse;
+        private HttpServerLib.HttpClientContext _httpClientContext;
 
         public OSHttpResponse() {}
 
-        public OSHttpResponse(IHttpResponse resp)
+        public OSHttpResponse(HttpServerLib.HttpResponse resp)
         {
             _httpResponse = resp;
         }
@@ -293,10 +293,10 @@ namespace OpenSim.Framework.Servers.HttpServer
         /// replying</param>
         public OSHttpResponse(OSHttpRequest req)
         {
-            _httpResponse = new HttpResponse(req.IHttpClientContext, req.IHttpRequest);
+            _httpResponse = new HttpServerLib.HttpResponse(req.IHttpClientContext, req.IHttpRequest);
             _httpClientContext = req.IHttpClientContext;
         }
-        public OSHttpResponse(HttpResponse resp, IHttpClientContext clientContext)
+        public OSHttpResponse(HttpServerLib.HttpResponse resp, HttpServerLib.HttpClientContext clientContext)
         {
             _httpResponse = resp;
             _httpClientContext = clientContext;

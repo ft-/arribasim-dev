@@ -25,7 +25,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using HttpServer;
+using HttpServerLib=HttpServer;
 using log4net;
 using System;
 using System.Collections;
@@ -43,8 +43,8 @@ namespace OpenSim.Framework.Servers.HttpServer
     {
         private static readonly ILog _log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
-        protected IHttpRequest _request = null;
-        protected IHttpClientContext _context = null;
+        protected HttpServerLib.HttpRequest _request = null;
+        protected HttpServerLib.HttpClientContext _context = null;
 
         public string[] AcceptTypes
         {
@@ -77,9 +77,9 @@ namespace OpenSim.Framework.Servers.HttpServer
         {
             get
             {
-                RequestCookies cookies = _request.Cookies;
+                HttpServerLib.RequestCookies cookies = _request.Cookies;
                 HttpCookieCollection httpCookies = new HttpCookieCollection();
-                foreach (RequestCookie cookie in cookies)
+                foreach (HttpServerLib.RequestCookie cookie in cookies)
                     httpCookies.Add(new HttpCookie(cookie.Name, cookie.Value));
                 return httpCookies;
             }
@@ -112,7 +112,7 @@ namespace OpenSim.Framework.Servers.HttpServer
 
         public bool KeepAlive
         {
-            get { return ConnectionType.KeepAlive == _request.Connection; }
+            get { return HttpServerLib.ConnectionType.KeepAlive == _request.Connection; }
         }
 
         public NameValueCollection QueryString
@@ -154,12 +154,12 @@ namespace OpenSim.Framework.Servers.HttpServer
         }
         private string _userAgent;
 
-        internal IHttpRequest IHttpRequest
+        internal HttpServerLib.HttpRequest IHttpRequest
         { 
             get { return _request; }
         }
 
-        internal IHttpClientContext IHttpClientContext 
+        internal HttpServerLib.HttpClientContext IHttpClientContext 
         {
             get { return _context; }
         }
@@ -176,7 +176,7 @@ namespace OpenSim.Framework.Servers.HttpServer
 
         public OSHttpRequest() {}
 
-        public OSHttpRequest(IHttpClientContext context, IHttpRequest req)
+        public OSHttpRequest(HttpServerLib.HttpClientContext context, HttpServerLib.HttpRequest req)
         {
             _request = req;
             _context = context;
@@ -225,7 +225,7 @@ namespace OpenSim.Framework.Servers.HttpServer
             _query = new Hashtable();
             try
             {
-                foreach (HttpInputItem item in req.QueryString)
+                foreach (HttpServerLib.HttpInputItem item in req.QueryString)
                 {
                     try
                     {

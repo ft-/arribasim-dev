@@ -153,7 +153,7 @@
       <Reference name="OpenMetaverseTypes" path="../../../../bin/"/>
       <Reference name="XMLRPC" path="../../../../bin/"/>
       <Reference name="log4net" path="../../../../bin/"/>
-      <Reference name="HttpServer_OpenSim" path="../../../../bin/"/>
+      <Reference name="HttpServer" path="../../../../bin/"/>
       <Reference name="SmartThreadPool" path="../../../../bin/"/>
       <Reference name="ThreadedClasses" path="../../../../bin/"/>
 
@@ -366,7 +366,7 @@
       <Reference name="OpenMetaverseTypes" path="../../../bin/"/>
       <Reference name="XMLRPC" path="../../../bin/"/>
       <Reference name="log4net" path="../../../bin/"/>
-      <Reference name="HttpServer_OpenSim" path="../../../bin/"/>
+      <Reference name="HttpServer" path="../../../bin/"/>
       <Reference name="Nini" path="../../../bin/"/>
       <Reference name="ThreadedClasses" path="../../../bin/"/>
 

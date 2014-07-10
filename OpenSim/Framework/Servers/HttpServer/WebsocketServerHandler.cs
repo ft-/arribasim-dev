@@ -25,7 +25,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using HttpServer;
+using HttpServerLib=HttpServer;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -103,8 +103,8 @@ namespace OpenSim.Framework.Servers.HttpServer
         private ManualResetEvent _receiveDone = new ManualResetEvent(false);
 
         private OSHttpRequest _request;
-        private HTTPNetworkContext _networkContext;
-        private IHttpClientContext _clientContext;
+        private HttpServerLib.HTTPNetworkContext _networkContext;
+        private HttpServerLib.HttpClientContext _clientContext;
 
         private int _pingtime = 0;
         private byte[] _buffer;
@@ -132,7 +132,7 @@ namespace OpenSim.Framework.Servers.HttpServer
         /// </summary>
         private const string WebsocketHandshakeAcceptHashConstant = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
-        public WebSocketHttpServerHandler(OSHttpRequest preq, IHttpClientContext pContext, int bufferlen)
+        public WebSocketHttpServerHandler(OSHttpRequest preq, HttpServerLib.HttpClientContext pContext, int bufferlen)
             : base(preq.HttpMethod, preq.Url.OriginalString)
         {
             _request = preq;

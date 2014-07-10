@@ -25,7 +25,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using HttpServer;
+using HttpServerLib=HttpServer;
 using log4net;
 using OpenMetaverse;
 using System;
@@ -40,13 +40,13 @@ namespace OpenSim.Framework.Servers.HttpServer
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         public readonly PollServiceEventArgs PollServiceArgs;
-        public readonly IHttpClientContext HttpContext;
-        public readonly IHttpRequest Request;
+        public readonly HttpServerLib.HttpClientContext HttpContext;
+        public readonly HttpServerLib.HttpRequest Request;
         public readonly int RequestTime;
         public readonly UUID RequestID;
 
         public PollServiceHttpRequest(
-            PollServiceEventArgs pPollServiceArgs, IHttpClientContext pHttpContext, IHttpRequest pRequest)
+            PollServiceEventArgs pPollServiceArgs, HttpServerLib.HttpClientContext pHttpContext, HttpServerLib.HttpRequest pRequest)
         {
             PollServiceArgs = pPollServiceArgs;
             HttpContext = pHttpContext;
@@ -58,7 +58,7 @@ namespace OpenSim.Framework.Servers.HttpServer
         internal void DoHTTPGruntWork(BaseHttpServer server, Hashtable responsedata)
         {
             OSHttpResponse response
-                = new OSHttpResponse(new HttpResponse(HttpContext, Request), HttpContext);
+                = new OSHttpResponse(new HttpServerLib.HttpResponse(HttpContext, Request), HttpContext);
 
             byte[] buffer = server.DoHTTPGruntWork(responsedata, response);
 
