@@ -228,7 +228,10 @@ namespace OpenSim.Region.CoreModules.World.Warp3DMap
             if (m_useAntiAliasing)
             {
                 using (Bitmap origBitmap = bitmap)
+                {
                     bitmap = ImageUtils.ResizeImage(origBitmap, viewport.Width, viewport.Height);
+                    origBitmap.Dispose();
+                }
             }
 
             // XXX: It shouldn't really be necesary to force a GC here as one should occur anyway pretty shortly
@@ -258,7 +261,12 @@ namespace OpenSim.Region.CoreModules.World.Warp3DMap
             try
             {
                 using (Bitmap mapbmp = CreateMapTile())
-                    return OpenJPEG.EncodeFromImage(mapbmp, true);
+                {
+                    byte[] data;
+                    data = OpenJPEG.EncodeFromImage(mapbmp, true);
+                    mapbmp.Dispose();
+                    return data;
+                }
             }
             catch (Exception e)
             {
@@ -382,6 +390,7 @@ namespace OpenSim.Region.CoreModules.World.Warp3DMap
                         new Vector3d(globalX, globalY, 0.0), m_scene.AssetService, textureTerrain))
             {
                 texture = new warp_Texture(image);
+                image.Dispose();
             }
 
             warp_Material material = new warp_Material(texture);
@@ -641,7 +650,10 @@ namespace OpenSim.Region.CoreModules.World.Warp3DMap
                 try
                 {
                     using (Bitmap img = (Bitmap)imgDecoder.DecodeToImage(asset))
+                    {
                         ret = new warp_Texture(img);
+                        img.Dispose();
+                    }
                 }
                 catch (Exception e)
                 {
@@ -746,6 +758,7 @@ namespace OpenSim.Region.CoreModules.World.Warp3DMap
                                 }
                             }
                         }
+                        bitmap.Dispose();
                     }
 
                     // Get the averages for each channel
