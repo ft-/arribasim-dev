@@ -702,7 +702,7 @@
     ;; such as the Meta7 viewer.
     ;; It has no ill effect on viewers which do not support server-side
     ;; windlight settings.
-    enable_windlight = truee
+    enable_windlight = true
 
 
 [Materials]
