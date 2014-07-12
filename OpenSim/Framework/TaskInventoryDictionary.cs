@@ -56,7 +56,7 @@ namespace OpenSim.Framework
 
             foreach (KeyValuePair<UUID, TaskInventoryItem> kvp in this)
             {
-                clone.Add(kvp.Key, kvp.Value);
+                clone.Add(kvp.Key, (TaskInventoryItem)kvp.Value.Clone());
             }
             
             return clone;
