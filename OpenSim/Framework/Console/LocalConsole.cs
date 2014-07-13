@@ -48,6 +48,9 @@ namespace OpenSim.Framework.Console
         private StringBuilder m_commandLine = new StringBuilder();
         private bool m_echo = true;
         private List<string> m_history = new List<string>();
+        private ThreadedClasses.BlockingQueue<KeyValuePair<string, string>> m_consoleQueue = new ThreadedClasses.BlockingQueue<KeyValuePair<string, string>>();
+        private bool m_AbortConsoleThread = false;
+        private Thread m_ConsoleThread;
 
         private static readonly ConsoleColor[] Colors = {
             // the dark colors don't seem to be visible on some black background terminals like putty :(
@@ -73,6 +76,8 @@ namespace OpenSim.Framework.Console
 
         public LocalConsole(string defaultPrompt) : base(defaultPrompt)
         {
+            m_ConsoleThread = new Thread(ConsoleOutputThread);
+            m_ConsoleThread.Start();
         }
 
         private void AddToHistory(string text)
@@ -317,32 +322,62 @@ namespace OpenSim.Framework.Console
         public override void Output(string text, string level)
         {
             FireOnOutput(text);
+            m_consoleQueue.Enqueue(new KeyValuePair<string, string>(text, level));
+        }
 
-            lock (m_commandLine)
+        private void ConsoleOutputThread()
+        {
+            Thread.CurrentThread.Name = "Console Output Thread";
+            for (; ; )
             {
-                if (m_cursorYPosition == -1)
+                KeyValuePair<string, string> output;
+                try
                 {
-                    WriteLocalText(text, level);
-
-                    return;
+                    output = m_consoleQueue.Dequeue(1000);
+                }
+                catch (Exception)
+                {
+                    continue;
+                }
+                if (m_AbortConsoleThread)
+                {
+                    break;
                 }
 
-                m_cursorYPosition = SetCursorTop(m_cursorYPosition);
-                SetCursorLeft(0);
+                lock (m_commandLine)
+                {
+                    if (m_cursorYPosition == -1)
+                    {
+                        WriteLocalText(output.Key, output.Value);
 
-                int count = m_commandLine.Length + prompt.Length;
+                    }
+                    else
+                    {
 
-                while (count-- > 0)
-                    System.Console.Write(" ");
+                        m_cursorYPosition = SetCursorTop(m_cursorYPosition);
+                        SetCursorLeft(0);
 
-                m_cursorYPosition = SetCursorTop(m_cursorYPosition);
-                SetCursorLeft(0);
+                        int count = m_commandLine.Length + prompt.Length;
 
-                WriteLocalText(text, level);
+                        if (count != 0)
+                        {
+                            string d = "";
+                            while (count-- > 0)
+                                d += " ";
 
-                m_cursorYPosition = System.Console.CursorTop;
+                            System.Console.Write(d);
+                        }
 
-                Show();
+                        m_cursorYPosition = SetCursorTop(m_cursorYPosition);
+                        SetCursorLeft(0);
+
+                        WriteLocalText(output.Key, output.Value);
+
+                        m_cursorYPosition = System.Console.CursorTop;
+
+                        Show();
+                    }
+                }
             }
         }
 
