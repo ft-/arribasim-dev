@@ -234,16 +234,6 @@ namespace OpenSim.Region.ScriptEngine.XEngine
             m_ScriptConfig = configSource.Configs["XEngine"];
             m_ConfigSource = configSource;
 
-            string rawScriptStopStrategy = m_ScriptConfig.GetString("ScriptStopStrategy", "co-op");
-
-            m_log.InfoFormat("[XEngine]: Script stop strategy is {0}", rawScriptStopStrategy);
-            if(rawScriptStopStrategy != "co-op")
-            {
-                m_ScriptConfig = null;
-                m_log.Warn("[XEngine]: DISABLING SCRIPTS! Please change ScriptStopStrategy to co-op in [XEngine] section and delete ScriptEngines folder");
-                return;
-            }
-
             ScriptClassName = "XEngineScript";
             ScriptBaseClassName = typeof(XEngineScriptBase).FullName;
             ScriptBaseClassParameters = typeof(XEngineScriptBase).GetConstructor(new Type[] { typeof(WaitHandle) }).GetParameters();
@@ -1187,6 +1177,12 @@ namespace OpenSim.Region.ScriptEngine.XEngine
 
                 if (!instance.Load(m_AppDomains[appDomain], assembly, stateSource))
                 {
+                    m_DomainScripts[instance.AppDomain].Remove(instance.ItemID);
+                    if (m_DomainScripts.RemoveIf(instance.AppDomain, delegate(ThreadedClasses.RwLockedList<UUID> appDomainList) { return appDomainList.Count == 0; }))
+                    {
+                        UnloadAppDomain(instance.AppDomain);
+                    }
+
                     return false;
                 }
 

@@ -274,9 +274,19 @@ namespace OpenSim.Region.ScriptEngine.Shared.CodeTools
 
         public string GetCompilerOutput(string assetID)
         {
+            /* automatically declutter the folder */
+            if(File.Exists(Path.Combine(ScriptEnginesPath, Path.Combine(
+                    m_scriptEngine.World.RegionInfo.RegionID.ToString(),
+                    FilePrefix + "_compiled_" + assetID + ".dll"))))
+            {
+                File.Delete(Path.Combine(ScriptEnginesPath, Path.Combine(
+                    m_scriptEngine.World.RegionInfo.RegionID.ToString(),
+                    FilePrefix + "_compiled_" + assetID + ".dll")));
+            }
+
             return Path.Combine(ScriptEnginesPath, Path.Combine(
                     m_scriptEngine.World.RegionInfo.RegionID.ToString(),
-                    FilePrefix + "_compiled_" + assetID + ".dll"));
+                    FilePrefix + "_compiled_arriba_" + assetID + ".dll"));
         }
 
         public string GetCompilerOutput(UUID assetID)
