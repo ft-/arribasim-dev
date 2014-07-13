@@ -40,6 +40,7 @@ namespace OpenSim.Region.ScriptEngine.Shared
     public partial class LSL_Types
     {
         // Types are kept is separate .dll to avoid having to add whatever .dll it is in it to script AppDomain
+        private static NumberFormatInfo USNumberFormat = new CultureInfo("en-US", false).NumberFormat;
 
         [Serializable]
         public struct Vector3
@@ -89,9 +90,9 @@ namespace OpenSim.Region.ScriptEngine.Shared
                     return;
                 }
                 bool res;
-                res = Double.TryParse(tmps[0], NumberStyles.Float, Culture.NumberFormatInfo, out x);
-                res = res & Double.TryParse(tmps[1], NumberStyles.Float, Culture.NumberFormatInfo, out y);
-                res = res & Double.TryParse(tmps[2], NumberStyles.Float, Culture.NumberFormatInfo, out z);
+                res = Double.TryParse(tmps[0], NumberStyles.Float, USNumberFormat, out x);
+                res = res & Double.TryParse(tmps[1], NumberStyles.Float, USNumberFormat, out y);
+                res = res & Double.TryParse(tmps[2], NumberStyles.Float, USNumberFormat, out z);
             }
 
             #endregion
@@ -100,19 +101,19 @@ namespace OpenSim.Region.ScriptEngine.Shared
 
             public override string ToString()
             {
-                string s=String.Format("<{0:0.000000},{1:0.000000},{2:0.000000}>", x, y, z);
+                string s=String.Format(USNumberFormat, "<{0:0.000000},{1:0.000000},{2:0.000000}>", x, y, z);
                 return s;
             }
 
             public static explicit operator LSLString(Vector3 vec)
             {
-                string s=String.Format("<{0:0.000000},{1:0.000000},{2:0.000000}>", vec.x, vec.y, vec.z);
+                string s=String.Format(USNumberFormat, "<{0:0.000000},{1:0.000000},{2:0.000000}>", vec.x, vec.y, vec.z);
                 return new LSLString(s);
             }
 
             public static explicit operator string(Vector3 vec)
             {
-                string s=String.Format("<{0:0.000000},{1:0.000000},{2:0.000000}>", vec.x, vec.y, vec.z);
+                string s=String.Format(USNumberFormat, "<{0:0.000000},{1:0.000000},{2:0.000000}>", vec.x, vec.y, vec.z);
                 return s;
             }
 
@@ -351,10 +352,10 @@ namespace OpenSim.Region.ScriptEngine.Shared
                     return;
                 }
                 bool res;
-                res = Double.TryParse(tmps[0], NumberStyles.Float, Culture.NumberFormatInfo, out x);
-                res = res & Double.TryParse(tmps[1], NumberStyles.Float, Culture.NumberFormatInfo, out y);
-                res = res & Double.TryParse(tmps[2], NumberStyles.Float, Culture.NumberFormatInfo, out z);
-                res = res & Double.TryParse(tmps[3], NumberStyles.Float, Culture.NumberFormatInfo, out s);
+                res = Double.TryParse(tmps[0], NumberStyles.Float, USNumberFormat, out x);
+                res = res & Double.TryParse(tmps[1], NumberStyles.Float, USNumberFormat, out y);
+                res = res & Double.TryParse(tmps[2], NumberStyles.Float, USNumberFormat, out z);
+                res = res & Double.TryParse(tmps[3], NumberStyles.Float, USNumberFormat, out s);
                 if (x == 0 && y == 0 && z == 0 && s == 0)
                     s = 1;
             }
@@ -412,19 +413,19 @@ namespace OpenSim.Region.ScriptEngine.Shared
 
             public override string ToString()
             {
-                string st=String.Format(Culture.FormatProvider, "<{0:0.000000},{1:0.000000},{2:0.000000},{3:0.000000}>", x, y, z, s);
+                string st = String.Format(USNumberFormat, "<{0:0.000000},{1:0.000000},{2:0.000000},{3:0.000000}>", x, y, z, s);
                 return st;
             }
 
             public static explicit operator string(Quaternion r)
             {
-                string s=String.Format("<{0:0.000000},{1:0.000000},{2:0.000000},{3:0.000000}>", r.x, r.y, r.z, r.s);
+                string s=String.Format(USNumberFormat, "<{0:0.000000},{1:0.000000},{2:0.000000},{3:0.000000}>", r.x, r.y, r.z, r.s);
                 return s;
             }
 
             public static explicit operator LSLString(Quaternion r)
             {
-                string s=String.Format("<{0:0.000000},{1:0.000000},{2:0.000000},{3:0.000000}>", r.x, r.y, r.z, r.s);
+                string s=String.Format(USNumberFormat, "<{0:0.000000},{1:0.000000},{2:0.000000},{3:0.000000}>", r.x, r.y, r.z, r.s);
                 return new LSLString(s);
             }
 
@@ -1140,7 +1141,7 @@ namespace OpenSim.Region.ScriptEngine.Shared
                 double entry;
                 for (int i = 0; i < Data.Length; i++)
                 {
-                    if (double.TryParse(Data[i].ToString(), NumberStyles.Float, Culture.NumberFormatInfo, out entry))
+                    if (double.TryParse(Data[i].ToString(), NumberStyles.Float, USNumberFormat, out entry))
                     {
                         if (entry < minimum) minimum = entry;
                     }
@@ -1154,7 +1155,7 @@ namespace OpenSim.Region.ScriptEngine.Shared
                 double entry;
                 for (int i = 0; i < Data.Length; i++)
                 {
-                    if (double.TryParse(Data[i].ToString(), NumberStyles.Float, Culture.NumberFormatInfo, out entry))
+                    if (double.TryParse(Data[i].ToString(), NumberStyles.Float, USNumberFormat, out entry))
                     {
                         if (entry > maximum) maximum = entry;
                     }
@@ -1173,7 +1174,7 @@ namespace OpenSim.Region.ScriptEngine.Shared
                 double entry;
                 for (int i = 0; i < Data.Length; i++)
                 {
-                    if (double.TryParse(Data[i].ToString(), NumberStyles.Float, Culture.NumberFormatInfo, out entry))
+                    if (double.TryParse(Data[i].ToString(), NumberStyles.Float, USNumberFormat, out entry))
                     {
                         count++;
                     }
@@ -1187,7 +1188,7 @@ namespace OpenSim.Region.ScriptEngine.Shared
                 double entry;
                 for (int i = 0; i < src.Data.Length; i++)
                 {
-                    if (double.TryParse(src.Data[i].ToString(), NumberStyles.Float, Culture.NumberFormatInfo, out entry))
+                    if (double.TryParse(src.Data[i].ToString(), NumberStyles.Float, USNumberFormat, out entry))
                     {
                         ret.Add(entry);
                     }
@@ -1201,7 +1202,7 @@ namespace OpenSim.Region.ScriptEngine.Shared
                 double entry;
                 for (int i = 0; i < Data.Length; i++)
                 {
-                    if (double.TryParse(Data[i].ToString(), NumberStyles.Float, Culture.NumberFormatInfo, out entry))
+                    if (double.TryParse(Data[i].ToString(), NumberStyles.Float, USNumberFormat, out entry))
                     {
                         sum = sum + entry;
                     }
@@ -1215,7 +1216,7 @@ namespace OpenSim.Region.ScriptEngine.Shared
                 double entry;
                 for (int i = 0; i < Data.Length; i++)
                 {
-                    if (double.TryParse(Data[i].ToString(), NumberStyles.Float, Culture.NumberFormatInfo, out entry))
+                    if (double.TryParse(Data[i].ToString(), NumberStyles.Float, USNumberFormat, out entry))
                     {
                         sum = sum + Math.Pow(entry, 2);
                     }
@@ -1338,11 +1339,11 @@ namespace OpenSim.Region.ScriptEngine.Shared
                 {
                     double a;
                     double b;
-                    if (!double.TryParse(x.ToString(), NumberStyles.Float, Culture.NumberFormatInfo, out a))
+                    if (!double.TryParse(x.ToString(), NumberStyles.Float, USNumberFormat, out a))
                     {
                         a = 0.0;
                     }
-                    if (!double.TryParse(y.ToString(), NumberStyles.Float, Culture.NumberFormatInfo, out b))
+                    if (!double.TryParse(y.ToString(), NumberStyles.Float, USNumberFormat, out b))
                     {
                         b = 0.0;
                     }
@@ -1982,7 +1983,7 @@ namespace OpenSim.Region.ScriptEngine.Shared
                     else
                         if (v.EndsWith("."))
                             v = v + "0";
-                this.value = double.Parse(v, System.Globalization.NumberStyles.Float, Culture.NumberFormatInfo);
+                this.value = double.Parse(v, System.Globalization.NumberStyles.Float, USNumberFormat);
             }
 
             #endregion
