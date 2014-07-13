@@ -453,9 +453,6 @@ namespace OpenSim.Framework
             }
             else if (m_externalHostName == "SYSTEMIP")
             {
-                m_log.InfoFormat(
-                    "[REGIONINFO]: Resolving SYSTEMIP to {0} for external hostname of region {1}",
-                    m_externalHostName, m_regionName);
                 if (DateTime.UtcNow - m_lastResolverTime > TimeSpan.FromMinutes(1))
                 {
                     string newIP = Util.GetLocalHost().ToString();
@@ -464,6 +461,12 @@ namespace OpenSim.Framework
                         if (newIP != m_lastExternalHostName && m_lastExternalHostName != string.Empty)
                         {
                             m_IPChanged = true;
+                        }
+                        if(newIP != m_lastExternalHostName || m_lastExternalHostName == string.Empty)
+                        {
+                            m_log.InfoFormat(
+                                "[REGIONINFO]: Resolving SYSTEMIP to {0} for external hostname of region {1}",
+                                m_externalHostName, m_regionName);
                         }
                         m_lastExternalHostName = newIP;
                         m_lastResolverTime = DateTime.UtcNow;
