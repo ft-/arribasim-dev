@@ -321,7 +321,6 @@ namespace OpenSim.Framework.Console
 
         public override void Output(string text, string level)
         {
-            FireOnOutput(text);
             m_consoleQueue.Enqueue(new KeyValuePair<string, string>(text, level));
         }
 
@@ -343,6 +342,7 @@ namespace OpenSim.Framework.Console
                 {
                     break;
                 }
+                FireOnOutput(output.Key);
 
                 lock (m_commandLine)
                 {
