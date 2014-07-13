@@ -225,7 +225,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
         private string lastEpAddress = string.Empty;
 
-        public void SimulatorIPChanged(EndPoint ep)
+        public void SimulatorIPChanged(IPAddress ep)
         {
             if(!m_pluginEnabled)
             {

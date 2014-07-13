@@ -433,7 +433,7 @@ namespace OpenSim.Region.Framework.Scenes
         public delegate void CrossAgentToNewRegion(ScenePresence sp, bool isFlying, GridRegion newRegion);
         public event CrossAgentToNewRegion OnCrossAgentToNewRegion;
 
-        public delegate void SimulatorIPChanged(System.Net.EndPoint ep);
+        public delegate void SimulatorIPChanged(System.Net.IPAddress ep);
         /// <summary>
         /// Fired when a Dyn IP detector detects an IP address change
         /// </summary>
@@ -2920,7 +2920,7 @@ namespace OpenSim.Region.Framework.Scenes
             }
         }
 
-        public void TriggerOnSimulatorIPChanged(System.Net.EndPoint ep)
+        public void TriggerOnSimulatorIPChanged(System.Net.IPAddress ep)
         {
             SimulatorIPChanged handlerSimulatorIPChanged = OnSimulatorIPChanged;
             if(handlerSimulatorIPChanged != null)

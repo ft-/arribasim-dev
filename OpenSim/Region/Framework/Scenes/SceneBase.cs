@@ -34,6 +34,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
+using System.Timers;
 using GridRegion = OpenSim.Services.Interfaces.GridRegion;
 
 namespace OpenSim.Region.Framework.Scenes
@@ -180,9 +181,28 @@ namespace OpenSim.Region.Framework.Scenes
 
         #endregion
 
+        private System.Timers.Timer m_IPUpdateTimer;
+
         public SceneBase(RegionInfo regInfo)
         {
             RegionInfo = regInfo;
+            if(RegionInfo.MayChangeIP)
+            {
+                m_IPUpdateTimer = new System.Timers.Timer(60000);
+                m_IPUpdateTimer.Elapsed += OnIPChangeTimer;
+                m_IPUpdateTimer.Interval = 60000; /* 1 hour interval */
+                m_IPUpdateTimer.Start();
+            }
+        }
+
+        private void OnIPChangeTimer(object source, ElapsedEventArgs e)
+        {
+            /* Trigger resolver */
+            RegionInfo.CheckExternalHostName();
+            if (RegionInfo.IsIPChanged)
+            {
+                EventManager.TriggerOnSimulatorIPChanged(Util.GetHostFromDNS(RegionInfo.ExternalHostName));
+            }
         }
 
         #region Update Methods

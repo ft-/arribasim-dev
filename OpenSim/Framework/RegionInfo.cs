@@ -135,7 +135,11 @@ namespace OpenSim.Framework
         protected string m_regionName = String.Empty;
         protected bool Allow_Alternate_Ports;
         public bool m_allow_alternate_ports;
-        protected string m_externalHostName;
+        private string m_externalHostName;
+        private string m_lastExternalHostName;
+        private bool m_IPChanged = false;
+        private bool m_CheckDynDns = false;
+        protected DateTime m_lastResolverTime;
         protected IPEndPoint m_internalEndPoint;
         protected uint m_remotingPort;
         public UUID RegionID = UUID.Zero;
@@ -371,7 +375,7 @@ namespace OpenSim.Framework
                 if ( m_serverURI != string.Empty ) {
                     return m_serverURI;
                 } else {
-                    return "http://" + m_externalHostName + ":" + m_httpPort + "/";
+                    return "http://" + ExternalHostName + ":" + m_httpPort + "/";
                 }
             }            
             set { 
@@ -409,14 +413,14 @@ namespace OpenSim.Framework
 
                 IPAddress ia = null;
                 // If it is already an IP, don't resolve it - just return directly
-                if (IPAddress.TryParse(m_externalHostName, out ia))
+                if (IPAddress.TryParse(ExternalHostName, out ia))
                     return new IPEndPoint(ia, m_internalEndPoint.Port);
 
                 // Reset for next check
                 ia = null;
                 try
                 {
-                    foreach (IPAddress Adr in Dns.GetHostAddresses(m_externalHostName))
+                    foreach (IPAddress Adr in Dns.GetHostAddresses(ExternalHostName))
                     {
                         if (ia == null)
                             ia = Adr;
@@ -431,20 +435,137 @@ namespace OpenSim.Framework
                 catch (SocketException e)
                 {
                     throw new Exception(
-                        "Unable to resolve local hostname " + m_externalHostName + " innerException of type '" +
+                        "Unable to resolve local hostname " + ExternalHostName + " innerException of type '" +
                         e + "' attached to this exception", e);
                 }
 
                 return new IPEndPoint(ia, m_internalEndPoint.Port);
             }
 
-            set { m_externalHostName = value.ToString(); }
+            set { ExternalHostName = value.ToString(); }
+        }
+
+        public string CheckExternalHostName()
+        {
+            if (!m_CheckDynDns && m_lastExternalHostName != string.Empty)
+            {
+                /* no recheck */
+            }
+            else if (m_externalHostName == "SYSTEMIP")
+            {
+                m_log.InfoFormat(
+                    "[REGIONINFO]: Resolving SYSTEMIP to {0} for external hostname of region {1}",
+                    m_externalHostName, m_regionName);
+                if (DateTime.UtcNow - m_lastResolverTime > TimeSpan.FromMinutes(1))
+                {
+                    string newIP = Util.GetLocalHost().ToString();
+                    lock (this)
+                    {
+                        if (newIP != m_lastExternalHostName && m_lastExternalHostName != string.Empty)
+                        {
+                            m_IPChanged = true;
+                        }
+                        m_lastExternalHostName = newIP;
+                        m_lastResolverTime = DateTime.UtcNow;
+                    }
+                }
+            }
+            else if (m_externalHostName == "MetroIP")
+            {
+                if (DateTime.UtcNow - m_lastResolverTime > TimeSpan.FromHours(1)) /* TODO: this is the current built-in has to be discussed with Metro Admins */
+                {
+                    try
+                    {
+                        string newIP;
+                        string strNewValue;
+                        HttpWebRequest req = (HttpWebRequest)WebRequest.Create("http://hypergrid.org/my_external_ip.php");
+                        req.Method = "POST";
+                        req.ContentType = "application/x-www-form-urlencoded";
+                        strNewValue = "name=Lena";
+                        req.ContentLength = strNewValue.Length;
+                        StreamWriter stOut = new StreamWriter(req.GetRequestStream(), System.Text.Encoding.ASCII);
+                        stOut.Write(strNewValue);
+                        stOut.Close();
+
+                        StreamReader stIn = new StreamReader(req.GetResponse().GetResponseStream());
+                        newIP = stIn.ReadToEnd();
+                        stIn.Close();
+                        lock (this)
+                        {
+                            if (newIP != m_lastExternalHostName && m_lastExternalHostName != string.Empty)
+                            {
+                                m_IPChanged = true;
+                                m_lastExternalHostName = newIP;
+                            }
+                            m_lastResolverTime = DateTime.UtcNow;
+                        }
+                    }
+                    catch
+                    {
+
+                    }
+                }
+            }
+            else if (m_CheckDynDns)
+            {
+                if (DateTime.UtcNow - m_lastResolverTime > TimeSpan.FromMinutes(1))
+                {
+                    try
+                    {
+                        string newIP = Util.GetHostFromDNS(m_externalHostName).ToString();
+                        lock (this)
+                        {
+                            if (newIP != m_lastExternalHostName && m_lastExternalHostName != string.Empty)
+                            {
+                                m_IPChanged = true;
+                                m_lastExternalHostName = newIP;
+                            }
+                            m_lastResolverTime = DateTime.UtcNow;
+                        }
+                    }
+                    catch
+                    {
+
+                    }
+                }
+
+                return m_externalHostName;
+            }
+            else
+            {
+                m_lastExternalHostName = m_externalHostName;
+            }
+            return m_lastExternalHostName;
         }
 
         public string ExternalHostName
         {
-            get { return m_externalHostName; }
+            get 
+            {
+                return CheckExternalHostName();
+            }
             set { m_externalHostName = value; }
+        }
+
+        public bool IsIPChanged
+        {
+            get
+            {
+                lock(this)
+                {
+                    bool ipChanged = m_IPChanged;
+                    m_IPChanged = false;
+                    return ipChanged;
+                }
+            }
+        }
+
+        public bool MayChangeIP
+        {
+            get
+            {
+                return m_CheckDynDns;
+            }
         }
 
         public IPEndPoint InternalEndPoint
@@ -729,6 +850,8 @@ namespace OpenSim.Framework
 
             m_agentCapacity = config.GetInt("MaxAgents", 100);
             allKeys.Remove("MaxAgents");
+
+            m_CheckDynDns = config.GetBoolean("CheckForIPChanges", false);
 
             // Multi-tenancy
             //

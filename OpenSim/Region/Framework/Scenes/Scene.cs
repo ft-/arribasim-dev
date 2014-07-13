@@ -1898,7 +1898,7 @@ namespace OpenSim.Region.Framework.Scenes
         }
 
         private string lastEpAddress = string.Empty;
-        public void SimulatorIPChanged(System.Net.EndPoint ep)
+        public void SimulatorIPChanged(System.Net.IPAddress ep)
         {
             if(ep.ToString() != lastEpAddress)
             {

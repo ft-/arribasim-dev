@@ -21,7 +21,19 @@ Location = "1000,1000"
 InternalAddress = "127.0.0.1"
 InternalPort = 9000
 AllowAlternatePorts = False
+;
+; * "SYSTEMIP" (reads out local host IP address)
+; * "hostname"
+;
 ExternalHostName = "SYSTEMIP"
+
+; *
+; * IP Changes Detector
+; * It will recheck the ExternalHostName for changes of external IP address if enabled.
+; *
+; * It registers, the grid registration and the vivox registration
+; *
+; CheckForIPChanges = false
 
 ; *
 ; * Prim data
