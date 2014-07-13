@@ -227,7 +227,7 @@ namespace OpenSim.Framework
                     reqnum, method, url);
 
             string errorMessage = "unknown error";
-            int tickstart = Util.EnvironmentTickCount();
+            int tickstart = Environment.TickCount;
             int tickdata = 0;
             string strBuffer = null;
 
@@ -282,7 +282,7 @@ namespace OpenSim.Framework
                 
                 // capture how much time was spent writing, this may seem silly
                 // but with the number concurrent requests, this often blocks
-                tickdata = Util.EnvironmentTickCountSubtract(tickstart);
+                tickdata = Environment.TickCount - tickstart;
 
                 using (WebResponse response = request.GetResponse())
                 {
@@ -313,7 +313,7 @@ namespace OpenSim.Framework
             }
             finally
             {
-                int tickdiff = Util.EnvironmentTickCountSubtract(tickstart);
+                int tickdiff = Environment.TickCount - tickstart;
                 if (tickdiff > LongCallTime)
                 {
                     m_log.InfoFormat(
@@ -413,7 +413,7 @@ namespace OpenSim.Framework
                     reqnum, method, url);
             
             string errorMessage = "unknown error";
-            int tickstart = Util.EnvironmentTickCount();
+            int tickstart = Environment.TickCount;
             int tickdata = 0;
             string queryString = null;
 
@@ -444,7 +444,7 @@ namespace OpenSim.Framework
 
                 // capture how much time was spent writing, this may seem silly
                 // but with the number concurrent requests, this often blocks
-                tickdata = Util.EnvironmentTickCountSubtract(tickstart);
+                tickdata = Environment.TickCount - tickstart;
 
                 using (WebResponse response = request.GetResponse())
                 {
@@ -478,7 +478,7 @@ namespace OpenSim.Framework
             }
             finally
             {
-                int tickdiff = Util.EnvironmentTickCountSubtract(tickstart);
+                int tickdiff = Environment.TickCount - tickstart;
                 if (tickdiff > LongCallTime)
                 {
                     m_log.InfoFormat(
@@ -778,7 +778,7 @@ namespace OpenSim.Framework
                 m_log.DebugFormat("[LOGHTTP]: HTTP OUT {0} AsynchronousRequestObject {1} to {2}",
                     reqnum, verb, requestUrl);
 
-            int tickstart = Util.EnvironmentTickCount();
+            int tickstart = Environment.TickCount;
             int tickdata = 0;
 
             Type type = typeof(TRequest);
@@ -825,7 +825,7 @@ namespace OpenSim.Framework
                             requestStream.Write(data, 0, length);
 
                         // capture how much time was spent writing
-                        tickdata = Util.EnvironmentTickCountSubtract(tickstart);
+                        tickdata = Environment.TickCount - tickstart;
 
                         request.BeginGetResponse(delegate(IAsyncResult ar)
                         {
@@ -921,7 +921,7 @@ namespace OpenSim.Framework
                     }, null);
                 }
 
-                int tickdiff = Util.EnvironmentTickCountSubtract(tickstart);
+                int tickdiff = Environment.TickCount - tickstart;
                 if (tickdiff > WebUtil.LongCallTime)
                 {
                     string originalRequest = null;
@@ -976,7 +976,7 @@ namespace OpenSim.Framework
                 m_log.DebugFormat("[LOGHTTP]: HTTP OUT {0} SynchronousRestForms {1} to {2}",
                     reqnum, verb, requestUrl);
 
-            int tickstart = Util.EnvironmentTickCount();
+            int tickstart = Environment.TickCount;
             int tickdata = 0;
 
             WebRequest request = WebRequest.Create(requestUrl);
@@ -1023,7 +1023,7 @@ namespace OpenSim.Framework
                             requestStream.Dispose();
 
                         // capture how much time was spent writing
-                        tickdata = Util.EnvironmentTickCountSubtract(tickstart);
+                        tickdata = Environment.TickCount - tickstart;
                     }
                 }
 
@@ -1047,7 +1047,7 @@ namespace OpenSim.Framework
                 }
             }
 
-            int tickdiff = Util.EnvironmentTickCountSubtract(tickstart);
+            int tickdiff = Environment.TickCount - tickstart;
             if (tickdiff > WebUtil.LongCallTime)
             {
                 m_log.InfoFormat(
@@ -1107,7 +1107,7 @@ namespace OpenSim.Framework
                 m_log.DebugFormat("[LOGHTTP]: HTTP OUT {0} SynchronousRestObject {1} to {2}",
                     reqnum, verb, requestUrl);
 
-            int tickstart = Util.EnvironmentTickCount();
+            int tickstart = Environment.TickCount;
             int tickdata = 0;
 
             Type type = typeof(TRequest);
@@ -1162,7 +1162,7 @@ namespace OpenSim.Framework
                     finally
                     {
                         // capture how much time was spent writing
-                        tickdata = Util.EnvironmentTickCountSubtract(tickstart);
+                        tickdata = Environment.TickCount - tickstart;
                     }
                 }
 
@@ -1212,7 +1212,7 @@ namespace OpenSim.Framework
                         verb, requestUrl), e);
                 }
 
-                int tickdiff = Util.EnvironmentTickCountSubtract(tickstart);
+                int tickdiff = Environment.TickCount - tickstart;
                 if (tickdiff > WebUtil.LongCallTime)
                 {
                     string originalRequest = null;
@@ -1283,7 +1283,7 @@ namespace OpenSim.Framework
                 m_log.DebugFormat("[LOGHTTP]: HTTP OUT {0} XML-RPC '{1}' to {2}",
                     reqnum, method, url);
 
-            int tickstart = Util.EnvironmentTickCount();
+            int tickstart = Environment.TickCount;
             string responseStr = null;
 
             try
@@ -1328,7 +1328,7 @@ namespace OpenSim.Framework
             }
             finally
             {
-                int tickdiff = Util.EnvironmentTickCountSubtract(tickstart);
+                int tickdiff = Environment.TickCount - tickstart;
                 if (tickdiff > WebUtil.LongCallTime)
                 {
                     m_log.InfoFormat(

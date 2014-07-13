@@ -335,7 +335,7 @@ namespace OpenMetaverse
                     // this is the received data
                     UDPPacketBuffer buffer = (UDPPacketBuffer)iar.AsyncState;
 
-                    int startTick = Util.EnvironmentTickCount();
+                    int startTick = Environment.TickCount;
 
                     // get the length of data actually read from the socket, store it with the
                     // buffer
@@ -358,7 +358,7 @@ namespace OpenMetaverse
                     }
                     else
                     {
-                        m_receiveTicksInCurrentSamplePeriod += Util.EnvironmentTickCountSubtract(startTick);
+                        m_receiveTicksInCurrentSamplePeriod += Environment.TickCount - startTick;
                         m_currentReceiveTimeSamples++;
                     }
                 }

@@ -258,7 +258,7 @@ namespace OpenSim.Framework.Monitoring
         }
         private void GetNextValue(Stat stat, PerfCounterControl perfControl, double factor)
         {
-            if (Util.EnvironmentTickCountSubtract(perfControl.lastFetch) > performanceCounterSampleInterval)
+            if (Environment.TickCount - perfControl.lastFetch > performanceCounterSampleInterval)
             {
                 if (perfControl != null && perfControl.perfCounter != null)
                 {
@@ -274,7 +274,7 @@ namespace OpenSim.Framework.Monitoring
                     {
                         m_log.ErrorFormat("{0} Exception on NextValue fetching {1}: {2}", LogHeader, stat.Name, e);
                     }
-                    perfControl.lastFetch = Util.EnvironmentTickCount();
+                    perfControl.lastFetch = Environment.TickCount;
                 }
             }
         }

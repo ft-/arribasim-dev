@@ -516,7 +516,7 @@ public abstract class BSPhysObject : PhysicsActor
         if (ms > 0)
         {
             // make sure first collision happens
-            NextCollisionOkTime = Util.EnvironmentTickCountSubtract(SubscribedEventsMs);
+            NextCollisionOkTime = Environment.TickCount - SubscribedEventsMs;
 
             PhysScene.TaintedObject(LocalID, TypeName+".SubscribeEvents", delegate()
             {

@@ -91,7 +91,7 @@ namespace OpenSim.Framework.Monitoring
             {
                 Thread = thread;
                 Timeout = timeout;
-                FirstTick = Environment.TickCount & Int32.MaxValue;
+                FirstTick = Environment.TickCount;
                 LastTick = FirstTick;
 
                 Stat 
@@ -104,7 +104,7 @@ namespace OpenSim.Framework.Monitoring
                         "thread",
                         StatType.Pull,
                         MeasuresOfInterest.None,
-                        stat => stat.Value = Environment.TickCount & Int32.MaxValue - LastTick,
+                        stat => stat.Value = Environment.TickCount - LastTick,
                         StatVerbosity.Debug);
 
                 StatsManager.RegisterStat(Stat);
@@ -151,7 +151,7 @@ namespace OpenSim.Framework.Monitoring
                 if (m_enabled)
                 {
                     // Set now so we don't get alerted on the first run
-                    LastWatchdogThreadTick = Environment.TickCount & Int32.MaxValue;
+                    LastWatchdogThreadTick = Environment.TickCount;
                 }
 
                 m_watchdogTimer.Enabled = m_enabled;
@@ -295,7 +295,7 @@ namespace OpenSim.Framework.Monitoring
             // anything
             if (m_threads.TryGetValue(threadID, out threadInfo))
             {
-                threadInfo.LastTick = Environment.TickCount & Int32.MaxValue;
+                threadInfo.LastTick = Environment.TickCount;
                 threadInfo.IsTimedOut = false;
             }
             else
@@ -336,7 +336,7 @@ namespace OpenSim.Framework.Monitoring
         /// <param name="e"></param>
         private static void WatchdogTimerElapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
-            int now = Environment.TickCount & Int32.MaxValue;
+            int now = Environment.TickCount;
             int msElapsed = now - LastWatchdogThreadTick;
 
             if (msElapsed > WATCHDOG_INTERVAL_MS * 2)
@@ -344,7 +344,7 @@ namespace OpenSim.Framework.Monitoring
                     "[WATCHDOG]: {0} ms since Watchdog last ran.  Interval should be approximately {1} ms",
                     msElapsed, WATCHDOG_INTERVAL_MS);
 
-            LastWatchdogThreadTick = Environment.TickCount & Int32.MaxValue;
+            LastWatchdogThreadTick = Environment.TickCount;
 
             Action<ThreadWatchdogInfo> callback = OnWatchdogTimeout;
 

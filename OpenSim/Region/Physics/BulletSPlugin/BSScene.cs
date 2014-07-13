@@ -582,7 +582,7 @@ public sealed class BSScene : PhysicsScene, IPhysicsParameters
         int updatedEntityCount = 0;
         int collidersCount = 0;
 
-        int beforeTime = Util.EnvironmentTickCount();
+        int beforeTime = Environment.TickCount;
         int simTime = 0;
 
         int numTaints = _taintOperations.Count;
@@ -629,7 +629,7 @@ public sealed class BSScene : PhysicsScene, IPhysicsParameters
             PE.DumpPhysicsStatistics(World);
 
         // Get a value for 'now' so all the collision and update routines don't have to get their own.
-        SimulationNowTime = Util.EnvironmentTickCount();
+        SimulationNowTime = Environment.TickCount;
 
         // Send collision information to the colliding objects. The objects decide if the collision
         //     is 'real' (like linksets don't collide with themselves) and the individual objects
@@ -673,7 +673,7 @@ public sealed class BSScene : PhysicsScene, IPhysicsParameters
         // Some actors want to know when the simulation step is complete.
         TriggerPostStepEvent(timeStep);
 
-        simTime = Util.EnvironmentTickCountSubtract(beforeTime);
+        simTime = Environment.TickCount - beforeTime;
         if (PhysicsLogging.Enabled)
         {
             DetailLog("{0},DoPhysicsStep,complete,frame={1}, nTaints={2}, simTime={3}, substeps={4}, updates={5}, colliders={6}, objWColl={7}",
@@ -821,9 +821,9 @@ public sealed class BSScene : PhysicsScene, IPhysicsParameters
     {
         while (m_initialized)
         {
-            int beginSimulationRealtimeMS = Util.EnvironmentTickCount();
+            int beginSimulationRealtimeMS = Environment.TickCount;
             DoPhysicsStep(BSParam.PhysicsTimeStep);
-            int simulationRealtimeMS = Util.EnvironmentTickCountSubtract(beginSimulationRealtimeMS);
+            int simulationRealtimeMS = Environment.TickCount - beginSimulationRealtimeMS;
             int simulationTimeVsRealtimeDifferenceMS = ((int)(BSParam.PhysicsTimeStep*1000f)) - simulationRealtimeMS;
 
             if (simulationTimeVsRealtimeDifferenceMS > 0)

@@ -1393,7 +1393,7 @@ namespace OpenSim.Region.Framework.Scenes
 
             while (!m_shuttingDown && ((endRun == null && Active) || MaintenanceRun < endRun))
             {
-                runtc = Util.EnvironmentTickCount();
+                runtc = Environment.TickCount;
                 ++MaintenanceRun;
 
                 // Coarse locations relate to positions of green dots on the mini-map (on a SecondLife client)
@@ -1420,8 +1420,8 @@ namespace OpenSim.Region.Framework.Scenes
                 Watchdog.UpdateThread();
 
                 previousMaintenanceTick = m_lastMaintenanceTick;
-                m_lastMaintenanceTick = Util.EnvironmentTickCount();
-                runtc = Util.EnvironmentTickCountSubtract(m_lastMaintenanceTick, runtc);
+                m_lastMaintenanceTick = Environment.TickCount;
+                runtc = m_lastMaintenanceTick - runtc;
                 runtc = (int)(MinMaintenanceTime * 1000) - runtc;
     
                 if (runtc > 0)
@@ -1429,11 +1429,10 @@ namespace OpenSim.Region.Framework.Scenes
     
                 // Optionally warn if a frame takes double the amount of time that it should.
                 if (DebugUpdates
-                    && Util.EnvironmentTickCountSubtract(
-                        m_lastMaintenanceTick, previousMaintenanceTick) > (int)(MinMaintenanceTime * 1000 * 2))
+                    && m_lastMaintenanceTick - previousMaintenanceTick > (int)(MinMaintenanceTime * 1000 * 2))
                     m_log.WarnFormat(
                         "[SCENE]: Maintenance took {0} ms (desired max {1} ms) in {2}",
-                        Util.EnvironmentTickCountSubtract(m_lastMaintenanceTick, previousMaintenanceTick),
+                        m_lastMaintenanceTick - previousMaintenanceTick,
                         MinMaintenanceTime * 1000,
                         RegionInfo.RegionName);
             }
@@ -1448,7 +1447,7 @@ namespace OpenSim.Region.Framework.Scenes
 
             float physicsFPS = 0f;
             int previousFrameTick, tmpMS;
-            int maintc = Util.EnvironmentTickCount();
+            int maintc = Environment.TickCount;
 
             while (!m_shuttingDown && ((endFrame == null && Active) || Frame < endFrame))
             {
@@ -1465,25 +1464,25 @@ namespace OpenSim.Region.Framework.Scenes
                     // Apply taints in terrain module to terrain in physics scene
                     if (Frame % m_update_terrain == 0)
                     {
-                        tmpMS = Util.EnvironmentTickCount();
+                        tmpMS = Environment.TickCount;
                         UpdateTerrain();
-                        terrainMS = Util.EnvironmentTickCountSubtract(tmpMS);
+                        terrainMS = Environment.TickCount - tmpMS;
                     }
 
-                    tmpMS = Util.EnvironmentTickCount();
+                    tmpMS = Environment.TickCount;
                     if (PhysicsEnabled && Frame % m_update_physics == 0)
                         m_sceneGraph.UpdatePreparePhysics();
-                    physicsMS2 = Util.EnvironmentTickCountSubtract(tmpMS);
+                    physicsMS2 = Environment.TickCount - tmpMS;
     
                     // Apply any pending avatar force input to the avatar's velocity
-                    tmpMS = Util.EnvironmentTickCount();
+                    tmpMS = Environment.TickCount;
                     if (Frame % m_update_entitymovement == 0)
                         m_sceneGraph.UpdateScenePresenceMovement();
-                    agentMS = Util.EnvironmentTickCountSubtract(tmpMS);
+                    agentMS = Environment.TickCount - tmpMS;
     
                     // Perform the main physics update.  This will do the actual work of moving objects and avatars according to their
                     // velocity
-                    tmpMS = Util.EnvironmentTickCount();
+                    tmpMS = Environment.TickCount;
                     if (Frame % m_update_physics == 0)
                     {
                         if (PhysicsEnabled)
@@ -1492,9 +1491,9 @@ namespace OpenSim.Region.Framework.Scenes
                         if (SynchronizeScene != null)
                             SynchronizeScene(this);
                     }
-                    physicsMS = Util.EnvironmentTickCountSubtract(tmpMS);
+                    physicsMS = Environment.TickCount - tmpMS;
 
-                    tmpMS = Util.EnvironmentTickCount();
+                    tmpMS = Environment.TickCount;
     
                     // Check if any objects have reached their targets
                     CheckAtTargets();
@@ -1509,36 +1508,36 @@ namespace OpenSim.Region.Framework.Scenes
                     if (Frame % m_update_presences == 0)
                         m_sceneGraph.UpdatePresences();
     
-                    agentMS += Util.EnvironmentTickCountSubtract(tmpMS);
+                    agentMS += Environment.TickCount - tmpMS;
     
                     // Delete temp-on-rez stuff
                     if (Frame % m_update_temp_cleaning == 0 && !m_cleaningTemps)
                     {
-                        tmpMS = Util.EnvironmentTickCount();
+                        tmpMS = Environment.TickCount;
                         m_cleaningTemps = true;
                         Util.RunThreadNoTimeout(delegate { CleanTempObjects(); m_cleaningTemps = false;  }, "CleanTempObjects", null);
-                        tempOnRezMS = Util.EnvironmentTickCountSubtract(tmpMS);
+                        tempOnRezMS = Environment.TickCount - tmpMS;
                     }
     
                     if (Frame % m_update_events == 0)
                     {
-                        tmpMS = Util.EnvironmentTickCount();
+                        tmpMS = Environment.TickCount;
                         UpdateEvents();
-                        eventMS = Util.EnvironmentTickCountSubtract(tmpMS);
+                        eventMS = Environment.TickCount - tmpMS;
                     }
     
                     if (PeriodicBackup && Frame % m_update_backup == 0)
                     {
-                        tmpMS = Util.EnvironmentTickCount();
+                        tmpMS = Environment.TickCount;
                         UpdateStorageBackup();
-                        backupMS = Util.EnvironmentTickCountSubtract(tmpMS);
+                        backupMS = Environment.TickCount - tmpMS;
                     }
     
                     //if (Frame % m_update_land == 0)
                     //{
-                    //    int ldMS = Util.EnvironmentTickCount();
+                    //    int ldMS = Environment.TickCount;
                     //    UpdateLand();
-                    //    landMS = Util.EnvironmentTickCountSubtract(ldMS);
+                    //    landMS = Environment.TickCount - ldMS;
                     //}
     
                     if (!LoginsEnabled && Frame == 20)
@@ -1592,8 +1591,8 @@ namespace OpenSim.Region.Framework.Scenes
                 Watchdog.UpdateThread();
 
                 previousFrameTick = m_lastFrameTick;
-                m_lastFrameTick = Util.EnvironmentTickCount();
-                tmpMS = Util.EnvironmentTickCountSubtract(m_lastFrameTick, maintc);
+                m_lastFrameTick = Environment.TickCount;
+                tmpMS = m_lastFrameTick - maintc;
                 tmpMS = (int)(MinFrameTime * 1000) - tmpMS;
 
                 if (tmpMS > 0)
@@ -1602,8 +1601,8 @@ namespace OpenSim.Region.Framework.Scenes
                     spareMS += tmpMS;
                 }
 
-                frameMS = Util.EnvironmentTickCountSubtract(maintc);
-                maintc = Util.EnvironmentTickCount();
+                frameMS = Environment.TickCount - maintc;
+                maintc = Environment.TickCount;
 
                 otherMS = tempOnRezMS + eventMS + backupMS + terrainMS + landMS;
 
@@ -1622,11 +1621,10 @@ namespace OpenSim.Region.Framework.Scenes
 
                // Optionally warn if a frame takes double the amount of time that it should.
                 if (DebugUpdates
-                    && Util.EnvironmentTickCountSubtract(
-                        m_lastFrameTick, previousFrameTick) > (int)(MinFrameTime * 1000 * 2))
+                    && (m_lastFrameTick - previousFrameTick) > (int)(MinFrameTime * 1000 * 2))
                     m_log.WarnFormat(
                         "[SCENE]: Frame took {0} ms (desired max {1} ms) in {2}",
-                        Util.EnvironmentTickCountSubtract(m_lastFrameTick, previousFrameTick),
+                        m_lastFrameTick - previousFrameTick,
                         MinFrameTime * 1000,
                         RegionInfo.RegionName);
             }
@@ -2688,7 +2686,7 @@ namespace OpenSim.Region.Framework.Scenes
                     EventManager.TriggerOnClientLogin(client);
             }
 
-            m_LastLogin = Util.EnvironmentTickCount();
+            m_LastLogin = Environment.TickCount;
 
             return sp;
         }
@@ -4961,14 +4959,14 @@ namespace OpenSim.Region.Framework.Scenes
             //
             int health=1; // Start at 1, means we're up
 
-            if ((Util.EnvironmentTickCountSubtract(m_lastFrameTick)) < 1000)
+            if ((Environment.TickCount - m_lastFrameTick) < 1000)
                 health += 1;
             else
                 return health;
 
             // A login in the last 4 mins? We can't be doing too badly
             //
-            if ((Util.EnvironmentTickCountSubtract(m_LastLogin)) < 240000)
+            if ((Environment.TickCount - m_LastLogin) < 240000)
                 health++;
             else
                 return health;
@@ -5166,7 +5164,7 @@ namespace OpenSim.Region.Framework.Scenes
 //            if (m_firstHeartbeat)
 //                return;
 //
-//            if (Util.EnvironmentTickCountSubtract(m_lastFrameTick) > 2000)
+//            if (Environment.TickCount - m_lastFrameTick > 2000)
 //                StartTimer();
 //        }
 

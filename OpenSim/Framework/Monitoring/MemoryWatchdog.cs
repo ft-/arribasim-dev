@@ -49,7 +49,7 @@ namespace OpenSim.Framework.Monitoring
 //                m_log.DebugFormat("[MEMORY WATCHDOG]: Setting MemoryWatchdog.Enabled to {0}", value);
 
                 if (value && !m_enabled)
-                    UpdateLastRecord(GC.GetTotalMemory(false), Util.EnvironmentTickCount());
+                    UpdateLastRecord(GC.GetTotalMemory(false), Environment.TickCount);
 
                 m_enabled = value;
             }
@@ -103,7 +103,7 @@ namespace OpenSim.Framework.Monitoring
 
         public static void Update()
         {
-            int now = Util.EnvironmentTickCount();
+            int now = Environment.TickCount;
             long memoryNow = GC.GetTotalMemory(false);
             long memoryDiff = memoryNow - m_lastUpdateMemory;
 
@@ -112,7 +112,7 @@ namespace OpenSim.Framework.Monitoring
                 if (m_samples.Count >= m_maxSamples)
                     m_samples.Dequeue();
 
-                double elapsed = Util.EnvironmentTickCountSubtract(now, m_lastUpdateTick);
+                int elapsed = Environment.TickCount - m_lastUpdateTick;
 
                 // This should never happen since it's not useful for updates to occur with no time elapsed, but
                 // protect ourselves from a divide-by-zero just in case.

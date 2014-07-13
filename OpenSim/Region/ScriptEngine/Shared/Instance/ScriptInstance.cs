@@ -193,11 +193,11 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
 
         public DateTime TimeStarted { get; private set; }
 
-        public long MeasurementPeriodTickStart { get; private set; }
+        public int MeasurementPeriodTickStart { get; private set; }
 
-        public long MeasurementPeriodExecutionTime { get; private set; }
+        public int MeasurementPeriodExecutionTime { get; private set; }
 
-        public static readonly long MaxMeasurementPeriod = 30 * TimeSpan.TicksPerMinute;
+        public static readonly int MaxMeasurementPeriod = 30 * 60000; /* this is ms unit, anyone telling otherwise is just blind */
 
         private bool m_coopTermination;
  
@@ -548,7 +548,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
                 Running = true;
 
                 TimeStarted = DateTime.Now;
-                MeasurementPeriodTickStart = Util.EnvironmentTickCount();
+                MeasurementPeriodTickStart = Environment.TickCount;
                 MeasurementPeriodExecutionTime = 0;
 
                 if (EventQueue.Count > 0)
@@ -845,7 +845,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
                             m_EventStart = DateTime.Now;
                             m_InEvent = true;
 
-                            int start = Util.EnvironmentTickCount();
+                            int start = Environment.TickCount;
 
                             // Reset the measurement period when we reach the end of the current one.
                             if (start - MeasurementPeriodTickStart > MaxMeasurementPeriod)
@@ -853,7 +853,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
 
                             m_Script.ExecuteEvent(State, data.EventName, data.Params);
 
-                            MeasurementPeriodExecutionTime += Util.EnvironmentTickCount() - start;
+                            MeasurementPeriodExecutionTime += Environment.TickCount - start;
 
                             m_InEvent = false;
                             m_CurrentEvent = String.Empty;

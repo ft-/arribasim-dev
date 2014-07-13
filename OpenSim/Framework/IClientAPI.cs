@@ -601,7 +601,7 @@ namespace OpenSim.Framework
             m_flags |= update.Flags;
 
             // Use the older of the updates as the updateTime
-            if (Util.EnvironmentTickCountCompare(UpdateTime, update.UpdateTime) > 0)
+            if (UpdateTime - update.UpdateTime > 0)
                 m_updateTime = update.UpdateTime;
         }
 
@@ -609,7 +609,7 @@ namespace OpenSim.Framework
         {
             m_entity = entity;
             m_flags = flags;
-            m_updateTime = Util.EnvironmentTickCount();
+            m_updateTime = Environment.TickCount;
         }
 
         public IEntityUpdate(ISceneEntity entity, uint flags, Int32 updateTime)

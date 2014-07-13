@@ -53,7 +53,7 @@ public class EventHistogram
         m_histogram = new long[m_numBuckets];
         Zero();
         m_lastBucket = 0;
-        m_timeBase = Util.EnvironmentTickCount();
+        m_timeBase = Environment.TickCount;
     }
 
     public void Event()
@@ -67,14 +67,14 @@ public class EventHistogram
         lock (histoLock)
         {
             // The time as displaced from the base of the histogram
-            int bucketTime = Util.EnvironmentTickCountSubtract(m_timeBase);
+            int bucketTime = Environment.TickCount - m_timeBase;
 
             // If more than the total time of the histogram, we just start over
             if (bucketTime > m_totalHistogramMilliseconds)
             {
                 Zero();
                 m_lastBucket = 0;
-                m_timeBase = Util.EnvironmentTickCount();
+                m_timeBase = Environment.TickCount;
             }
             else
             {

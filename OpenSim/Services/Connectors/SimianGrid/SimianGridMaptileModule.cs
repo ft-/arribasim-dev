@@ -149,7 +149,7 @@ namespace OpenSim.Services.Connectors.SimianGrid
             // this approach is a bit convoluted becase we want to wait for the
             // first upload to happen on startup but after all the objects are
             // loaded and initialized
-            if (m_lastrefresh > 0 && Util.EnvironmentTickCountSubtract(m_lastrefresh) < m_refreshtime)
+            if (m_lastrefresh > 0 && Environment.TickCount - m_lastrefresh < m_refreshtime)
                 return;
 
             m_log.DebugFormat("[SIMIAN MAPTILE] map refresh fired");
@@ -168,7 +168,7 @@ namespace OpenSim.Services.Connectors.SimianGrid
                 }
             }
 
-            m_lastrefresh = Util.EnvironmentTickCount();
+            m_lastrefresh = Environment.TickCount;
         }
 
         ///<summary>

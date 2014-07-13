@@ -4134,13 +4134,13 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                 }
                 else
                 {
-                    if (Util.EnvironmentTickCountSubtract(m_LastQueueFill) < 200)
+                    if (Environment.TickCount - m_LastQueueFill < 200)
                         m_maxUpdates += 5;
                     else
                         m_maxUpdates = m_maxUpdates >> 1;
                 }
                 m_maxUpdates = Util.Clamp<Int32>(m_maxUpdates,10,500);
-                m_LastQueueFill = Util.EnvironmentTickCount();
+                m_LastQueueFill = Environment.TickCount;
             
                 if (m_entityUpdates.Count > 0)
                     ProcessEntityUpdates(m_maxUpdates);

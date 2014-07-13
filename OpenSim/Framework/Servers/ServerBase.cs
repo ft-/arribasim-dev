@@ -825,7 +825,7 @@ namespace OpenSim.Framework.Servers
 
             sb.Append(threads.Length + " threads are being tracked:" + Environment.NewLine);
 
-            int timeNow = Environment.TickCount & Int32.MaxValue;
+            int timeNow = Environment.TickCount;
 
             sb.AppendFormat(reportFormat, "ID", "NAME", "LAST UPDATE (MS)", "LIFETIME (MS)", "PRIORITY", "STATE");
             sb.Append(Environment.NewLine);

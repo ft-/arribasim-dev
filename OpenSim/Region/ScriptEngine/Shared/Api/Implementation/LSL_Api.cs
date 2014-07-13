@@ -4228,7 +4228,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                     }
 
                     ce = new UserInfoCacheEntry();
-                    ce.time = Util.EnvironmentTickCount();
+                    ce.time = Environment.TickCount;
                     ce.account = account;
                     ce.pinfo = pinfo;
                     return ce;
@@ -4244,7 +4244,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
             account = ce.account;
 
-            if (Util.EnvironmentTickCount() < ce.time || (Util.EnvironmentTickCount() - ce.time)
+            if ((Environment.TickCount - ce.time)
                 >= LlRequestAgentDataCacheTimeoutMs)
             {
                 PresenceInfo[] pinfos = World.PresenceService.GetAgents(new string[] { uuid.ToString() });
@@ -4263,7 +4263,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                     pinfo = null;
                 }
 
-                ce.time = Util.EnvironmentTickCount();
+                ce.time = Environment.TickCount;
                 ce.pinfo = pinfo;
             }
             else

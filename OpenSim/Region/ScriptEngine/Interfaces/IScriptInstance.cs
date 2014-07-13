@@ -102,12 +102,12 @@ namespace OpenSim.Region.ScriptEngine.Interfaces
         /// <summary>
         /// Tick the last measurement period was started.
         /// </summary>
-        long MeasurementPeriodTickStart { get; }
+        int MeasurementPeriodTickStart { get; }
 
         /// <summary>
         /// Ticks spent executing in the last measurement period.
         /// </summary>
-        long MeasurementPeriodExecutionTime { get; }
+        int MeasurementPeriodExecutionTime { get; }
 
         /// <summary>
         /// Scene part in which this script instance is contained.

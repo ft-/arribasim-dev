@@ -178,7 +178,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             RequestedDripRate = dripRate;
             // TotalDripRequest = dripRate; // this will be overwritten when a child node registers
             // MaxBurst = (Int64)((double)dripRate * m_quantumsPerBurst);
-            m_lastDrip = Util.EnvironmentTickCount();
+            m_lastDrip = Environment.TickCount;
         }
 
 #endregion Constructor
@@ -305,8 +305,8 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             
             // Determine the interval over which we are adding tokens, never add
             // more than a single quantum of tokens
-            Int32 deltaMS = Math.Min(Util.EnvironmentTickCountSubtract(m_lastDrip), m_ticksPerQuantum);
-            m_lastDrip = Util.EnvironmentTickCount();
+            Int32 deltaMS = Math.Min(Environment.TickCount - m_lastDrip, m_ticksPerQuantum);
+            m_lastDrip = Environment.TickCount;
 
             // This can be 0 in the very unusual case that the timer wrapped
             // It can be 0 if we try add tokens at a sub-tick rate

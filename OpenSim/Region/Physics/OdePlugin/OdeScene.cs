@@ -928,7 +928,7 @@ namespace OpenSim.Region.Physics.OdePlugin
             {
                 // We do this inside the lock so that we don't count any delay in acquiring it
                 if (CollectStats)
-                    m_nativeCollisionStartTick = Util.EnvironmentTickCount();
+                    m_nativeCollisionStartTick = Environment.TickCount;
 
                 count = d.Collide(geom1, geom2, maxContacts, contactsArray, contactGeomSize);
             }
@@ -937,7 +937,7 @@ namespace OpenSim.Region.Physics.OdePlugin
             // negligable
             if (CollectStats)
                 m_stats[ODENativeGeomCollisionFrameMsStatName]
-                    += Util.EnvironmentTickCountSubtract(m_nativeCollisionStartTick);
+                    += Environment.TickCount - m_nativeCollisionStartTick;
 
             return count;
         }
@@ -953,7 +953,7 @@ namespace OpenSim.Region.Physics.OdePlugin
             if (CollectStats)
             {
                 m_inCollisionTiming = true;
-                m_nativeCollisionStartTick = Util.EnvironmentTickCount();
+                m_nativeCollisionStartTick = Environment.TickCount;
             }
 
             d.SpaceCollide2(space1, space2, data, nearCallback);
@@ -961,7 +961,7 @@ namespace OpenSim.Region.Physics.OdePlugin
             if (CollectStats && m_inCollisionTiming)
             {
                 m_stats[ODENativeSpaceCollisionFrameMsStatName]
-                    += Util.EnvironmentTickCountSubtract(m_nativeCollisionStartTick);
+                    += Environment.TickCount - m_nativeCollisionStartTick;
                 m_inCollisionTiming = false;
             }
         }
@@ -977,7 +977,7 @@ namespace OpenSim.Region.Physics.OdePlugin
             if (CollectStats && m_inCollisionTiming)
             {
                 m_stats[ODENativeSpaceCollisionFrameMsStatName]
-                    += Util.EnvironmentTickCountSubtract(m_nativeCollisionStartTick);
+                    += Environment.TickCount - m_nativeCollisionStartTick;
                 m_inCollisionTiming = false;
             }
 
@@ -2943,7 +2943,7 @@ namespace OpenSim.Region.Physics.OdePlugin
         {
             if (!_worldInitialized) return 11f;
 
-            int startFrameTick = CollectStats ? Util.EnvironmentTickCount() : 0;
+            int startFrameTick = CollectStats ? Environment.TickCount : 0;
             int tempTick = 0, tempTick2 = 0;
 
             if (framecount >= int.MaxValue)
@@ -3023,7 +3023,7 @@ namespace OpenSim.Region.Physics.OdePlugin
                     try
                     {
                         if (CollectStats)
-                            tempTick = Util.EnvironmentTickCount();
+                            tempTick = Environment.TickCount;
 
                         lock (_taintedActors)
                         {
@@ -3035,8 +3035,8 @@ namespace OpenSim.Region.Physics.OdePlugin
 
                         if (CollectStats)
                         {
-                            tempTick2 = Util.EnvironmentTickCount();
-                            m_stats[ODEAvatarTaintMsStatName] += Util.EnvironmentTickCountSubtract(tempTick2, tempTick);
+                            tempTick2 = Environment.TickCount;
+                            m_stats[ODEAvatarTaintMsStatName] += tempTick2 - tempTick;
                             tempTick = tempTick2;
                         }
 
@@ -3072,8 +3072,8 @@ namespace OpenSim.Region.Physics.OdePlugin
 
                         if (CollectStats)
                         {
-                            tempTick2 = Util.EnvironmentTickCount();
-                            m_stats[ODEPrimTaintMsStatName] += Util.EnvironmentTickCountSubtract(tempTick2, tempTick);
+                            tempTick2 = Environment.TickCount;
+                            m_stats[ODEPrimTaintMsStatName] += tempTick2 - tempTick;
                             tempTick = tempTick2;
                         }
 
@@ -3098,8 +3098,8 @@ namespace OpenSim.Region.Physics.OdePlugin
 
                         if (CollectStats)
                         {
-                            tempTick2 = Util.EnvironmentTickCount();
-                            m_stats[ODEAvatarForcesFrameMsStatName] += Util.EnvironmentTickCountSubtract(tempTick2, tempTick);
+                            tempTick2 = Environment.TickCount;
+                            m_stats[ODEAvatarForcesFrameMsStatName] += tempTick2 - tempTick;
                             tempTick = tempTick2;
                         }
 
@@ -3112,8 +3112,8 @@ namespace OpenSim.Region.Physics.OdePlugin
 
                         if (CollectStats)
                         {
-                            tempTick2 = Util.EnvironmentTickCount();
-                            m_stats[ODEPrimForcesFrameMsStatName] += Util.EnvironmentTickCountSubtract(tempTick2, tempTick);
+                            tempTick2 = Environment.TickCount;
+                            m_stats[ODEPrimForcesFrameMsStatName] += tempTick2 - tempTick;
                             tempTick = tempTick2;
                         }
 
@@ -3125,8 +3125,8 @@ namespace OpenSim.Region.Physics.OdePlugin
 
                         if (CollectStats)
                         {
-                            tempTick2 = Util.EnvironmentTickCount();
-                            m_stats[ODERaycastingFrameMsStatName] += Util.EnvironmentTickCountSubtract(tempTick2, tempTick);
+                            tempTick2 = Environment.TickCount;
+                            m_stats[ODERaycastingFrameMsStatName] += tempTick2 - tempTick;
                             tempTick = tempTick2;
                         }
 
@@ -3134,8 +3134,8 @@ namespace OpenSim.Region.Physics.OdePlugin
 
                         if (CollectStats)
                         {
-                            tempTick2 = Util.EnvironmentTickCount();
-                            m_stats[ODEOtherCollisionFrameMsStatName] += Util.EnvironmentTickCountSubtract(tempTick2, tempTick);
+                            tempTick2 = Environment.TickCount;
+                            m_stats[ODEOtherCollisionFrameMsStatName] += tempTick2 - tempTick;
                             tempTick = tempTick2;
                         }
 
@@ -3166,15 +3166,15 @@ namespace OpenSim.Region.Physics.OdePlugin
 
                         if (CollectStats)
                         {
-                            tempTick2 = Util.EnvironmentTickCount();
-                            m_stats[ODECollisionNotificationFrameMsStatName] += Util.EnvironmentTickCountSubtract(tempTick2, tempTick);
+                            tempTick2 = Environment.TickCount;
+                            m_stats[ODECollisionNotificationFrameMsStatName] += tempTick2 - tempTick;
                             tempTick = tempTick2;
                         }
 
                         d.WorldQuickStep(world, ODE_STEPSIZE);
 
                         if (CollectStats)
-                            m_stats[ODENativeStepFrameMsStatName] += Util.EnvironmentTickCountSubtract(tempTick);
+                            m_stats[ODENativeStepFrameMsStatName] += Environment.TickCount - tempTick;
 
                         d.JointGroupEmpty(contactgroup);
                     }
@@ -3187,7 +3187,7 @@ namespace OpenSim.Region.Physics.OdePlugin
                 }
 
                 if (CollectStats)
-                    tempTick = Util.EnvironmentTickCount();
+                    tempTick = Environment.TickCount;
 
                 foreach (OdeCharacter actor in _characters)
                 {
@@ -3214,8 +3214,8 @@ namespace OpenSim.Region.Physics.OdePlugin
 
                 if (CollectStats)
                 {
-                    tempTick2 = Util.EnvironmentTickCount();
-                    m_stats[ODEAvatarUpdateFrameMsStatName] += Util.EnvironmentTickCountSubtract(tempTick2, tempTick);
+                    tempTick2 = Environment.TickCount;
+                    m_stats[ODEAvatarUpdateFrameMsStatName] += tempTick2 - tempTick;
                     tempTick = tempTick2;
                 }
 
@@ -3233,7 +3233,7 @@ namespace OpenSim.Region.Physics.OdePlugin
                 }
 
                 if (CollectStats)
-                    m_stats[ODEPrimUpdateFrameMsStatName] += Util.EnvironmentTickCountSubtract(tempTick);
+                    m_stats[ODEPrimUpdateFrameMsStatName] += Environment.TickCount - tempTick;
 
                 //DumpJointInfo();
 
@@ -3256,7 +3256,7 @@ namespace OpenSim.Region.Physics.OdePlugin
                     d.WorldExportDIF(world, fname, physics_logging_append_existing_logfile, prefix);
                 }
 
-                latertickcount = Util.EnvironmentTickCountSubtract(tickCountFrameRun);
+                latertickcount = Environment.TickCount - tickCountFrameRun;
 
                 // OpenSimulator above does 10 fps.  10 fps = means that the main thread loop and physics
                 // has a max of 100 ms to run theoretically.
@@ -3270,13 +3270,13 @@ namespace OpenSim.Region.Physics.OdePlugin
                 else
                 {
                     m_timeDilation = 100f / latertickcount;
-                    //m_timeDilation = Math.Min((Math.Max(100 - (Util.EnvironmentTickCount() - tickCountFrameRun), 1) / 100f), 1.0f);
+                    //m_timeDilation = Math.Min((Math.Max(100 - (Environment.TickCount - tickCountFrameRun), 1) / 100f), 1.0f);
                 }
 
-                tickCountFrameRun = Util.EnvironmentTickCount();
+                tickCountFrameRun = Environment.TickCount;
 
                 if (CollectStats)
-                    m_stats[ODETotalFrameMsStatName] += Util.EnvironmentTickCountSubtract(startFrameTick);
+                    m_stats[ODETotalFrameMsStatName] += Environment.TickCount - startFrameTick;
             }
 
             return fps;
@@ -3799,7 +3799,7 @@ namespace OpenSim.Region.Physics.OdePlugin
 
         private void SetTerrain(float[] heightMap, Vector3 pOffset)
         {
-            int startTime = Util.EnvironmentTickCount();
+            int startTime = Environment.TickCount;
             m_log.DebugFormat("[ODE SCENE]: Setting terrain for {0} with offset {1}", Name, pOffset);
 
             // this._heightmap[i] = (double)heightMap[i];
@@ -3925,7 +3925,7 @@ namespace OpenSim.Region.Physics.OdePlugin
             }
 
             m_log.DebugFormat(
-                "[ODE SCENE]: Setting terrain for {0} took {1}ms", Name, Util.EnvironmentTickCountSubtract(startTime));
+                "[ODE SCENE]: Setting terrain for {0} took {1}ms", Name, Environment.TickCount - startTime);
         }
 
         public override void DeleteTerrain()

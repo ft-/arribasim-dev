@@ -66,8 +66,7 @@ namespace OpenSim.Framework
                 foreach (string str in _tempBlocked.Keys)
                 {
                     if (
-                        Util.EnvironmentTickCountSubtract(Util.EnvironmentTickCount(),
-                                                          _tempBlocked[str]) > 0)
+                        Environment.TickCount - _tempBlocked[str] > 0)
                         removes.Add(str);
                 }
                 _blockLockSlim.ExitReadLock();
@@ -137,7 +136,7 @@ namespace OpenSim.Framework
             _blockLockSlim.ExitReadLock();
 
             lock (_generalRequestTimes)
-                _generalRequestTimes.Put(Util.EnvironmentTickCount());
+                _generalRequestTimes.Put(Environment.TickCount);
 
             if (_options.MaxConcurrentSessions > 0)
             {
@@ -157,14 +156,14 @@ namespace OpenSim.Framework
                         if (!_tempBlocked.ContainsKey(clientstring))
                         {
                             _tempBlocked.Add(clientstring,
-                                             Util.EnvironmentTickCount() +
+                                             Environment.TickCount +
                                              (int) _options.ForgetTimeSpan.TotalMilliseconds);
                             _forgetTimer.Enabled = true;
                             m_log.WarnFormat("[{0}]: client: {1} is blocked for {2} milliseconds based on concurrency, X-ForwardedForAllowed status is {3}, endpoint:{4}", _options.ReportingName, clientstring, _options.ForgetTimeSpan.TotalMilliseconds, _options.AllowXForwardedFor, endpoint);
 
                         }
                         else
-                            _tempBlocked[clientstring] = Util.EnvironmentTickCount() +
+                            _tempBlocked[clientstring] = Environment.TickCount +
                                                          (int) _options.ForgetTimeSpan.TotalMilliseconds;
                         _blockLockSlim.ExitWriteLock();
 
@@ -176,8 +175,8 @@ namespace OpenSim.Framework
                     ProcessConcurrency(key, endpoint);
             }
             if (_generalRequestTimes.Size == _generalRequestTimes.Capacity &&
-                (Util.EnvironmentTickCountSubtract(Util.EnvironmentTickCount(), _generalRequestTimes.Get()) <
-                 _options.RequestTimeSpan.TotalMilliseconds))
+                Environment.TickCount - _generalRequestTimes.Get() <
+                 _options.RequestTimeSpan.TotalMilliseconds)
             {
                 //Trigger deeper inspection
                 if (DeeperInspection(key, endpoint))
@@ -228,17 +227,17 @@ namespace OpenSim.Framework
 
                 if (_deeperInspection.ContainsKey(clientstring))
                 {
-                    _deeperInspection[clientstring].Put(Util.EnvironmentTickCount());
+                    _deeperInspection[clientstring].Put(Environment.TickCount);
                     if (_deeperInspection[clientstring].Size == _deeperInspection[clientstring].Capacity &&
-                        (Util.EnvironmentTickCountSubtract(Util.EnvironmentTickCount(), _deeperInspection[clientstring].Get()) <
+                        (Environment.TickCount - _deeperInspection[clientstring].Get() <
                          _options.RequestTimeSpan.TotalMilliseconds))
                     {
                         //Looks like we're over the limit
                         _blockLockSlim.EnterWriteLock();
                         if (!_tempBlocked.ContainsKey(clientstring))
-                            _tempBlocked.Add(clientstring, Util.EnvironmentTickCount() + (int)_options.ForgetTimeSpan.TotalMilliseconds);
+                            _tempBlocked.Add(clientstring, Environment.TickCount + (int)_options.ForgetTimeSpan.TotalMilliseconds);
                         else
-                            _tempBlocked[clientstring] = Util.EnvironmentTickCount() + (int)_options.ForgetTimeSpan.TotalMilliseconds;
+                            _tempBlocked[clientstring] = Environment.TickCount + (int)_options.ForgetTimeSpan.TotalMilliseconds;
                         _blockLockSlim.ExitWriteLock();
 
                         m_log.WarnFormat("[{0}]: client: {1} is blocked for {2} milliseconds, X-ForwardedForAllowed status is {3}, endpoint:{4}", _options.ReportingName, clientstring, _options.ForgetTimeSpan.TotalMilliseconds, _options.AllowXForwardedFor, endpoint);
@@ -251,7 +250,7 @@ namespace OpenSim.Framework
                 else
                 {
                     _deeperInspection.Add(clientstring, new CircularBuffer<int>(_options.MaxRequestsInTimeframe + 1, true));
-                    _deeperInspection[clientstring].Put(Util.EnvironmentTickCount());
+                    _deeperInspection[clientstring].Put(Environment.TickCount);
                     _forgetTimer.Enabled = true;
                 }
 

@@ -583,7 +583,7 @@ namespace OpenSim.Framework.Servers.HttpServer
             WebSocketFrame pingFrame = new WebSocketFrame() { Header = WebsocketFrameHeader.HeaderDefault(), WebSocketPayload = new byte[0] };
             pingFrame.Header.Opcode = WebSocketReader.OpCode.Ping;
             pingFrame.Header.IsEnd = true;
-            _pingtime = Util.EnvironmentTickCount();
+            _pingtime = Environment.TickCount;
             SendSocket(pingFrame.ToBytes());
         }
 
@@ -661,7 +661,7 @@ namespace OpenSim.Framework.Servers.HttpServer
                     PongDelegate pongD = OnPong;
                     if (pongD != null)
                     {
-                        pongD(this, new PongEventArgs(){PingResponseMS = Util.EnvironmentTickCountSubtract(Util.EnvironmentTickCount(),_pingtime)});
+                        pongD(this, new PongEventArgs(){PingResponseMS = Environment.TickCount - _pingtime});
                     }
                     break;
                 case WebSocketReader.OpCode.Binary:

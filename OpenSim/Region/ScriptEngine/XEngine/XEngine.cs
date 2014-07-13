@@ -1186,7 +1186,9 @@ namespace OpenSim.Region.ScriptEngine.XEngine
                                                 m_MaxScriptQueue);
 
                 if (!instance.Load(m_AppDomains[appDomain], assembly, stateSource))
+                {
                     return false;
+                }
 
     //                    if (DebugLevel >= 1)
     //                    m_log.DebugFormat(
@@ -1992,7 +1994,7 @@ namespace OpenSim.Region.ScriptEngine.XEngine
 
         public Dictionary<uint, float> GetObjectScriptsExecutionTimes()
         {
-            long tickNow = Util.EnvironmentTickCount();
+            int tickNow = Environment.TickCount;
             Dictionary<uint, float> topScripts = new Dictionary<uint, float>();
             m_Scripts.ForEach(delegate(IScriptInstance si)
             {
@@ -2012,7 +2014,7 @@ namespace OpenSim.Region.ScriptEngine.XEngine
                 return 0.0f;
             }
             float time = 0.0f;
-            long tickNow = Util.EnvironmentTickCount();
+            int tickNow = Environment.TickCount;
             IScriptInstance si;
             // Calculate the time for all scripts that this engine is executing
             // Ignore any others
@@ -2027,9 +2029,9 @@ namespace OpenSim.Region.ScriptEngine.XEngine
             return time;
         }
 
-        private float CalculateAdjustedExectionTime(IScriptInstance si, long tickNow)
+        private float CalculateAdjustedExectionTime(IScriptInstance si, int tickNow)
         {
-            long ticksElapsed = tickNow - si.MeasurementPeriodTickStart;
+            int ticksElapsed = tickNow - si.MeasurementPeriodTickStart;
 
             // Avoid divide by zero
             if (ticksElapsed == 0)

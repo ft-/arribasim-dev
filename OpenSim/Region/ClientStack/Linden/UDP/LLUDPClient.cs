@@ -130,7 +130,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         /// <summary>Total number of sent packets that we have reported to the OnPacketStats event(s)</summary>
         private int m_packetsSentReported;
         /// <summary>Holds the Environment.TickCount value of when the next OnQueueEmpty can be fired</summary>
-        private int m_nextOnQueueEmpty = 1;
+        private int m_nextOnQueueEmpty = Environment.TickCount;
 
         /// <summary>Throttle bucket for this agent's connection</summary>
         private readonly AdaptiveTokenBucket m_throttleClient;
@@ -218,7 +218,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             RTO = m_defaultRTO;
 
             // Initialize this to a sane value to prevent early disconnects
-            TickLastPacketReceived = Environment.TickCount & Int32.MaxValue;
+            TickLastPacketReceived = Environment.TickCount;
         }
 
         /// <summary>
@@ -284,7 +284,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         {
             return string.Format(
                 "{0,7} {1,7} {2,7} {3,9} {4,7} {5,7} {6,7} {7,7} {8,7} {9,8} {10,7} {11,7}",
-                Util.EnvironmentTickCountSubtract(TickLastPacketReceived),
+                Environment.TickCount - TickLastPacketReceived,
                 PacketsReceived,                                 
                 PacketsSent,
                 PacketsResent,
@@ -625,20 +625,14 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         /// <param name="categories">Throttle categories to fire the callback for</param>
         private void BeginFireQueueEmpty(ThrottleOutPacketTypeFlags categories)
         {
-//            if (m_nextOnQueueEmpty != 0 && (Environment.TickCount & Int32.MaxValue) >= m_nextOnQueueEmpty)
-            if (!m_isQueueEmptyRunning && (Environment.TickCount & Int32.MaxValue) >= m_nextOnQueueEmpty)
+            int start = Environment.TickCount;
+            if (!m_isQueueEmptyRunning && start - m_nextOnQueueEmpty >= 0)
             {
                 m_isQueueEmptyRunning = true;
 
-                int start = Environment.TickCount & Int32.MaxValue;
                 const int MIN_CALLBACK_MS = 30;
 
                 m_nextOnQueueEmpty = start + MIN_CALLBACK_MS;
-                if (m_nextOnQueueEmpty == 0)
-                    m_nextOnQueueEmpty = 1;
-
-                // Use a value of 0 to signal that FireQueueEmpty is running
-//                m_nextOnQueueEmpty = 0;
 
                 m_categories = categories;
 
@@ -666,29 +660,14 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         /// signature</param>
         private void FireQueueEmpty(object o)
         {
-//            int start = Environment.TickCount & Int32.MaxValue;
-//            const int MIN_CALLBACK_MS = 30;
+            ThrottleOutPacketTypeFlags categories = (ThrottleOutPacketTypeFlags)o;
+            QueueEmpty callback = OnQueueEmpty;                      
 
-//            if (m_udpServer.IsRunningOutbound)
-//            {        
-                ThrottleOutPacketTypeFlags categories = (ThrottleOutPacketTypeFlags)o;
-                QueueEmpty callback = OnQueueEmpty;                      
-
-                if (callback != null)
-                {
-//                    if (m_udpServer.IsRunningOutbound)
-//                    {                
-                        try { callback(categories); }
-                        catch (Exception e) { m_log.Error("[LLUDPCLIENT]: OnQueueEmpty(" + categories + ") threw an exception: " + e.Message, e); }
-//                    }
-                }
-//            }
-
-//            m_nextOnQueueEmpty = start + MIN_CALLBACK_MS;
-//            if (m_nextOnQueueEmpty == 0)
-//                m_nextOnQueueEmpty = 1;
-
-//            }
+            if (callback != null)
+            {
+                    try { callback(categories); }
+                    catch (Exception e) { m_log.Error("[LLUDPCLIENT]: OnQueueEmpty(" + categories + ") threw an exception: " + e.Message, e); }
+            }
 
             m_isQueueEmptyRunning = false;
         }

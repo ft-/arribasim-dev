@@ -140,7 +140,7 @@ namespace OpenSim.Framework
                 {
                     MinHeapItem item = m_heaps[iq].RemoveMin();
                     m_lookupTable.Remove(item.Value.Entity.LocalId);
-                    timeinqueue = Util.EnvironmentTickCountSubtract(item.EntryTime);
+                    timeinqueue = Environment.TickCount - item.EntryTime;
                     value = item.Value;
 
                     return true;
@@ -160,7 +160,7 @@ namespace OpenSim.Framework
                 
                 MinHeapItem item = m_heaps[m_nextQueue].RemoveMin();
                 m_lookupTable.Remove(item.Value.Entity.LocalId);
-                timeinqueue = Util.EnvironmentTickCountSubtract(item.EntryTime);
+                timeinqueue = Environment.TickCount - item.EntryTime;
                 value = item.Value;
                 
                 return true;
@@ -182,7 +182,7 @@ namespace OpenSim.Framework
 
                     MinHeapItem item = m_heaps[m_nextQueue].RemoveMin();
                     m_lookupTable.Remove(item.Value.Entity.LocalId);
-                    timeinqueue = Util.EnvironmentTickCountSubtract(item.EntryTime);
+                    timeinqueue = Environment.TickCount - item.EntryTime;
                     value = item.Value;
 
                     return true;
@@ -287,7 +287,7 @@ namespace OpenSim.Framework
 
             internal MinHeapItem(uint pqueue, UInt64 entryorder, IEntityUpdate value)
             {
-                this.entrytime = Util.EnvironmentTickCount();
+                this.entrytime = Environment.TickCount;
                 this.entryorder = entryorder;
                 this.value = value;
                 this.pqueue = pqueue;

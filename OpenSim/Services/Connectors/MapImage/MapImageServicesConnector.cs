@@ -82,7 +82,7 @@ namespace OpenSim.Services.Connectors
         public bool RemoveMapTile(int x, int y, out string reason)
         {
             reason = string.Empty;
-            int tickstart = Util.EnvironmentTickCount();
+            int tickstart = Environment.TickCount;
             Dictionary<string, object> sendData = new Dictionary<string, object>();
             sendData["X"] = x.ToString();
             sendData["Y"] = y.ToString();
@@ -132,7 +132,7 @@ namespace OpenSim.Services.Connectors
             finally
             {
                 // This just dumps a warning for any operation that takes more than 100 ms
-                int tickdiff = Util.EnvironmentTickCountSubtract(tickstart);
+                int tickdiff = Environment.TickCount - tickstart;
                 m_log.DebugFormat("[MAP IMAGE CONNECTOR]: map tile deleted in {0}ms", tickdiff);
             }
 
@@ -142,7 +142,7 @@ namespace OpenSim.Services.Connectors
         public bool AddMapTile(int x, int y, byte[] jpgData, out string reason)
         {
             reason = string.Empty;
-            int tickstart = Util.EnvironmentTickCount();
+            int tickstart = Environment.TickCount;
             Dictionary<string, object> sendData = new Dictionary<string, object>();
             sendData["X"] = x.ToString();
             sendData["Y"] = y.ToString();
@@ -197,7 +197,7 @@ namespace OpenSim.Services.Connectors
             finally
             {
                 // This just dumps a warning for any operation that takes more than 100 ms
-                int tickdiff = Util.EnvironmentTickCountSubtract(tickstart);
+                int tickdiff = Environment.TickCount - tickstart;
                 m_log.DebugFormat("[MAP IMAGE CONNECTOR]: map tile uploaded in {0}ms", tickdiff);
             }
 

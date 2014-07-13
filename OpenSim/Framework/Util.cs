@@ -2031,7 +2031,7 @@ namespace OpenSim.Framework
             public void Started()
             {
                 Thread = Thread.CurrentThread;
-                started = EnvironmentTickCount();
+                started = Environment.TickCount;
                 Running = true;
             }
 
@@ -2042,7 +2042,7 @@ namespace OpenSim.Framework
 
             public int Elapsed()
             {
-                return EnvironmentTickCountSubtract(started);
+                return Environment.TickCount - started;
             }
 
             public void Abort()
@@ -2443,61 +2443,6 @@ namespace OpenSim.Framework
             
             t.Name = name;
             t.Start();
-        }
-
-        /// <summary>
-        /// Environment.TickCount is an int but it counts all 32 bits so it goes positive
-        /// and negative every 24.9 days. This trims down TickCount so it doesn't wrap
-        /// for the callers. 
-        /// This trims it to a 12 day interval so don't let your frame time get too long.
-        /// </summary>
-        /// <returns></returns>
-        public static Int32 EnvironmentTickCount()
-        {
-            return Environment.TickCount & EnvironmentTickCountMask;
-        }
-        const Int32 EnvironmentTickCountMask = 0x3fffffff;
-
-        /// <summary>
-        /// Environment.TickCount is an int but it counts all 32 bits so it goes positive
-        /// and negative every 24.9 days. Subtracts the passed value (previously fetched by
-        /// 'EnvironmentTickCount()') and accounts for any wrapping.
-        /// </summary>
-        /// <param name="newValue"></param>
-        /// <param name="prevValue"></param>
-        /// <returns>subtraction of passed prevValue from current Environment.TickCount</returns>
-        public static Int32 EnvironmentTickCountSubtract(Int32 newValue, Int32 prevValue)
-        {
-            Int32 diff = newValue - prevValue;
-            return (diff >= 0) ? diff : (diff + EnvironmentTickCountMask + 1);
-        }
-
-        /// <summary>
-        /// Environment.TickCount is an int but it counts all 32 bits so it goes positive
-        /// and negative every 24.9 days. Subtracts the passed value (previously fetched by
-        /// 'EnvironmentTickCount()') and accounts for any wrapping.
-        /// </summary>
-        /// <returns>subtraction of passed prevValue from current Environment.TickCount</returns>
-        public static Int32 EnvironmentTickCountSubtract(Int32 prevValue)
-        {
-            return EnvironmentTickCountSubtract(EnvironmentTickCount(), prevValue);
-        }
-
-        // Returns value of Tick Count A - TickCount B accounting for wrapping of TickCount
-        // Assumes both tcA and tcB came from previous calls to Util.EnvironmentTickCount().
-        // A positive return value indicates A occured later than B
-        public static Int32 EnvironmentTickCountCompare(Int32 tcA, Int32 tcB)
-        {
-            // A, B and TC are all between 0 and 0x3fffffff
-            int tc = EnvironmentTickCount();
-
-            if (tc - tcA >= 0)
-                tcA += EnvironmentTickCountMask + 1;
-
-            if (tc - tcB >= 0)
-                tcB += EnvironmentTickCountMask + 1;
-
-            return tcA - tcB;
         }
 
         /// <summary>
