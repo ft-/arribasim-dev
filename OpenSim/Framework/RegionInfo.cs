@@ -136,7 +136,7 @@ namespace OpenSim.Framework
         protected bool Allow_Alternate_Ports;
         public bool m_allow_alternate_ports;
         private string m_externalHostName;
-        private string m_lastExternalHostName;
+        private string m_lastExternalHostName = string.Empty;
         private bool m_IPChanged = false;
         private bool m_CheckDynDns = false;
         protected DateTime m_lastResolverTime;
@@ -447,7 +447,7 @@ namespace OpenSim.Framework
 
         public string CheckExternalHostName()
         {
-            if (!m_CheckDynDns && m_lastExternalHostName != string.Empty)
+            if (!m_CheckDynDns && !String.IsNullOrEmpty(m_lastExternalHostName))
             {
                 /* no recheck */
             }
