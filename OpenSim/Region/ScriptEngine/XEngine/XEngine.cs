@@ -1177,12 +1177,6 @@ namespace OpenSim.Region.ScriptEngine.XEngine
 
                 if (!instance.Load(m_AppDomains[appDomain], assembly, stateSource))
                 {
-                    m_DomainScripts[instance.AppDomain].Remove(instance.ItemID);
-                    if (m_DomainScripts.RemoveIf(instance.AppDomain, delegate(ThreadedClasses.RwLockedList<UUID> appDomainList) { return appDomainList.Count == 0; }))
-                    {
-                        UnloadAppDomain(instance.AppDomain);
-                    }
-
                     return false;
                 }
 
