@@ -341,7 +341,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         /// </summary>
         /// <param name="localID"></param>
         /// <param name="itemID"></param>
-        public static void UnregisterScriptFacilities(IScriptEngine engine, uint localID, UUID itemID)
+        public static void UnregisterScriptFacilities(IScriptEngine engine, uint localID, UUID itemID, bool resetScript)
         {
 //            m_log.DebugFormat("[ASYNC COMMAND MANAGER]: Removing facilities for script {0}", itemID);
 
@@ -351,13 +351,16 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                 // Remove dataserver events
                 m_Dataserver[engine].RemoveEvents(localID, itemID);
 
-                // Remove from: Timers
-                m_Timer[engine].UnSetTimerEvents(localID, itemID);
+                if (resetScript)
+                {
+                    // Remove from: Timers
+                    m_Timer[engine].UnSetTimerEvents(localID, itemID);
 
-                // Remove from: HttpRequest
-                IHttpRequestModule iHttpReq = engine.World.RequestModuleInterface<IHttpRequestModule>();
-                if (iHttpReq != null)
-                    iHttpReq.StopHttpRequestsForScript(itemID);
+                    // Remove from: HttpRequest
+                    IHttpRequestModule iHttpReq = engine.World.RequestModuleInterface<IHttpRequestModule>();
+                    if (iHttpReq != null)
+                        iHttpReq.StopHttpRequestsForScript(itemID);
+                }
 
                 IWorldComm comms = engine.World.RequestModuleInterface<IWorldComm>();
                 if (comms != null)
