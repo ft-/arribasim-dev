@@ -1763,7 +1763,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             b = Util.UTF8.GetBytes(data);
 
             a = Util.UTF8.GetBytes(
-                "Linden text version 2\n{\nLLEmbeddedItems version 1\n{\ncount 0\n}\nText length" + b.Length.ToString() + "\n");
+                "Linden text version 2\n{\nLLEmbeddedItems version 1\n{\ncount 0\n}\nText length " + b.Length.ToString() + "\n");
 
             c = Util.UTF8.GetBytes("}");
 
