@@ -473,42 +473,6 @@ namespace OpenSim.Framework
                     }
                 }
             }
-            else if (m_externalHostName == "MetroIP")
-            {
-                if (DateTime.UtcNow - m_lastResolverTime > TimeSpan.FromHours(1)) /* TODO: this is the current built-in has to be discussed with Metro Admins */
-                {
-                    try
-                    {
-                        string newIP;
-                        string strNewValue;
-                        HttpWebRequest req = (HttpWebRequest)WebRequest.Create("http://hypergrid.org/my_external_ip.php");
-                        req.Method = "POST";
-                        req.ContentType = "application/x-www-form-urlencoded";
-                        strNewValue = "name=Lena";
-                        req.ContentLength = strNewValue.Length;
-                        StreamWriter stOut = new StreamWriter(req.GetRequestStream(), System.Text.Encoding.ASCII);
-                        stOut.Write(strNewValue);
-                        stOut.Close();
-
-                        StreamReader stIn = new StreamReader(req.GetResponse().GetResponseStream());
-                        newIP = stIn.ReadToEnd();
-                        stIn.Close();
-                        lock (this)
-                        {
-                            if (newIP != m_lastExternalHostName && m_lastExternalHostName != string.Empty)
-                            {
-                                m_IPChanged = true;
-                                m_lastExternalHostName = newIP;
-                            }
-                            m_lastResolverTime = DateTime.UtcNow;
-                        }
-                    }
-                    catch
-                    {
-
-                    }
-                }
-            }
             else if (m_CheckDynDns)
             {
                 if (DateTime.UtcNow - m_lastResolverTime > TimeSpan.FromMinutes(1))
@@ -797,16 +761,28 @@ namespace OpenSim.Framework
                 externalName = MainConsole.Instance.CmdPrompt("External host name", "SYSTEMIP");
                 config.Set("ExternalHostName", externalName);
             }
-            if (externalName == "SYSTEMIP")
+            if (externalName == "MetroIP")
             {
-                m_externalHostName = Util.GetLocalHost().ToString();
-                m_log.InfoFormat(
-                    "[REGIONINFO]: Resolving SYSTEMIP to {0} for external hostname of region {1}",
-                    m_externalHostName, name);
+                string newIP;
+                string strNewValue;
+                HttpWebRequest req = (HttpWebRequest)WebRequest.Create("http://hypergrid.org/my_external_ip.php");
+                req.Method = "POST";
+                req.ContentType = "application/x-www-form-urlencoded";
+                strNewValue = "name=Lena";
+                req.ContentLength = strNewValue.Length;
+                StreamWriter stOut = new StreamWriter(req.GetRequestStream(), System.Text.Encoding.ASCII);
+                stOut.Write(strNewValue);
+                stOut.Close();
+
+                StreamReader stIn = new StreamReader(req.GetResponse().GetResponseStream());
+                newIP = stIn.ReadToEnd();
+                stIn.Close();
+                m_externalHostName = newIP;
             }
             else
             {
                 m_externalHostName = externalName;
+                m_CheckDynDns = config.GetBoolean("CheckForIPChanges", false);
             }
 
             // RegionType
@@ -853,8 +829,6 @@ namespace OpenSim.Framework
 
             m_agentCapacity = config.GetInt("MaxAgents", 100);
             allKeys.Remove("MaxAgents");
-
-            m_CheckDynDns = config.GetBoolean("CheckForIPChanges", false);
 
             // Multi-tenancy
             //
