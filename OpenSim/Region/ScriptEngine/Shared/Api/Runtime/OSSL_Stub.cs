@@ -404,10 +404,12 @@ namespace OpenSim.Region.ScriptEngine.Shared.ScriptBase
             return m_OSSL_Functions.osGetDrawStringSize(contentType, text, fontName, fontSize);
         }
 
+        /*
         public void osSetStateEvents(int events)
         {
             m_OSSL_Functions.osSetStateEvents(events);
         }
+         */
 
         public string osGetScriptEngineName()
         {

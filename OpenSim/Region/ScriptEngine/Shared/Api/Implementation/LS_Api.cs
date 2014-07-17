@@ -441,13 +441,8 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
             if (!World.RegionInfo.EstateSettings.IsEstateManagerOrOwner(m_host.OwnerID))
             {
-                ScenePresence sp = World.GetScenePresence(m_host.OwnerID);
-
-                if (sp == null || sp.GodLevel < 200)
-                {
-                    LSShoutError("lsSetWindlightScene can only be used by estate managers or owners.");
-                    return 0;
-                }
+                LSShoutError("lsSetWindlightScene can only be used by estate managers or owners.");
+                return 0;
             }
 
             int success = 0;
@@ -479,13 +474,8 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
             if (!World.RegionInfo.EstateSettings.IsEstateManagerOrOwner(m_host.OwnerID))
             {
-                ScenePresence sp = World.GetScenePresence(m_host.OwnerID);
-
-                if (sp == null || sp.GodLevel < 200)
-                {
-                    LSShoutError("lsSetWindlightScene can only be used by estate managers or owners.");
-                    return;
-                }
+                LSShoutError("lsSetWindlightScene can only be used by estate managers or owners.");
+                return;
             }
 
             m_host.ParentGroup.Scene.RegionInfo.WindlightSettings.valid = false;
@@ -510,13 +500,8 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
             if (!World.RegionInfo.EstateSettings.IsEstateManagerOrOwner(m_host.OwnerID))
             {
-                ScenePresence sp = World.GetScenePresence(m_host.OwnerID);
-
-                if (sp == null || sp.GodLevel < 200)
-                {
-                    LSShoutError("lsSetWindlightSceneTargeted can only be used by estate managers or owners.");
-                    return 0;
-                }
+                LSShoutError("lsSetWindlightSceneTargeted can only be used by estate managers or owners.");
+                return 0;
             }
 
             int success = 0;
