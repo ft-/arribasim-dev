@@ -2900,7 +2900,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             EstateSettings estate = World.RegionInfo.EstateSettings;
             m_host.AddScriptLPS(1);
 
-            if (!estate.IsEstateOwner(m_host.OwnerID) || !estate.IsEstateManagerOrOwner(m_host.OwnerID))
+            if (!estate.IsEstateManagerOrOwner(m_host.OwnerID))
             {
                 OSSLShoutError("You are not Estate Owner or Estate Manager");
                 return;
