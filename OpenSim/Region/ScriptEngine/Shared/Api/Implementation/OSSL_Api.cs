@@ -2014,7 +2014,6 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         /// <returns></returns>
         public string osGetGridNick()
         {
-            CheckThreatLevel(ThreatLevel.Moderate, "osGetGridNick");
             m_host.AddScriptLPS(1);
 
             string nick = String.Empty;
@@ -2031,7 +2030,6 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
         public string osGetGridName()
         {
-            CheckThreatLevel(ThreatLevel.Moderate, "osGetGridName");
             m_host.AddScriptLPS(1);
 
             string name = String.Empty;
@@ -2048,7 +2046,6 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
         public string osGetGridLoginURI()
         {
-            CheckThreatLevel(ThreatLevel.Moderate, "osGetGridLoginURI");
             m_host.AddScriptLPS(1);
 
             string loginURI = String.Empty;
@@ -2065,7 +2062,6 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
         public string osGetGridHomeURI()
         {
-            CheckThreatLevel(ThreatLevel.Moderate, "osGetGridHomeURI");
             m_host.AddScriptLPS(1);
 
             IConfigSource config = m_ScriptEngine.ConfigSource;
@@ -2087,7 +2083,6 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
         public string osGetGridGatekeeperURI()
         {
-            CheckThreatLevel(ThreatLevel.Moderate, "osGetGridGatekeeperURI");
             m_host.AddScriptLPS(1);
 
             IConfigSource config = m_ScriptEngine.ConfigSource;
