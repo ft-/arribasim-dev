@@ -791,34 +791,20 @@ namespace OpenSim.Region.Framework.Scenes
             {
 //                m_log.DebugFormat("[PRIM INVENTORY]: Updating item {0} in {1}", item.Name, m_part.Name);
                 
-                it.ParentID = m_part.UUID;
-                it.ParentPartID = m_part.UUID;
+                item.ParentID = m_part.UUID;
+                item.ParentPartID = m_part.UUID;
 
                 // If group permissions have been set on, check that the groupID is up to date in case it has
                 // changed since permissions were last set.
-                it.GroupPermissions = item.GroupPermissions;
-                if (it.GroupPermissions != (uint)PermissionMask.None)
-                    it.GroupID = m_part.GroupID;
+                if (item.GroupPermissions != (uint)PermissionMask.None)
+                    item.GroupID = m_part.GroupID;
 
-                if (item.AssetID != UUID.Zero)
-                    it.AssetID = item.AssetID;
-
-                it.CreatorID = item.CreatorID;
-                it.OwnerID = item.OwnerID;
-                it.GroupID = item.GroupID;
-                it.BasePermissions = item.BasePermissions;
-                it.CurrentPermissions = item.CurrentPermissions;
-                it.EveryonePermissions = item.EveryonePermissions;
-                it.NextPermissions = item.NextPermissions;
-                it.Type = item.Type;
-                it.InvType = item.InvType;
-                it.Flags = item.Flags;
-                it.Name = item.Name;
-                it.Description = item.Description;
-                it.CreationDate = item.CreationDate;
+                if (item.AssetID == UUID.Zero)
+                    item.AssetID = it.AssetID;
 
                 lock (m_items)
                 {
+                    m_items[item.ItemID] = item;
                     m_inventorySerial++;
                 }
                 
