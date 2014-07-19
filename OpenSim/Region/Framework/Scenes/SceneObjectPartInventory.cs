@@ -803,8 +803,6 @@ namespace OpenSim.Region.Framework.Scenes
                 if (item.AssetID != UUID.Zero)
                     it.AssetID = item.AssetID;
 
-                it.ItemID = item.ItemID;
-                it.ParentID = item.ParentID;
                 it.CreatorID = item.CreatorID;
                 it.OwnerID = item.OwnerID;
                 it.GroupID = item.GroupID;
