@@ -1851,7 +1851,7 @@ namespace OpenSim.Region.Framework.Scenes
             return RezNewScript(
                 agentID,
                 itemBase,
-                "default\n{\n    state_entry()\n    {\n        llSay(0, \"Script running\");\n    }\n}");
+                "default\n{\n    state_entry()\n    {\n        llSay(PUBLIC_CHANNEL, \"Hello, World!\");\n    }\n}");
         }
 
         /// <summary>
