@@ -89,7 +89,7 @@ namespace OpenSim.Region.CoreModules.World.Wind.Plugins
             {
                 // Uses strength value if avg_strength not specified
                 m_avgStrength = windConfig.GetFloat("strength", 5.0F);
-                m_avgStrength = windConfig.GetFloat("avg_strength", 5.0F);
+                m_avgStrength = windConfig.GetFloat("avg_strength", m_avgStrength);
 
                 m_avgDirection = windConfig.GetFloat("avg_direction", 0.0F);
                 m_varStrength  = windConfig.GetFloat("var_strength", 5.0F);
