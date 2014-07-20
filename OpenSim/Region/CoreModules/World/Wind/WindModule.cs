@@ -429,17 +429,6 @@ namespace OpenSim.Region.CoreModules
         {
             if (m_ready)
             {
-                if (m_activeWindPlugin != null)
-                {
-                    // Ask wind plugin to generate a LL wind array to be cached locally
-                    // Try not to update this too often, as it may involve array copies
-                    if (m_frame >= (m_frameLastUpdateClientArray + m_frameUpdateRate))
-                    {
-                        windSpeeds = m_activeWindPlugin.WindLLClientArray();
-                        m_frameLastUpdateClientArray = m_frame;
-                    }
-                }
-
                 avatar.ControllingClient.SendWindData(windSpeeds);
             }
         }
