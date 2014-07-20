@@ -156,6 +156,8 @@ namespace OpenSim.Modules.Currency
 		// Constant memebers   
 		private const int MONEYMODULE_REQUEST_TIMEOUT = 10000;
 
+        private bool m_DTLNSLEnabled = false;
+
 		// Private data members.   
 		private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
@@ -275,7 +277,7 @@ namespace OpenSim.Modules.Currency
 				TeleportMinPrice 		= economyConfig.GetInt	("TeleportMinPrice", 		2);
 				TeleportPriceExponent 	= economyConfig.GetFloat("TeleportPriceExponent", 	2f);
 				EnergyEfficiency 		= economyConfig.GetFloat("EnergyEfficiency", 		1);
-
+                m_DTLNSLEnabled = true;
 			}
 			catch
 			{
@@ -290,6 +292,11 @@ namespace OpenSim.Modules.Currency
 			//m_log.InfoFormat("[MONEY]: AddRegion:");
 
 			if (scene==null) return;
+
+            if (!m_DTLNSLEnabled)
+            {
+                return;
+            }
 
 			scene.RegisterModuleInterface<IMoneyModule>(this);	// 競合するモジュールの排除
 
