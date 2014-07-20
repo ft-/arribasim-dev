@@ -45,6 +45,7 @@ namespace OpenSim.Services.GridService
         private static readonly ILog m_log =
                 LogManager.GetLogger(
                 MethodBase.GetCurrentMethod().DeclaringType);
+        private string LogHeader = "[GRID SERVICE]";
 
         private bool m_DeleteOnUnregister = true;
         private static GridService m_RootInstance = null;
@@ -136,12 +137,19 @@ namespace OpenSim.Services.GridService
             if (regionInfos.RegionID == UUID.Zero)
                 return "Invalid RegionID - cannot be zero UUID";
 
-            RegionData region = m_Database.Get(regionInfos.RegionLocX, regionInfos.RegionLocY, scopeID);
-            if ((region != null) && (region.RegionID != regionInfos.RegionID))
+            String reason = "Region overlaps another region";
+            RegionData region = FindAnyConflictingRegion(regionInfos, scopeID, out reason);
+            // If there is a conflicting region, if it has the same ID and same coordinates
+            //    then it is a region re-registering (permissions and ownership checked later).
+            if ((region != null)
+                && ((region.coordX != regionInfos.RegionCoordX)
+                    || (region.coordY != regionInfos.RegionCoordY)
+                    || (region.RegionID != regionInfos.RegionID))
+                )
             {
-                m_log.WarnFormat("[GRID SERVICE]: Region {0} tried to register in coordinates {1}, {2} which are already in use in scope {3}.", 
-                    regionInfos.RegionID, regionInfos.RegionLocX, regionInfos.RegionLocY, scopeID);
-                return "Region overlaps another region";
+                // If not same ID and same coordinates, this new region has conflicts and can't be registered.
+                m_log.WarnFormat("{0} Register region conflict in scope {1}. {2}", LogHeader, scopeID, reason);
+                return reason;
             }
 
             if (region != null)
@@ -269,6 +277,108 @@ namespace OpenSim.Services.GridService
                 (OpenSim.Framework.RegionFlags)flags);
 
             return String.Empty;
+        }
+
+        /// <summary>
+        /// Search the region map for regions conflicting with this region.
+        /// The region to be added is passed and we look for any existing regions that are
+        /// in the requested location, that are large varregions that overlap this region, or
+        /// are previously defined regions that would lie under this new region.
+        /// </summary>
+        /// <param name="regionInfos">Information on region requested to be added to the world map</param>
+        /// <param name="scopeID">Grid id for region</param>
+        /// <param name="reason">The reason the returned region conflicts with passed region</param>
+        /// <returns></returns>
+        private RegionData FindAnyConflictingRegion(GridRegion regionInfos, UUID scopeID, out string reason)
+        {
+            reason = "Reregistration";
+            // First see if there is an existing region right where this region is trying to go
+            // (We keep this result so it can be returned if suppressing errors)
+            RegionData noErrorRegion = m_Database.Get(regionInfos.RegionLocX, regionInfos.RegionLocY, scopeID);
+            RegionData region = noErrorRegion;
+            if (region != null
+                && region.RegionID == regionInfos.RegionID
+                && region.sizeX == regionInfos.RegionSizeX
+                && region.sizeY == regionInfos.RegionSizeY)
+            {
+                // If this seems to be exactly the same region, return this as it could be
+                //     a re-registration (permissions checked by calling routine).
+                m_log.DebugFormat("{0} FindAnyConflictingRegion: re-register of {1}",
+                                        LogHeader, RegionString(regionInfos));
+                return region;
+            }
+
+            // No region exactly there or we're resizing an existing region.
+            // Fetch regions that could be varregions overlapping requested location.
+            int xmin = regionInfos.RegionLocX - (int)Constants.MaximumRegionSize + 10;
+            int xmax = regionInfos.RegionLocX;
+            int ymin = regionInfos.RegionLocY - (int)Constants.MaximumRegionSize + 10;
+            int ymax = regionInfos.RegionLocY;
+            List<RegionData> rdatas = m_Database.Get(xmin, ymin, xmax, ymax, scopeID);
+            foreach (RegionData rdata in rdatas)
+            {
+                // m_log.DebugFormat("{0} FindAnyConflictingRegion: find existing. Checking {1}", LogHeader, RegionString(rdata) );
+                if ((rdata.posX + rdata.sizeX > regionInfos.RegionLocX)
+                    && (rdata.posY + rdata.sizeY > regionInfos.RegionLocY))
+                {
+                    region = rdata;
+                    m_log.WarnFormat("{0} FindAnyConflictingRegion: conflict of {1} by existing varregion {2}",
+                                LogHeader, RegionString(regionInfos), RegionString(region));
+                    reason = String.Format("Region location is overlapped by existing varregion {0}",
+                                                RegionString(region));
+
+                    return region;
+                }
+            }
+
+            // There isn't a region that overlaps this potential region.
+            // See if this potential region overlaps an existing region.
+            // First, a shortcut of not looking for overlap if new region is legacy region sized
+            //     and connot overlap anything.
+            if (regionInfos.RegionSizeX != Constants.RegionSize
+                || regionInfos.RegionSizeY != Constants.RegionSize)
+            {
+                // trim range looked for so we don't pick up neighbor regions just off the edges
+                xmin = regionInfos.RegionLocX;
+                xmax = regionInfos.RegionLocX + regionInfos.RegionSizeX - 10;
+                ymin = regionInfos.RegionLocY;
+                ymax = regionInfos.RegionLocY + regionInfos.RegionSizeY - 10;
+                rdatas = m_Database.Get(xmin, ymin, xmax, ymax, scopeID);
+
+                // If the region is being resized, the found region could be ourself.
+                foreach (RegionData rdata in rdatas)
+                {
+                    // m_log.DebugFormat("{0} FindAnyConflictingRegion: see if overlap. Checking {1}", LogHeader, RegionString(rdata) );
+                    if (region == null || region.RegionID != regionInfos.RegionID)
+                    {
+                        region = rdata;
+                        m_log.WarnFormat("{0} FindAnyConflictingRegion: conflict of varregion {1} overlaps existing region {2}",
+                                LogHeader, RegionString(regionInfos), RegionString(region));
+                        reason = String.Format("Region {0} would overlap existing region {1}",
+                                        RegionString(regionInfos), RegionString(region));
+
+                        return region;
+                    }
+                }
+            }
+
+            // If we get here, region is either null (nothing found here) or
+            //     is the non-conflicting region found at the location being requested.
+            return region;
+        }
+
+        // String describing name and region location of passed region
+        private String RegionString(RegionData reg)
+        {
+            return String.Format("{0}/{1} at <{2},{3}>",
+                reg.RegionName, reg.RegionID, reg.coordX, reg.coordY);
+        }
+
+        // String describing name and region location of passed region
+        private String RegionString(GridRegion reg)
+        {
+            return String.Format("{0}/{1} at <{2},{3}>",
+                reg.RegionName, reg.RegionID, reg.RegionCoordX, reg.RegionCoordY);
         }
 
         public bool DeregisterRegion(UUID regionID)
