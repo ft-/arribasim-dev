@@ -39,8 +39,8 @@ namespace OpenSim.Region.CoreModules.World
     public class AccessModule : ISharedRegionModule
     {
 //        private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
-                
-        private List<Scene> m_SceneList = new List<Scene>();
+
+        private ThreadedClasses.RwLockedList<Scene> m_SceneList = new ThreadedClasses.RwLockedList<Scene>();
 
         public void Initialise(IConfigSource config)
         {
@@ -86,8 +86,7 @@ namespace OpenSim.Region.CoreModules.World
 
         public void AddRegion(Scene scene)
         {
-            if (!m_SceneList.Contains(scene))
-                m_SceneList.Add(scene);
+            m_SceneList.Add(scene);
         }
 
         public void RemoveRegion(Scene scene)
