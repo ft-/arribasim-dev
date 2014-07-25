@@ -1544,31 +1544,6 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             // Make sure the content type is text/plain to start with
             m_UrlModule.HttpContentType(new UUID(id), "text/plain");
 
-            // Is the object owner online and in the region
-            ScenePresence agent = World.GetScenePresence(m_host.ParentGroup.OwnerID);
-            if (agent == null || agent.IsChildAgent)
-                return;  // Fail if the owner is not in the same region
-
-            // Is it the embeded browser?
-            string userAgent = m_UrlModule.GetHttpHeader(new UUID(id), "user-agent");
-            if (userAgent.IndexOf("SecondLife") < 0)
-                return; // Not the embedded browser. Is this check good enough?
-
-            // Use the IP address of the client and check against the request
-            // seperate logins from the same IP will allow all of them to get non-text/plain as long
-            // as the owner is in the region. Same as SL!
-            string logonFromIPAddress = agent.ControllingClient.RemoteEndPoint.Address.ToString();
-            string requestFromIPAddress = m_UrlModule.GetHttpHeader(new UUID(id), "remote_addr");
-            //m_log.Debug("IP from header='" + requestFromIPAddress + "' IP from endpoint='" + logonFromIPAddress + "'");
-            if (requestFromIPAddress == null || requestFromIPAddress.Trim() == "")
-                return;
-            if (logonFromIPAddress == null || logonFromIPAddress.Trim() == "")
-                return;
-
-            // If the request isnt from the same IP address then the request cannot be from the owner
-            if (!requestFromIPAddress.Trim().Equals(logonFromIPAddress.Trim()))
-                return;
-
             switch (type)
             {
                 case ScriptBaseClass.CONTENT_TYPE_HTML:
