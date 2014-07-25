@@ -1541,9 +1541,6 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             if (m_UrlModule == null)
                 return;
 
-            // Make sure the content type is text/plain to start with
-            m_UrlModule.HttpContentType(new UUID(id), "text/plain");
-
             switch (type)
             {
                 case ScriptBaseClass.CONTENT_TYPE_HTML:
