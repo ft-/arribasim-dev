@@ -979,7 +979,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             else
             {
                 byte[] data = packet.ToBytes();
-                packetQueued = SendPacketData(udpClient, data, packet.Type, category, method);
+                packetQueued = !SendPacketData(udpClient, data, packet.Type, category, method);
             }
 
             PacketPool.Instance.ReturnPacket(packet);
