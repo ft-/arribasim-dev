@@ -508,10 +508,8 @@ namespace OpenSim.Framework
 //            m_log.DebugFormat(
 //                "[AVATAR APPEARNCE]: Appending itemID={0}, assetID={1} at {2}",
 //                attach.ItemID, attach.AssetID, attach.AttachPoint);
-            if (m_attachments[attach.AttachPoint].Find(delegate(AvatarAttachment a) { return a.ItemID == attach.ItemID;  }) == null)
-            {
-                m_attachments[attach.AttachPoint].Add(attach);
-            }
+
+            m_attachments[attach.AttachPoint].Add(attach);
         }
 
         internal void ReplaceAttachment(AvatarAttachment attach)
