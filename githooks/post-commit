@@ -1,0 +1,4 @@
+#!/bin/sh
+
+git log -1 "--pretty=format:(Codename: That is Not True) %ai / %H" >OpenSim/Framework/Servers/versioninfo.txt
+git log -1 "--pretty=format:OpenSim Arriba (Codename: That is Not True) %ai / %H" >bin/.version
