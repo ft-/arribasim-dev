@@ -940,3 +940,16 @@ ALTER TABLE prims ADD COLUMN AttachedPosZ double default 0;
 ALTER TABLE primshapes ADD COLUMN LastAttachPoint int(4) not null default '0';
 COMMIT;
 
+:VERSION 50         # UTF-8 corrections
+BEGIN;
+ALTER TABLE prims DEFAULT CHARSET=utf8;
+ALTER TABLE primitems DEFAULT CHARSET=utf8;
+ALTER TABLE prims CHANGE COLUMN Name Name VARCHAR(255) NULL,
+                      CHANGE COLUMN Text Text VARCHAR(255) NULL DEFAULT NULL,
+                      CHANGE COLUMN SitName SitName VARCHAR(255) NULL DEFAULT NULL,
+                      CHANGE COLUMN TouchName TouchName VARCHAR(255) NULL DEFAULT NULL,
+                      CHANGE COLUMN MediaURL MediaURL VARCHAR(255) NULL,
+                      CHANGE COLUMN DynAttrs DynAttrs TEXT NULL;
+ALTER TABLE primitems CHANGE COLUMN name name VARCHAR(255) NULL,
+                      CHANGE COLUMN description description VARCHAR(255) NULL;
+COMMIT;
