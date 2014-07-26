@@ -374,6 +374,7 @@
         <Match pattern="*.cs" recurse="false">
         </Match>
 	<Match pattern="Properties/*.cs" recurse="false"/>
+        <Match buildAction="EmbeddedResource" pattern="versioninfo.txt" recurse="false"/>
       </Files>
     </Project>
 

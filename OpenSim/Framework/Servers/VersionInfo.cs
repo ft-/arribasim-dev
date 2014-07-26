@@ -25,6 +25,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using System.Reflection;
+using System.IO;
+using System;
+
 namespace OpenSim
 {
     public class VersionInfo
@@ -51,6 +55,26 @@ namespace OpenSim
         public static string GetVersionString(string versionNumber, Flavour flavour)
         {
             string versionString = "OpenSim Arriba " + versionNumber + " " + flavour;
+            if (flavour == Flavour.Dev)
+            {
+                try
+                {
+                    string[] manifests = typeof(VersionInfo).Assembly.GetManifestResourceNames();
+
+                    using (Stream resource = typeof(VersionInfo).Assembly.GetManifestResourceStream("OpenSim.Framework.Servers.versioninfo.txt"))
+                    {
+                        using (TextReader tr = new StreamReader(resource))
+                        {
+                            string versioninfo = tr.ReadLine().Trim();
+                            versionString = "OpenSim Arriba " + versioninfo + " " + flavour;
+                        }
+                    }
+                }
+                catch
+                {
+
+                }
+            }
             return versionString.PadRight(VERSIONINFO_VERSION_LENGTH);
         }
 
