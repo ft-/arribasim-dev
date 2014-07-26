@@ -508,8 +508,14 @@ namespace OpenSim.Framework
 //            m_log.DebugFormat(
 //                "[AVATAR APPEARNCE]: Appending itemID={0}, assetID={1} at {2}",
 //                attach.ItemID, attach.AssetID, attach.AttachPoint);
+            try
+            {
+                m_attachments[attach.AttachPoint].AddIfNotExists(attach);
+            }
+            catch (ThreadedClasses.RwLockedList<AvatarAttachment>.ValueAlreadyExistsException)
+            {
 
-            m_attachments[attach.AttachPoint].Add(attach);
+            }
         }
 
         internal void ReplaceAttachment(AvatarAttachment attach)
