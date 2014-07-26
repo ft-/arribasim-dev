@@ -59,8 +59,6 @@ namespace OpenSim
             {
                 try
                 {
-                    string[] manifests = typeof(VersionInfo).Assembly.GetManifestResourceNames();
-
                     using (Stream resource = typeof(VersionInfo).Assembly.GetManifestResourceStream("OpenSim.Framework.Servers.versioninfo.txt"))
                     {
                         using (TextReader tr = new StreamReader(resource))
