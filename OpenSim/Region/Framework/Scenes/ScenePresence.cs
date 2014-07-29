@@ -188,7 +188,7 @@ namespace OpenSim.Region.Framework.Scenes
         public bool Flying
         {
             get { return PhysicsActor != null && PhysicsActor.Flying; }
-            set { PhysicsActor.Flying = value; }
+            set { if(PhysicsActor != null) PhysicsActor.Flying = value; }
         }
 
         // add for fly velocity control
