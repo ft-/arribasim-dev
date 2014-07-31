@@ -28,6 +28,14 @@ AllowAlternatePorts = False
 ExternalHostName = "SYSTEMIP"
 
 ; *
+; * Variable-sized regions allows the creation of large, borderless spaces.
+; * The default is 256 meters. For larger spaces, set these to multiples of 256.
+; * For the time being, X and Y need to be the same.
+; *
+; SizeX = 512
+; SizeY = 512
+
+; *
 ; * IP Changes Detector
 ; * It will recheck the ExternalHostName for changes of external IP address if enabled.
 ; *
