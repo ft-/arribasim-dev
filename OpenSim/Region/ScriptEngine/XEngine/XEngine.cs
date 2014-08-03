@@ -1251,7 +1251,7 @@ namespace OpenSim.Region.ScriptEngine.XEngine
                 localList.Remove(itemID);
 
                 // If there are no more scripts, remove prim
-                m_PrimObjects.RemoveIf(localID, delegate(ThreadedClasses.RwLockedList<UUID> l) { return l.Count != 0; });
+                m_PrimObjects.RemoveIf(localID, delegate(ThreadedClasses.RwLockedList<UUID> l) { return l.Count == 0; });
             }
 
             instance.RemoveState();
@@ -1405,14 +1405,7 @@ namespace OpenSim.Region.ScriptEngine.XEngine
             foreach (UUID itemID in uuids)
             {
                 IScriptInstance instance = null;
-                try
-                {
-                    if (m_Scripts.ContainsKey(itemID))
-                        instance = m_Scripts[itemID];
-                }
-                catch { /* ignore race conditions */ }
-    
-                if (instance != null)
+                if(m_Scripts.TryGetValue(itemID, out instance))
                 {
                     instance.PostEvent(p);
                     result = true;
