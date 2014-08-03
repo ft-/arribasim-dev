@@ -6228,8 +6228,8 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         public virtual LSL_Integer llGetFreeMemory()
         {
             m_host.AddScriptLPS(1);
-            // Make scripts designed for LSO happy
-            return 16384;
+            // Make scripts designed for Mono happy
+            return 65536;
         }
 
         public LSL_Integer llGetFreeURLs()
@@ -12210,15 +12210,15 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         public LSL_Integer llGetSPMaxMemory()
         {
             m_host.AddScriptLPS(1);
-            // The value returned for LSO scripts in SL
-            return 16384;
+            // The value returned for Mono scripts in SL
+            return 65536;
         }
 
         public virtual LSL_Integer llGetUsedMemory()
         {
             m_host.AddScriptLPS(1);
-            // The value returned for LSO scripts in SL
-            return 16384;
+            // The value returned for Mono scripts in SL
+            return 65536;
         }
 
         public void llScriptProfiler(LSL_Integer flags)
