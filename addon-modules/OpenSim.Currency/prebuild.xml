@@ -16,8 +16,8 @@
    <Reference name="System.Xml"/>
    <Reference name="System.Drawing"/>
    <Reference name="System.Runtime.Remoting"/>
-   <Reference name="OpenMetaverseTypes"/>
-   <Reference name="OpenMetaverse"/>
+   <Reference name="OpenMetaverseTypes" path="../../bin/"/>
+   <Reference name="OpenMetaverse" path="../../bin/"/>
    <Reference name="OpenSim.Framework"/>
    <Reference name="OpenSim.Data"/>
    <Reference name="OpenSim.Region.Framework"/>
