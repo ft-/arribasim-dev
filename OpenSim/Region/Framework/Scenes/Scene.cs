@@ -3828,7 +3828,10 @@ namespace OpenSim.Region.Framework.Scenes
 
             ILandObject land = LandChannel.GetLandObject(posX, posY);
             if (land == null)
+            {
+                reason = "No parcel found at location";
                 return false;
+            }
 
             bool banned = land.IsBannedFromLand(agentID);
             bool restricted = land.IsRestrictedFromLand(agentID);
@@ -5625,7 +5628,9 @@ namespace OpenSim.Region.Framework.Scenes
                 bool restricted = land.IsRestrictedFromLand(agentID);
 
                 if (banned || restricted)
+                {
                     return false;
+                }
             }
 
             reason = String.Empty;
