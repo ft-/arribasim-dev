@@ -965,6 +965,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
             AsyncCommandManager.UnregisterScriptFacilities(Engine, LocalID, ItemID, true);
             EventQueue.Clear();
             m_Script.ResetVars();
+            StartParam = 0;
             State = "default";
 
             Part.SetScriptEvents(ItemID,
@@ -991,6 +992,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
             EventQueue.Clear();
             m_Script.ResetVars();
             string oldState = State;
+            StartParam = 0;
             State = "default";
 
             Part.SetScriptEvents(ItemID,
