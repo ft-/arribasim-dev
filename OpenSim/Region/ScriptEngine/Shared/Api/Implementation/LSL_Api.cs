@@ -5544,7 +5544,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             m_host.AddScriptLPS(1);
             if(name == "dynamic_pathfinding")
             {
-                return "0";
+                return "disabled";
             }
             else if (name == "estate_id")
             {
