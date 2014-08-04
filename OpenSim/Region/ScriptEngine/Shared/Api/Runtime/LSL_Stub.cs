@@ -163,6 +163,11 @@ namespace OpenSim.Region.ScriptEngine.Shared.ScriptBase
             return m_LSL_Functions.llCeil(f);
         }
 
+        public LSL_String llGetEnv(LSL_String name)
+        {
+            return m_LSL_Functions.llGetEnv(name);
+        }
+
         public void llClearCameraParams()
         {
             m_LSL_Functions.llClearCameraParams();
