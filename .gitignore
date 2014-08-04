@@ -105,3 +105,4 @@ doc/html
 doc/doxygen.error.log
 *.log
 /OpenSim/Framework/Servers/versioninfo.txt
+/*.tmp
