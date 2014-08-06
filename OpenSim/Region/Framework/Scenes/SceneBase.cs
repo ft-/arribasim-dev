@@ -231,7 +231,11 @@ namespace OpenSim.Region.Framework.Scenes
         /// <param name="RemoteClient">Client to send to</param>
         public virtual void SendLayerData(IClientAPI RemoteClient)
         {
-            RemoteClient.SendLayerData(Heightmap.GetFloatsSerialised());
+            ITerrainModule terrModule = RequestModuleInterface<ITerrainModule>();
+            if (terrModule != null)
+            {
+                terrModule.PushTerrain(RemoteClient);
+            }
         }
 
         #endregion

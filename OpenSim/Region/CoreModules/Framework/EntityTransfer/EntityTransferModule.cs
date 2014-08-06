@@ -1071,7 +1071,7 @@ namespace OpenSim.Region.CoreModules.Framework.EntityTransfer
 
             // Finally, let's close this previously-known-as-root agent, when the jump is outside the view zone
 
-            if (NeedsClosing(sp.DrawDistance, oldRegionX, newRegionX, oldRegionY, newRegionY, reg))
+            if (NeedsClosing(sp.Scene.DefaultDrawDistance, oldRegionX, newRegionX, oldRegionY, newRegionY, reg))
             {
                 if (!sp.Scene.IncomingPreCloseClient(sp))
                     return;
@@ -1239,7 +1239,7 @@ namespace OpenSim.Region.CoreModules.Framework.EntityTransfer
             sp.MakeChildAgent();
 
             // Finally, let's close this previously-known-as-root agent, when the jump is outside the view zone
-            if (NeedsClosing(sp.DrawDistance, oldRegionX, newRegionX, oldRegionY, newRegionY, reg))
+            if (NeedsClosing(sp.Scene.DefaultDrawDistance, oldRegionX, newRegionX, oldRegionY, newRegionY, reg))
             {
                 if (!sp.Scene.IncomingPreCloseClient(sp))
                     return;
@@ -2370,7 +2370,7 @@ namespace OpenSim.Region.CoreModules.Framework.EntityTransfer
             {
                 // The area to check is as big as the current region.
                 // We presume all adjacent regions are the same size as this region.
-                uint dd = Math.Max((uint)avatar.DrawDistance, 
+                uint dd = Math.Max((uint)avatar.Scene.DefaultDrawDistance, 
                                 Math.Max(Scene.RegionInfo.RegionSizeX, Scene.RegionInfo.RegionSizeY));
 
                 uint startX = Util.RegionToWorldLoc(pRegionLocX) - dd + Constants.RegionSize/2;
