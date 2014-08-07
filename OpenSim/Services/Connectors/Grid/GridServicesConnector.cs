@@ -212,7 +212,12 @@ namespace OpenSim.Services.Connectors
                     if (r is Dictionary<string, object>)
                     {
                         GridRegion rinfo = new GridRegion((Dictionary<string, object>)r);
-                        rinfos.Add(rinfo);
+                        if (Uri.IsWellFormedUriString(rinfo.ServerURI, UriKind.Absolute) && 
+                            rinfo.ExternalEndPoint.Port != 0 &&
+                            rinfo.HttpPort != 0)
+                        {
+                            rinfos.Add(rinfo);
+                        }
                     }
                 }
             }
