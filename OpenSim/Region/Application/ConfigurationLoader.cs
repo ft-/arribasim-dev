@@ -336,9 +336,11 @@ namespace OpenSim
                 // Try to read it
                 try
                 {
-                    XmlReader r = XmlReader.Create(iniPath);
-                    XmlConfigSource cs = new XmlConfigSource(r);
-                    configSource.Source.Merge(cs);
+                    using (XmlReader r = XmlReader.Create(iniPath))
+                    {
+                        XmlConfigSource cs = new XmlConfigSource(r);
+                        configSource.Source.Merge(cs);
+                    }
 
                     success = true;
                 }
