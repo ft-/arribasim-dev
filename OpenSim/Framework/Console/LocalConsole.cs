@@ -354,7 +354,14 @@ namespace OpenSim.Framework.Console
                     else
                     {
 
-                        m_cursorYPosition = SetCursorTop(m_cursorYPosition);
+                        try
+                        {
+                            m_cursorYPosition = SetCursorTop(m_cursorYPosition);
+                        }
+                        catch
+                        {
+
+                        }
                         SetCursorLeft(0);
 
                         int count = m_commandLine.Length + prompt.Length;
@@ -368,7 +375,14 @@ namespace OpenSim.Framework.Console
                             System.Console.Write(d);
                         }
 
-                        m_cursorYPosition = SetCursorTop(m_cursorYPosition);
+                        try
+                        {
+                            m_cursorYPosition = SetCursorTop(m_cursorYPosition);
+                        }
+                        catch
+                        {
+
+                        }
                         SetCursorLeft(0);
 
                         WriteLocalText(output.Key, output.Value);
