@@ -574,7 +574,11 @@ namespace OpenSim
                 SceneManager.TrySetCurrentScene("..");
             }
 
-            scene.DeleteAllSceneObjects();
+            if (cleanup)
+            {
+                // only allow the console comand delete-region to remove objects from DB
+                scene.DeleteAllSceneObjects();
+            }
             SceneManager.CloseScene(scene);
             ShutdownClientServer(scene.RegionInfo);
             
