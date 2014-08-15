@@ -98,6 +98,7 @@ namespace OpenSim.Region.CoreModules.World.Permissions
         private bool m_RegionOwnerIsGod = false;
         private bool m_RegionManagerIsGod = false;
         private bool m_ParcelOwnerIsGod = false;
+        private List<string> AgentListIsGod = new List<string>();
 
         private bool m_SimpleBuildPermissions = false;
 
@@ -244,6 +245,17 @@ namespace OpenSim.Region.CoreModules.World.Permissions
                 {
                     string uuid = uuidl.Trim(" \t".ToCharArray());
                     GrantYP.Add(uuid, true);
+                }
+            }
+
+            grant = Util.GetConfigVarFromSections<string>(config, "agent_list_is_god",
+                 new string[] { "Startup", "Permissions" }, string.Empty);
+            if (grant.Length > 0)
+            {
+                foreach (string uuidl in grant.Split(','))
+                {
+                    string uuid = uuidl.Trim();
+                    AgentListIsGod.Add(uuid);
                 }
             }
         }
@@ -518,6 +530,9 @@ namespace OpenSim.Region.CoreModules.World.Permissions
                 return true;
             
             if (IsEstateManager(user) && m_RegionManagerIsGod)
+                return true;
+
+            if (AgentListIsGod.Contains(user.ToString()))
                 return true;
 
             if (IsGridGod(user, null))
