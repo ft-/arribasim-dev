@@ -336,6 +336,12 @@ namespace OpenSim.Region.Framework.Scenes
         private object m_originRegionIDAccessLock = new object();
 
         /// <summary>
+        /// Triggered on entity transfer after to allow CompleteMovement() to proceed after we have received an
+        /// UpdateAgent from the originating region.ddkjjkj
+        /// </summary>
+        private AutoResetEvent m_updateAgentReceivedAfterTransferEvent = new AutoResetEvent(false);
+
+        /// <summary>
         /// Used by the entity transfer module to signal when the presence should not be closed because a subsequent
         /// teleport is reusing the connection.
         /// </summary>
@@ -1672,20 +1678,12 @@ namespace OpenSim.Region.Framework.Scenes
             // (which triggers Scene.IncomingUpdateChildAgent(AgentData cAgentData) here in the destination, 
             // m_originRegionID is UUID.Zero; after, it's non-Zero.  The CompleteMovement sequence initiated from the
             // viewer (in turn triggered by the source region sending it a TeleportFinish event) waits until it's non-zero
-            int count = 50;
+            m_updateAgentReceivedAfterTransferEvent.WaitOne(10000);
+
             UUID originID;
 
             lock (m_originRegionIDAccessLock)
                 originID = m_originRegionID;
-
-            while (originID.Equals(UUID.Zero) && count-- > 0)
-            {
-                lock (m_originRegionIDAccessLock)
-                    originID = m_originRegionID;
-
-                m_log.DebugFormat("[SCENE PRESENCE]: Agent {0} waiting for update in {1}", client.Name, Scene.Name);
-                Thread.Sleep(200);
-            }
 
             if (originID.Equals(UUID.Zero))
             {
@@ -1774,12 +1772,7 @@ namespace OpenSim.Region.Framework.Scenes
                     "[SCENE PRESENCE]: Releasing {0} {1} with callback to {2}",
                     client.Name, client.AgentId, m_callbackURI);
 
-                UUID originID;
-
-                lock (m_originRegionIDAccessLock)
-                    originID = m_originRegionID;
-
-                Scene.SimulationService.ReleaseAgent(originID, UUID, m_callbackURI);
+                Scene.SimulationService.ReleaseAgent(m_originRegionID, UUID, m_callbackURI);
                 m_callbackURI = null;
             }
 //            else
@@ -3790,6 +3783,8 @@ namespace OpenSim.Region.Framework.Scenes
                 return;
 
             CopyFrom(cAgentData);
+
+            m_updateAgentReceivedAfterTransferEvent.Set();
         }
 
         private static Vector3 marker = new Vector3(-1f, -1f, -1f);
