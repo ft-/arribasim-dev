@@ -297,46 +297,55 @@ namespace OpenSim.Framework
         public float NonphysPrimMin
         {
             get { return m_nonphysPrimMin; }
+            set { m_nonphysPrimMin = value; }
         }
 
         public int NonphysPrimMax
         {
             get { return m_nonphysPrimMax; }
+            set { m_nonphysPrimMax = value; }
         }
 
         public float PhysPrimMin
         {
             get { return m_physPrimMin; }
+            set { m_physPrimMin = value; }
         }
 
         public int PhysPrimMax
         {
             get { return m_physPrimMax; }
+            set { m_physPrimMax = value; }
         }
 
         public bool ClampPrimSize
         {
             get { return m_clampPrimSize; }
+            set { m_clampPrimSize = value; }
         }
 
         public int ObjectCapacity
         {
             get { return m_objectCapacity; }
+            set { m_objectCapacity = value; }
         }
 
         public int MaxPrimsPerUser
         {
             get { return m_maxPrimsPerUser; }
+            set { m_maxPrimsPerUser = value; }
         }
 
         public int LinksetCapacity
         {
             get { return m_linksetCapacity; }
+            set { m_linksetCapacity = value; }
         }
 
         public int AgentCapacity
         {
             get { return m_agentCapacity; }
+            set { m_agentCapacity = value; }
         }
 
         public byte AccessLevel
@@ -347,6 +356,7 @@ namespace OpenSim.Framework
         public string RegionType
         {
             get { return m_regionType; }
+            set { m_regionType = value; }
         }
 
         public UUID MaptileStaticUUID
