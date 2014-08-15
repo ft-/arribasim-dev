@@ -59,6 +59,7 @@ namespace OpenSim.Region.CoreModules.World.Estate
         /// If false, region restart requests from the client are blocked even if they are otherwise legitimate.
         /// </summary>
         public bool AllowRegionRestartFromClient { get; set; }
+        public bool SilentRegionRestart { get; set; }
 
         private EstateTerrainXferHandler TerrainUploader;
         public TelehubManager m_Telehub;
@@ -76,11 +77,15 @@ namespace OpenSim.Region.CoreModules.World.Estate
         public void Initialise(IConfigSource source) 
         {
             AllowRegionRestartFromClient = true;
+            SilentRegionRestart = false;
 
             IConfig config = source.Configs["EstateManagement"];
 
             if (config != null)
+            {
                 AllowRegionRestartFromClient = config.GetBoolean("AllowRegionRestartFromClient", true);
+                SilentRegionRestart = config.GetBoolean("SilentRegionRestart", false);
+            }
         }
         
         public void AddRegion(Scene scene)
@@ -574,7 +579,10 @@ namespace OpenSim.Region.CoreModules.World.Estate
         {
             if (!AllowRegionRestartFromClient)
             {
-                remoteClient.SendAlertMessage("Region restart has been disabled on this simulator.");
+                if (!SilentRegionRestart)
+                {
+                    remoteClient.SendAlertMessage("Region restart has been disabled on this simulator.");
+                }
                 return;
             }
 
