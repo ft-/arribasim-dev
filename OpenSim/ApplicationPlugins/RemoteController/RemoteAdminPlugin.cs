@@ -507,9 +507,9 @@ namespace OpenSim.ApplicationPlugins.RemoteController
             Hashtable responseData = (Hashtable)response.Value;
             Hashtable requestData = (Hashtable)request.Params[0];
 
-            int  m_regionLimit = m_config.GetInt("region_limit", 0);
-            bool m_enableVoiceForNewRegions = m_config.GetBoolean("create_region_enable_voice", false);
-            bool m_publicAccess = m_config.GetBoolean("create_region_public", true);
+            int  regionLimit = m_config.GetInt("region_limit", 0);
+            bool enableVoiceForNewRegions = m_config.GetBoolean("create_region_enable_voice", false);
+            bool publicAccess = m_config.GetBoolean("create_region_public", true);
 
             CheckStringParameters(requestData, responseData, new string[]
                                                 {
@@ -520,9 +520,9 @@ namespace OpenSim.ApplicationPlugins.RemoteController
             CheckIntegerParams(requestData, responseData, new string[] {"region_x", "region_y", "listen_port"});
 
             // check whether we still have space left (iff we are using limits)
-            if (m_regionLimit != 0 && m_application.SceneManager.Scenes.Count >= m_regionLimit)
+            if (regionLimit != 0 && m_application.SceneManager.Scenes.Count >= regionLimit)
                 throw new Exception(String.Format("cannot instantiate new region, server capacity {0} already reached; delete regions first",
-                                                    m_regionLimit));
+                                                    regionLimit));
             // extract or generate region ID now
             Scene scene = null;
             UUID regionID = UUID.Zero;
@@ -749,13 +749,13 @@ namespace OpenSim.ApplicationPlugins.RemoteController
 
             // If an access specification was provided, use it.
             // Otherwise accept the default.
-            newScene.RegionInfo.EstateSettings.PublicAccess = GetBoolean(requestData, "public", m_publicAccess);
+            newScene.RegionInfo.EstateSettings.PublicAccess = GetBoolean(requestData, "public", publicAccess);
             newScene.RegionInfo.EstateSettings.Save();
 
             // enable voice on newly created region if
             // requested by either the XmlRpc request or the
             // configuration
-            if (GetBoolean(requestData, "enable_voice", m_enableVoiceForNewRegions))
+            if (GetBoolean(requestData, "enable_voice", enableVoiceForNewRegions))
             {
                 List<ILandObject> parcels = ((Scene)newScene).LandChannel.AllParcels();
 
@@ -846,12 +846,6 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                                                    });
             CheckIntegerParams(requestData, responseData, new string[] { "region_x", "region_y", "listen_port" });
 
-            // check whether we still have space left (iff we are using limits)
-            if (m_regionLimit != 0 && m_application.SceneManager.Scenes.Count >= m_regionLimit)
-                throw new Exception(String.Format("cannot instantiate new region, server capacity {0} already reached; delete regions first",
-                                                    m_regionLimit));
-
-            Scene scene = null;
             UUID regionID = UUID.Zero;
             if (requestData.ContainsKey("region_id") &&
                 !String.IsNullOrEmpty((string)requestData["region_id"]))
@@ -2213,6 +2207,35 @@ namespace OpenSim.ApplicationPlugins.RemoteController
 
                 if (!float.TryParse(rawVal, out val))
                     throw new Exception(string.Format("{0} {1} is not a valid float", paramName, rawVal));
+                else
+                    return val;
+            }
+            else
+            {
+                return defaultVal;
+            }
+        }
+
+        /// <summary>
+        /// Parse a float with the given parameter name from a request data hash table.
+        /// </summary>
+        /// <remarks>
+        /// Will throw an exception if parameter is not a float.
+        /// Will not throw if parameter is not found, passes back default value instead.
+        /// </remarks>
+        /// <param name="requestData"></param>
+        /// <param name="paramName"></param>
+        /// <param name="defaultVal"></param>
+        /// <returns></returns>
+        private static int ParseInteger(Hashtable requestData, string paramName, int defaultVal)
+        {
+            if (requestData.Contains(paramName))
+            {
+                string rawVal = (string)requestData[paramName];
+                int val;
+
+                if (!int.TryParse(rawVal, out val))
+                    throw new Exception(string.Format("{0} {1} is not a valid int", paramName, rawVal));
                 else
                     return val;
             }
