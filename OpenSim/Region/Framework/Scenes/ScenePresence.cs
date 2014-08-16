@@ -279,6 +279,11 @@ namespace OpenSim.Region.Framework.Scenes
         }
 
         /// <summary>
+        /// Set if initial data about the scene (avatars, objects) has been sent to the ControllingClient.
+        /// </summary>
+        public bool SentInitialDataToClient { get; private set; }
+
+        /// <summary>
         /// Copy of the script states while the agent is in transit. This state may
         /// need to be placed back in case of transfer fail.
         /// </summary>
@@ -1754,7 +1759,7 @@ namespace OpenSim.Region.Framework.Scenes
             ControllingClient.MoveAgentIntoRegion(m_scene.RegionInfo, AbsolutePosition, look);
 
             // Remember in HandleUseCircuitCode, we delayed this to here
-            if (m_teleportFlags > 0)
+            if (!SentInitialDataToClient)
                 SendInitialDataToMe();
 
 //            m_log.DebugFormat("[SCENE PRESENCE] Completed movement");
@@ -3292,6 +3297,8 @@ namespace OpenSim.Region.Framework.Scenes
 
         public void SendInitialDataToMe()
         {
+            SentInitialDataToClient = true;
+
             // Send all scene object to the new client
             Util.RunThreadNoTimeout(delegate
             {
