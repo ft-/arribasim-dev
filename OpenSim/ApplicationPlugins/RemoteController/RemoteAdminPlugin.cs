@@ -121,6 +121,7 @@ namespace OpenSim.ApplicationPlugins.RemoteController
 
                     Dictionary<string, XmlRpcMethod> availableMethods = new Dictionary<string, XmlRpcMethod>();
                     availableMethods["admin_create_region"] = (req, ep) => InvokeXmlRpcMethod(req, ep, XmlRpcCreateRegionMethod);
+                    availableMethods["admin_load_region"] = (req, ep) => InvokeXmlRpcMethod(req, ep, XmlRpcLoadRegionMethod);
                     availableMethods["admin_delete_region"] = (req, ep) => InvokeXmlRpcMethod(req, ep, XmlRpcDeleteRegionMethod);
                     availableMethods["admin_close_region"] = (req, ep) => InvokeXmlRpcMethod(req, ep, XmlRpcCloseRegionMethod);
                     availableMethods["admin_modify_region"] = (req, ep) => InvokeXmlRpcMethod(req, ep, XmlRpcModifyRegionMethod);
@@ -777,6 +778,135 @@ namespace OpenSim.ApplicationPlugins.RemoteController
             responseData["region_id"] = region.RegionID.ToString();
 
             m_log.Info("[RADMIN]: CreateRegion: request complete");
+        }
+
+        /// <summary>
+        /// Load an existing region.
+        /// <summary>
+        /// <param name="request">incoming XML RPC request</param>
+        /// <remarks>
+        /// XmlRpcLoadRegionMethod takes the following XMLRPC
+        /// parameters
+        /// <list type="table">
+        /// <listheader><term>parameter name</term><description>description</description></listheader>
+        /// <item><term>password</term>
+        ///       <description>admin password as set in OpenSim.ini</description></item>
+        /// <item><term>region_name</term>
+        ///       <description>desired region name</description></item>
+        /// <item><term>region_id</term>
+        ///       <description>(optional) desired region UUID</description></item>
+        /// <item><term>region_x</term>
+        ///       <description>desired region X coordinate (integer)</description></item>
+        /// <item><term>region_y</term>
+        ///       <description>desired region Y coordinate (integer)</description></item>
+        /// <item><term>listen_ip</term>
+        ///       <description>internal IP address (dotted quad)</description></item>
+        /// <item><term>listen_port</term>
+        ///       <description>internal port (integer)</description></item>
+        /// <item><term>external_address</term>
+        ///       <description>external IP address</description></item>
+        /// <item><term>region_agent_capacity</term>
+        ///       <description>max agent limit allowed to be on the region 
+        ///       (integer) (optional, default: 100)</description></item>
+        /// <item><term>region_object_capacity</term>
+        ///       <description>sets the prim capacity of the region
+        ///       (integer) (optional, default: 15000)</description></item>
+        /// <item><term>region_clamp_prim_size</term>
+        ///       <description>enable/disables prim size clamping
+        ///       ('true' or 'false') (optional, default: false)</description></item>
+        /// </list>
+        ///
+        /// XmlRpcCreateRegionMethod returns
+        /// <list type="table">
+        /// <listheader><term>name</term><description>description</description></listheader>
+        /// <item><term>success</term>
+        ///       <description>true or false</description></item>
+        /// <item><term>error</term>
+        ///       <description>error message if success is false</description></item>
+        /// <item><term>region_uuid</term>
+        ///       <description>UUID of the newly loaded region</description></item>
+        /// <item><term>region_name</term>
+        ///       <description>name of the newly loaded region</description></item>
+        /// </list>
+        /// </remarks>
+        private void XmlRpcLoadRegionMethod(XmlRpcRequest request, XmlRpcResponse response, IPEndPoint remoteClient)
+        {
+            // This command allows one to load existing reagions into the simulator.
+            // The region beeing loaded must exist in your database and must be offline
+
+            m_log.Info("[RADMIN]: LoadRegion: new request");
+
+            Hashtable responseData = (Hashtable)response.Value;
+            Hashtable requestData = (Hashtable)request.Params[0];
+
+            CheckStringParameters(requestData, responseData, new string[]
+                                                   {
+                                                       "region_id", "region_name",
+                                                       "listen_ip", "external_address"
+                                                   });
+            CheckIntegerParams(requestData, responseData, new string[] { "region_x", "region_y", "listen_port" });
+
+            // check whether we still have space left (iff we are using limits)
+            if (m_regionLimit != 0 && m_application.SceneManager.Scenes.Count >= m_regionLimit)
+                throw new Exception(String.Format("cannot instantiate new region, server capacity {0} already reached; delete regions first",
+                                                    m_regionLimit));
+
+            Scene scene = null;
+            UUID regionID = UUID.Zero;
+            if (requestData.ContainsKey("region_id") &&
+                !String.IsNullOrEmpty((string)requestData["region_id"]))
+            {
+                regionID = (UUID)(string)requestData["region_id"];
+            }
+
+            // create volatile or persistent region info
+            RegionInfo region = new RegionInfo();
+
+            region.RegionID = regionID;
+            region.originRegionID = regionID;
+            region.RegionName = (string)requestData["region_name"];
+            region.RegionLocX = Convert.ToUInt32(requestData["region_x"]);
+            region.RegionLocY = Convert.ToUInt32(requestData["region_y"]);
+
+            region.InternalEndPoint = new IPEndPoint(IPAddress.Parse((string)requestData["listen_ip"]), 0);
+            region.InternalEndPoint.Port = Convert.ToInt32(requestData["listen_port"]);
+            region.ExternalHostName = (string)requestData["external_address"];
+            region.Persistent = false;
+
+            region.AgentCapacity = ParseInteger(requestData, "region_agent_capacity", region.AgentCapacity);
+            region.ObjectCapacity = ParseInteger(requestData, "region_object_capacity", region.ObjectCapacity);
+            region.ClampPrimSize = GetBoolean(requestData, "region_clamp_prim_size", region.ClampPrimSize);
+            region.NonphysPrimMin = ParseFloat(requestData, "region_nonphys_prim_min", region.NonphysPrimMin);
+            region.NonphysPrimMax = ParseInteger(requestData, "region_nonphys_prim_max", region.NonphysPrimMax);
+            region.PhysPrimMin = ParseFloat(requestData, "region_phys_prim_min", region.PhysPrimMin);
+            region.PhysPrimMax = ParseInteger(requestData, "region_phys_prim_max", region.PhysPrimMax);
+            region.MaxPrimsPerUser = ParseInteger(requestData, "region_max_prim_pe_user", region.MaxPrimsPerUser);
+            region.LinksetCapacity = ParseInteger(requestData, "region_linkset_capacity", region.LinksetCapacity);
+
+
+            if (requestData.Contains("region_last_map_uuid"))
+            {
+                region.lastMapUUID = (UUID)(string)requestData["region_last_map_uuid"];
+            }
+            if (requestData.Contains("region_type"))
+            {
+                region.RegionType = (string)requestData["region_type"];
+            }
+
+            region.EstateSettings = m_application.EstateDataService.LoadEstateSettings(region.RegionID, false);
+
+
+            IScene newScene;
+
+            m_application.CreateRegion(region, true, out newScene);
+            newScene.Start();
+
+            responseData["success"] = true;
+            responseData["region_name"] = region.RegionName;
+            responseData["region_id"] = region.RegionID.ToString();
+
+            m_log.Info("[RADMIN]: LoadRegion: request complete");
+
         }
 
         /// <summary>
