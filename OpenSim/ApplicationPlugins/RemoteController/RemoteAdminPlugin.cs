@@ -581,6 +581,43 @@ namespace OpenSim.ApplicationPlugins.RemoteController
 
             region.ExternalHostName = (string) requestData["external_address"];
 
+            region.AgentCapacity = ParseInteger(requestData, "region_agent_capacity", region.AgentCapacity);
+            region.ObjectCapacity = ParseInteger(requestData, "region_object_capacity", region.ObjectCapacity);
+            region.ClampPrimSize = GetBoolean(requestData, "region_clamp_prim_size", region.ClampPrimSize);
+            region.NonphysPrimMin = ParseFloat(requestData, "region_nonphys_prim_min", region.NonphysPrimMin);
+            region.NonphysPrimMax = ParseInteger(requestData, "region_nonphys_prim_max", region.NonphysPrimMax);
+            region.PhysPrimMin = ParseFloat(requestData, "region_phys_prim_min", region.PhysPrimMin);
+            region.PhysPrimMax = ParseInteger(requestData, "region_phys_prim_max", region.PhysPrimMax);
+            region.MaxPrimsPerUser = ParseInteger(requestData, "region_max_prim_pe_user", region.MaxPrimsPerUser);
+            region.LinksetCapacity = ParseInteger(requestData, "region_linkset_capacity", region.LinksetCapacity);
+            region.RegionSettings.BlockTerraform = GetBoolean(requestData, "region_block_terraform", region.RegionSettings.BlockTerraform);
+
+
+            if (requestData.Contains("region_maturity"))
+            {
+                if ((string)requestData["region_maturity"] == "0")
+                {
+                    region.RegionSettings.Maturity = 0;
+                }
+                else if ((string)requestData["region_maturity"] == "1")
+                {
+                    region.RegionSettings.Maturity = 1;
+                }
+                else if ((string)requestData["region_maturity"] == "2")
+                {
+                    region.RegionSettings.Maturity = 2;
+                }
+            }
+
+            if (requestData.Contains("region_last_map_uuid"))
+            {
+                region.lastMapUUID = (UUID)(string)requestData["region_last_map_uuid"];
+            }
+            if (requestData.Contains("region_type"))
+            {
+                region.RegionType = (string)requestData["region_type"];
+            }
+
             bool persist = Convert.ToBoolean(requestData["persist"]);
             if (persist)
             {
