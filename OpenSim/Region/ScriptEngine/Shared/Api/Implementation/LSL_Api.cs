@@ -10733,7 +10733,16 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             SortedDictionary<int, float> parameters = new SortedDictionary<int, float>();
             object[] data = rules.Data;
             for (int i = 0; i < data.Length; ++i) {
-                int type = Convert.ToInt32(data[i++].ToString());
+                int type;
+                try
+                {
+                    type = Convert.ToInt32(data[i++].ToString());
+                }
+                catch
+                {
+                    Error("llSetCameraParams", string.Format("Invalid camera param type {0}", data[i - 1]));
+                    return;
+                }
                 if (i >= data.Length) break; // odd number of entries => ignore the last
 
                 // some special cases: Vector parameters are split into 3 float parameters (with type+1, type+2, type+3)
@@ -10742,9 +10751,63 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                 case ScriptBaseClass.CAMERA_FOCUS_OFFSET:
                 case ScriptBaseClass.CAMERA_POSITION:
                     LSL_Vector v = (LSL_Vector)data[i];
-                    parameters.Add(type + 1, (float)v.x);
-                    parameters.Add(type + 2, (float)v.y);
-                    parameters.Add(type + 3, (float)v.z);
+                    try
+                    {
+                        parameters.Add(type + 1, (float)v.x);
+                    }
+                    catch
+                    {
+                        switch(type)
+                        {
+                            case ScriptBaseClass.CAMERA_FOCUS:
+                                Error("llSetCameraParams", "CAMERA_FOCUS: Parameter x is invalid");
+                                return;
+                            case ScriptBaseClass.CAMERA_FOCUS_OFFSET:
+                                Error("llSetCameraParams", "CAMERA_FOCUS_OFFSET: Parameter x is invalid");
+                                return;
+                            case ScriptBaseClass.CAMERA_POSITION:
+                                Error("llSetCameraParams", "CAMERA_POSITION: Parameter x is invalid");
+                                return;
+                        }
+                    }
+                    try
+                    {
+                        parameters.Add(type + 2, (float)v.y);
+                    }
+                    catch
+                    {
+                        switch(type)
+                        {
+                            case ScriptBaseClass.CAMERA_FOCUS:
+                                Error("llSetCameraParams", "CAMERA_FOCUS: Parameter y is invalid");
+                                return;
+                            case ScriptBaseClass.CAMERA_FOCUS_OFFSET:
+                                Error("llSetCameraParams", "CAMERA_FOCUS_OFFSET: Parameter y is invalid");
+                                return;
+                            case ScriptBaseClass.CAMERA_POSITION:
+                                Error("llSetCameraParams", "CAMERA_POSITION: Parameter y is invalid");
+                                return;
+                        }
+                    }
+                    try
+                    {
+                        parameters.Add(type + 3, (float)v.z);
+                    }
+                    catch
+                    {
+                        switch(type)
+                        {
+                            case ScriptBaseClass.CAMERA_FOCUS:
+                                Error("llSetCameraParams", "CAMERA_FOCUS: Parameter z is invalid");
+                                return;
+                            case ScriptBaseClass.CAMERA_FOCUS_OFFSET:
+                                Error("llSetCameraParams", "CAMERA_FOCUS_OFFSET: Parameter z is invalid");
+                                return;
+                            case ScriptBaseClass.CAMERA_POSITION:
+                                Error("llSetCameraParams", "CAMERA_POSITION: Parameter z is invalid");
+                                return;
+                        }
+                    }
                     break;
                 default:
                     // TODO: clean that up as soon as the implicit casts are in
@@ -10752,7 +10815,17 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                         parameters.Add(type, (float)((LSL_Float)data[i]).value);
                     else if (data[i] is LSL_Integer)
                         parameters.Add(type, (float)((LSL_Integer)data[i]).value);
-                    else parameters.Add(type, Convert.ToSingle(data[i]));
+                    else
+                    {
+                        try
+                        {
+                            parameters.Add(type, Convert.ToSingle(data[i]));
+                        }
+                        catch
+                        {
+                            Error("llSetCameraParams", string.Format("{0}: Parameter is invalid", type));
+                        }
+                    }
                     break;
                 }
             }
