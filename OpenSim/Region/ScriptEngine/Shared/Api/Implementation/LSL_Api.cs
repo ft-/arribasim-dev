@@ -4059,6 +4059,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             if (item == null)
             {
                 Error("llGiveInventory", "Can't find inventory object '" + inventory + "'");
+                return;
             }
 
             UUID objId = item.ItemID;
