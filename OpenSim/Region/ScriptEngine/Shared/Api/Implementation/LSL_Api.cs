@@ -8680,6 +8680,10 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                         res.Add(GetPartRot(part));
                         break;
 
+                    case (int)ScriptBaseClass.PRIM_PHYSICS_SHAPE_TYPE:
+                        res.Add(new LSL_Integer((int)part.PhysicsShapeType));
+                        break;
+
                     case (int)ScriptBaseClass.PRIM_TYPE:
                         // implementing box
                         PrimitiveBaseShape Shape = part.Shape;
