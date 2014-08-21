@@ -4059,6 +4059,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             if (item == null)
             {
                 Error("llGiveInventory", "Can't find inventory object '" + inventory + "'");
+                return;
             }
 
             UUID objId = item.ItemID;
@@ -8677,6 +8678,10 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                     case (int)ScriptBaseClass.PRIM_ROTATION:
                         res.Add(GetPartRot(part));
+                        break;
+
+                    case (int)ScriptBaseClass.PRIM_PHYSICS_SHAPE_TYPE:
+                        res.Add(new LSL_Integer((int)part.PhysicsShapeType));
                         break;
 
                     case (int)ScriptBaseClass.PRIM_TYPE:
