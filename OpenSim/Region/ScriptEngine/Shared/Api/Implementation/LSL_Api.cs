@@ -13207,7 +13207,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         {
             m_host.AddScriptLPS(1);
             // The value returned for Mono scripts in SL
-            return 65536;
+            return 16384;
         }
 
         public void llScriptProfiler(LSL_Integer flags)
