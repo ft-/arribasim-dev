@@ -118,6 +118,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
 
             set
             {
+                bool reEnqueueScript = false;
                 // Need to do this inside a lock in order to avoid races with EventProcessor()
                 lock (m_Script)
                 {
@@ -126,12 +127,16 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
     
                     if (wasSuspended && !m_Suspended)
                     {
-                        lock (EventQueue)
-                        {
-                            // Need to place ourselves back in a work item if there are events to process
-                            if (EventQueue.Count > 0 && Running && !ShuttingDown)
-                                m_CurrentWorkItem = Engine.QueueEventHandler(this);
-                        }
+                        reEnqueueScript = true;
+                    }
+                }
+                if (reEnqueueScript)
+                {
+                    lock (EventQueue)
+                    {
+                        // Need to place ourselves back in a work item if there are events to process
+                        if (EventQueue.Count > 0 && Running && !ShuttingDown)
+                            m_CurrentWorkItem = Engine.QueueEventHandler(this);
                     }
                 }
             }
