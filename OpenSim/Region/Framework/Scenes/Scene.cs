@@ -2018,8 +2018,8 @@ namespace OpenSim.Region.Framework.Scenes
                 SceneObjectPart target = GetSceneObjectPart(RayTargetID);
 
                 Vector3 direction = Vector3.Normalize(RayEnd - RayStart);
-                Vector3 AXOrigin = new Vector3(RayStart.X, RayStart.Y, RayStart.Z);
-                Vector3 AXdirection = new Vector3(direction.X, direction.Y, direction.Z);
+                Vector3 AXOrigin = RayStart;
+                Vector3 AXdirection = direction;
 
                 if (target != null)
                 {
@@ -2041,13 +2041,13 @@ namespace OpenSim.Region.Framework.Scenes
                     // If we hit something
                     if (ei.HitTF)
                     {
-                        Vector3 scaleComponent = new Vector3(ei.AAfaceNormal.X, ei.AAfaceNormal.Y, ei.AAfaceNormal.Z);
+                        Vector3 scaleComponent = ei.AAfaceNormal;
                         if (scaleComponent.X != 0) ScaleOffset = scale.X;
                         if (scaleComponent.Y != 0) ScaleOffset = scale.Y;
                         if (scaleComponent.Z != 0) ScaleOffset = scale.Z;
                         ScaleOffset = Math.Abs(ScaleOffset);
-                        Vector3 intersectionpoint = new Vector3(ei.ipoint.X, ei.ipoint.Y, ei.ipoint.Z);
-                        Vector3 normal = new Vector3(ei.normal.X, ei.normal.Y, ei.normal.Z);
+                        Vector3 intersectionpoint = ei.ipoint;
+                        Vector3 normal = ei.normal;
                         // Set the position to the intersection point
                         Vector3 offset = (normal * (ScaleOffset / 2f));
                         pos = (intersectionpoint + offset);
@@ -2072,7 +2072,7 @@ namespace OpenSim.Region.Framework.Scenes
 
                     if (ei.HitTF)
                     {
-                        pos = new Vector3(ei.ipoint.X, ei.ipoint.Y, ei.ipoint.Z);
+                        pos = ei.ipoint;
                     } else
                     {
                         // fall back to our stupid functionality
@@ -3126,8 +3126,8 @@ namespace OpenSim.Region.Framework.Scenes
             if (target != null && target2 != null)
             {
                 Vector3 direction = Vector3.Normalize(RayEnd - RayStart);
-                Vector3 AXOrigin = new Vector3(RayStart.X, RayStart.Y, RayStart.Z);
-                Vector3 AXdirection = new Vector3(direction.X, direction.Y, direction.Z);
+                Vector3 AXOrigin = RayStart;
+                Vector3 AXdirection = direction;
 
                 pos = target2.AbsolutePosition;
                 //m_log.Info("[OBJECT_REZ]: TargetPos: " + pos.ToString() + ", RayStart: " + RayStart.ToString() + ", RayEnd: " + RayEnd.ToString() + ", Volume: " + Util.GetDistanceTo(RayStart,RayEnd).ToString() + ", mag1: " + Util.GetMagnitude(RayStart).ToString() + ", mag2: " + Util.GetMagnitude(RayEnd).ToString());
@@ -3148,13 +3148,13 @@ namespace OpenSim.Region.Framework.Scenes
                 if (ei.HitTF)
                 {
                     Vector3 scale = target.Scale;
-                    Vector3 scaleComponent = new Vector3(ei.AAfaceNormal.X, ei.AAfaceNormal.Y, ei.AAfaceNormal.Z);
+                    Vector3 scaleComponent = ei.AAfaceNormal;
                     if (scaleComponent.X != 0) ScaleOffset = scale.X;
                     if (scaleComponent.Y != 0) ScaleOffset = scale.Y;
                     if (scaleComponent.Z != 0) ScaleOffset = scale.Z;
                     ScaleOffset = Math.Abs(ScaleOffset);
-                    Vector3 intersectionpoint = new Vector3(ei.ipoint.X, ei.ipoint.Y, ei.ipoint.Z);
-                    Vector3 normal = new Vector3(ei.normal.X, ei.normal.Y, ei.normal.Z);
+                    Vector3 intersectionpoint = ei.ipoint;
+                    Vector3 normal = ei.normal;
                     Vector3 offset = normal * (ScaleOffset / 2f);
                     pos = intersectionpoint + offset;
 
@@ -5015,7 +5015,7 @@ namespace OpenSim.Region.Framework.Scenes
                 case PhysicsJointType.Ball:
                     {
                         Vector3 jointAnchor = PhysicsScene.GetJointAnchor(joint);
-                        Vector3 proxyPos = new Vector3(jointAnchor.X, jointAnchor.Y, jointAnchor.Z);
+                        Vector3 proxyPos = jointAnchor;
                         jointProxyObject.ParentGroup.UpdateGroupPosition(proxyPos); // schedules the entire group for a terse update
                     }
                     break;
@@ -5040,7 +5040,7 @@ namespace OpenSim.Region.Framework.Scenes
                             jointErrorMessage(joint, "joint.TrackedBodyName is null, joint " + joint.ObjectNameInScene);
                         }
 
-                        Vector3 proxyPos = new Vector3(jointAnchor.X, jointAnchor.Y, jointAnchor.Z);
+                        Vector3 proxyPos = jointAnchor;
                         Quaternion q = trackedBody.RotationOffset * joint.LocalRotation;
 
                         jointProxyObject.ParentGroup.UpdateGroupPosition(proxyPos); // schedules the entire group for a terse update
@@ -5141,8 +5141,8 @@ namespace OpenSim.Region.Framework.Scenes
                 y = Heightmap.Height - 1;
 
             Vector3 p0 = new Vector3(x, y, (float)Heightmap[(int)x, (int)y]);
-            Vector3 p1 = new Vector3(p0);
-            Vector3 p2 = new Vector3(p0);
+            Vector3 p1 = p0;
+            Vector3 p2 = p0;
 
             p1.X += 1.0f;
             if (p1.X < Heightmap.Width)
