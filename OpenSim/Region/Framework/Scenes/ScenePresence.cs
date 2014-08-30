@@ -612,6 +612,10 @@ namespace OpenSim.Region.Framework.Scenes
 //                        "[SCENE PRESENCE]: Set velocity {0} for {1} in {2} via getting Velocity!",
 //                        m_velocity, Name, Scene.RegionInfo.RegionName);
                 }
+                else if (ParentPart != null)
+                {
+                    return ParentPart.ParentGroup.Velocity;
+                }
 
                 return m_velocity;
             }
