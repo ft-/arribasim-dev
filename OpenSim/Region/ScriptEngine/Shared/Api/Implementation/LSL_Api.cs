@@ -12244,10 +12244,20 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                                 {
                                     Quaternion rot = Quaternion.Identity;
 
-                                    if (obj.ParentGroup.RootPart == obj)
-                                        rot = obj.ParentGroup.GroupRotation;
+                                    if (obj.ParentGroup.IsAttachment)
+                                    {
+                                        ScenePresence sp = World.GetScenePresence(obj.ParentGroup.AttachedAvatar);
+
+                                        if (sp != null)
+                                            rot = sp.GetWorldRotation();
+                                    }
                                     else
-                                        rot = obj.GetWorldRotation();
+                                    {
+                                        if (obj.ParentGroup.RootPart == obj)
+                                            rot = obj.ParentGroup.GroupRotation;
+                                        else
+                                            rot = obj.GetWorldRotation();
+                                    }
 
                                     LSL_Rotation objrot = new LSL_Rotation(rot);
                                     ret.Add(objrot);
