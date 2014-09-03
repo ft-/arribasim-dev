@@ -379,7 +379,7 @@ namespace OpenSim.Region.CoreModules.World.LegacyMap
                                     // Mono Array
                                 }
 
-                                Vector3 pos = part.GetWorldPosition();
+                                Vector3 pos = part.WorldPosition;
 
                                 // skip prim outside of retion
                                 if (!m_scene.PositionIsInCurrentRegion(pos))
@@ -409,7 +409,7 @@ namespace OpenSim.Region.CoreModules.World.LegacyMap
                                     Vector3 tScale = new Vector3();
                                     Vector3 axPos = new Vector3(pos.X, pos.Y, pos.Z);
 
-                                    Quaternion llrot = part.GetWorldRotation();
+                                    Quaternion llrot = part.WorldRotation;
                                     Quaternion rot = new Quaternion(llrot.W, llrot.X, llrot.Y, llrot.Z);
                                     scale = lscale * rot;
 

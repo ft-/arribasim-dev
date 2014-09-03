@@ -308,7 +308,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
             }
             SceneObjectPart SensePoint = ts.host;
 
-            Vector3 fromRegionPos = SensePoint.GetWorldPosition();
+            Vector3 fromRegionPos = SensePoint.WorldPosition;
 
             // pre define some things to avoid repeated definitions in the loop body
             Vector3 toRegionPos;
@@ -319,7 +319,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
             float dy;
             float dz;
 
-            Quaternion q = SensePoint.GetWorldRotation();
+            Quaternion q = SensePoint.WorldRotation;
             if (SensePoint.ParentGroup.IsAttachment)
             {
                 // In attachments, rotate the sensor cone with the
@@ -338,7 +338,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
                 if (avatar == null)
                     return sensedEntities;
 
-                q = avatar.GetWorldRotation() * q;
+                q = avatar.WorldRotation * q;
             }
 
             LSL_Types.Quaternion r = new LSL_Types.Quaternion(q);
@@ -449,9 +449,9 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
                 return sensedEntities;
 
             SceneObjectPart SensePoint = ts.host;
-            Vector3 fromRegionPos = SensePoint.GetWorldPosition();
+            Vector3 fromRegionPos = SensePoint.WorldPosition;
             
-            Quaternion q = SensePoint.GetWorldRotation();
+            Quaternion q = SensePoint.WorldRotation;
             if (SensePoint.ParentGroup.IsAttachment)
             {
                 // In attachments, rotate the sensor cone with the
@@ -470,7 +470,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Plugins
                 if (avatar == null)
                     return sensedEntities;
 
-                q = avatar.GetWorldRotation() * q;
+                q = avatar.WorldRotation * q;
             }
 
             LSL_Types.Quaternion r = new LSL_Types.Quaternion(q);

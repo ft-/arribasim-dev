@@ -1022,13 +1022,13 @@ namespace OpenSim.Region.Framework.Scenes
             {
                 SceneObjectPart part = parts[i];
 
-                Vector3 worldPos = part.GetWorldPosition();
+                Vector3 worldPos = part.WorldPosition;
                 Vector3 offset = worldPos - AbsolutePosition;
                 Quaternion worldRot;
                 if (part.ParentID == 0)
                     worldRot = part.RotationOffset;
                 else
-                    worldRot = part.GetWorldRotation();
+                    worldRot = part.WorldRotation;
 
                 Vector3 frontTopLeft;
                 Vector3 frontTopRight;
@@ -2439,8 +2439,8 @@ namespace OpenSim.Region.Framework.Scenes
             
             linkPart.ClearUndoState();
 
-            Vector3 worldPos = linkPart.GetWorldPosition();
-            Quaternion worldRot = linkPart.GetWorldRotation();
+            Vector3 worldPos = linkPart.WorldPosition;
+            Quaternion worldRot = linkPart.WorldRotation;
 
             // Remove the part from this object
             lock (m_parts.SyncRoot)

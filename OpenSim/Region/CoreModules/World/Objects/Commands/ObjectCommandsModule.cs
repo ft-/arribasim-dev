@@ -617,7 +617,7 @@ namespace OpenSim.Region.CoreModules.World.Objects.Commands
                 cdl.AddRow("ProjectionFOV", s.ProjectionFOV);
                 cdl.AddRow("ProjectionTextureUUID", s.ProjectionTextureUUID);
                 cdl.AddRow("Rotation (Relative)", sop.RotationOffset);
-                cdl.AddRow("Rotation (World)", sop.GetWorldRotation());
+                cdl.AddRow("Rotation (World)", sop.WorldRotation);
                 cdl.AddRow("Scale", s.Scale);
                 cdl.AddRow(
                     "SculptData", 

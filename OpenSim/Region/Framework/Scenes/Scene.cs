@@ -3163,7 +3163,7 @@ namespace OpenSim.Region.Framework.Scenes
                     SceneObjectGroup copy;
                     if (CopyRotates)
                     {
-                        Quaternion worldRot = target2.GetWorldRotation();
+                        Quaternion worldRot = target2.WorldRotation;
 
                         // SceneObjectGroup obj = m_sceneGraph.DuplicateObject(localID, pos, target.GetEffectiveObjectFlags(), AgentID, GroupID, worldRot);
                         copy = m_sceneGraph.DuplicateObject(localID, pos, target.GetEffectiveObjectFlags(), AgentID, GroupID, worldRot);
@@ -4627,7 +4627,7 @@ namespace OpenSim.Region.Framework.Scenes
             if (part != null)
             {
                 SceneObjectPart parent = part.ParentGroup.RootPart;
-                return ScriptDanger(parent, parent.GetWorldPosition());
+                return ScriptDanger(parent, parent.WorldPosition);
             }
             else
             {

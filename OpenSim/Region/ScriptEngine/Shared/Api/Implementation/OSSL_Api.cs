@@ -2518,7 +2518,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                 ScenePresence sp = World.GetScenePresence(npcId);
 
                 if (sp != null)
-                    return new LSL_Rotation(sp.GetWorldRotation());
+                    return new LSL_Rotation(sp.WorldRotation);
             }
 
             return Quaternion.Identity;
@@ -2936,7 +2936,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             m_host.AddScriptLPS(1);
 
             UUID avatarId = new UUID(avatar);
-            Vector3 pos = m_host.GetWorldPosition();
+            Vector3 pos = m_host.WorldPosition;
 
             ScenePresence presence = World.GetScenePresence(avatarId); 
             if (presence != null)
@@ -2966,7 +2966,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             UUID avatarId = new UUID(avatar);
             ScenePresence presence = World.GetScenePresence(avatarId);
 
-            if (presence != null && World.ScriptDanger(m_host.LocalId, m_host.GetWorldPosition()))
+            if (presence != null && World.ScriptDanger(m_host.LocalId, m_host.WorldPosition))
             {
                 float health = presence.Health;
                 health += (float)healing;

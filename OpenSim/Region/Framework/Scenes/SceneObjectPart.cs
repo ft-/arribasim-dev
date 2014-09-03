@@ -771,8 +771,8 @@ namespace OpenSim.Region.Framework.Scenes
                         else
                         {
                             // The physics engine always sees all objects (root or linked) in world coordinates.
-                            actor.Position = GetWorldPosition();
-                            actor.Orientation = GetWorldRotation();
+                            actor.Position = WorldPosition;
+                            actor.Orientation = WorldRotation;
                         }
 
                         // Tell the physics engines that this prim changed.
@@ -800,8 +800,8 @@ namespace OpenSim.Region.Framework.Scenes
                     PhysicsActor actor = PhysActor;
                     if (ParentID != 0 && actor != null)
                     {
-                        actor.Position = GetWorldPosition();
-                        actor.Orientation = GetWorldRotation();
+                        actor.Position = WorldPosition;
+                        actor.Orientation = WorldRotation;
 
                         // Tell the physics engines that this prim changed.
                         if (ParentGroup.Scene != null)
@@ -875,7 +875,7 @@ namespace OpenSim.Region.Framework.Scenes
                         else
                         {
                             // Child prim we have to calculate it's world rotationwel
-                            Quaternion resultingrotation = GetWorldRotation();
+                            Quaternion resultingrotation = WorldRotation;
                             actor.Orientation = resultingrotation;
                             //m_log.Info("[PART]: RO2:" + actor.Orientation.ToString());
                         }
@@ -1628,7 +1628,7 @@ namespace OpenSim.Region.Framework.Scenes
 
             if (localGlobalTF)
             {
-                Quaternion grot = GetWorldRotation();
+                Quaternion grot = WorldRotation;
                 Quaternion AXgrot = grot;
                 Vector3 AXimpulsei = impulsei;
                 Vector3 newimpulse = AXimpulsei * AXgrot;
@@ -1654,7 +1654,7 @@ namespace OpenSim.Region.Framework.Scenes
 
             if (localGlobalTF)
             {
-                Quaternion grot = GetWorldRotation();
+                Quaternion grot = WorldRotation;
                 Quaternion AXgrot = grot;
                 Vector3 AXimpulsei = impulsei;
                 Vector3 newimpulse = AXimpulsei * AXgrot;
@@ -1677,7 +1677,7 @@ namespace OpenSim.Region.Framework.Scenes
 
             if (localGlobalTF)
             {
-                Quaternion grot = GetWorldRotation();
+                Quaternion grot = WorldRotation;
                 Quaternion AXgrot = grot;
                 Vector3 AXimpulsei = impulsei;
                 Vector3 newimpulse = AXimpulsei * AXgrot;
@@ -2185,46 +2185,52 @@ namespace OpenSim.Region.Framework.Scenes
         /// Remember, the Group Position simply gives the position of the group itself
         /// </remarks>
         /// <returns>A Linked Child Prim objects position in world</returns>
-        public Vector3 GetWorldPosition()
+        public Vector3 WorldPosition
         {
-            Vector3 ret;
-            if (_parentID == 0)
-                // if a root SOP, my position is what it is
-                ret = GroupPosition;
-            else
+            get
             {
-                // If a child SOP, my position is relative to the root SOP so take
-                //    my info and add the root's position and rotation to
-                //    get my world position.
-                Quaternion parentRot = ParentGroup.RootPart.RotationOffset;
-                Vector3 translationOffsetPosition = OffsetPosition * parentRot;
-                ret = ParentGroup.AbsolutePosition + translationOffsetPosition;
+                Vector3 ret;
+                if (_parentID == 0)
+                    // if a root SOP, my position is what it is
+                    ret = GroupPosition;
+                else
+                {
+                    // If a child SOP, my position is relative to the root SOP so take
+                    //    my info and add the root's position and rotation to
+                    //    get my world position.
+                    Quaternion parentRot = ParentGroup.RootPart.RotationOffset;
+                    Vector3 translationOffsetPosition = OffsetPosition * parentRot;
+                    ret = ParentGroup.AbsolutePosition + translationOffsetPosition;
+                }
+                return ret;
             }
-            return ret;
         }
 
         /// <summary>
         /// Gets the rotation of this prim offset by the group rotation
         /// </summary>
         /// <returns></returns>
-        public Quaternion GetWorldRotation()
+        public Quaternion WorldRotation
         {
-            Quaternion newRot;
-
-            if (this.LinkNum == 0 || this.LinkNum == 1)
+            get
             {
-                newRot = RotationOffset;
-            }
-            else
-            {
-                // A child SOP's rotation is relative to the root SOP's rotation.
-                // Combine them to get my absolute rotation.
-                Quaternion parentRot = ParentGroup.RootPart.RotationOffset;
-                Quaternion oldRot = RotationOffset;
-                newRot = parentRot * oldRot;
-            }
+                Quaternion newRot;
 
-            return newRot;
+                if (this.LinkNum == 0 || this.LinkNum == 1)
+                {
+                    newRot = RotationOffset;
+                }
+                else
+                {
+                    // A child SOP's rotation is relative to the root SOP's rotation.
+                    // Combine them to get my absolute rotation.
+                    Quaternion parentRot = ParentGroup.RootPart.RotationOffset;
+                    Quaternion oldRot = RotationOffset;
+                    newRot = parentRot * oldRot;
+                }
+
+                return newRot;
+            }
         }
 
         public void MoveToTarget(Vector3 target, float tau)
@@ -2286,7 +2292,7 @@ namespace OpenSim.Region.Framework.Scenes
             detobj.nameStr = obj.Name;
             detobj.ownerUUID = obj.OwnerID;
             detobj.posVector = obj.AbsolutePosition;
-            detobj.rotQuat = obj.GetWorldRotation();
+            detobj.rotQuat = obj.WorldRotation;
             detobj.velVector = obj.Velocity;
             detobj.colliderType = 0;
             detobj.groupUUID = obj.GroupID;
@@ -3549,8 +3555,8 @@ namespace OpenSim.Region.Framework.Scenes
             Vector3 AmBb = new Vector3(0, 0, 0); // Vertex B - Vertex C
             Vector3 cross = new Vector3();
 
-            Vector3 pos = GetWorldPosition();
-            Quaternion rot = GetWorldRotation();
+            Vector3 pos = WorldPosition;
+            Quaternion rot = WorldRotation;
 
             // Variables prefixed with AX are Axiom.Math copies of the LL variety.
 
@@ -4203,8 +4209,8 @@ namespace OpenSim.Region.Framework.Scenes
                     if (pa != null)
                     {
                         pa.SetMaterial(Material);
-                        pa.Position = GetWorldPosition();
-                        pa.Orientation = GetWorldRotation();
+                        pa.Position = WorldPosition;
+                        pa.Orientation = WorldRotation;
                         DoPhysicsPropertyUpdate(UsePhysics, true);
 
                         SubscribeForCollisionEvents();
@@ -4327,7 +4333,7 @@ namespace OpenSim.Region.Framework.Scenes
                         Shape,
                         AbsolutePosition,
                         Scale,
-                        GetWorldRotation(),
+                        WorldRotation,
                         isPhysical,
                         isPhantom,
                         PhysicsShapeType,

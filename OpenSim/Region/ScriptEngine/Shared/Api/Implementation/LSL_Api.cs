@@ -1240,7 +1240,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         public LSL_Float llGround(LSL_Vector offset)
         {
             m_host.AddScriptLPS(1);
-            Vector3 pos = m_host.GetWorldPosition() + (Vector3)offset;
+            Vector3 pos = m_host.WorldPosition + (Vector3)offset;
 
             //Get the slope normal.  This gives us the equation of the plane tangent to the slope.
             LSL_Vector vsn = llGroundNormal(offset);
@@ -1274,7 +1274,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             ICloudModule module = World.RequestModuleInterface<ICloudModule>();
             if (module != null)
             {
-                Vector3 pos = m_host.GetWorldPosition();
+                Vector3 pos = m_host.WorldPosition;
                 int x = (int)(pos.X + offset.x);
                 int y = (int)(pos.Y + offset.y);
 
@@ -1291,7 +1291,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             IWindModule module = World.RequestModuleInterface<IWindModule>();
             if (module != null)
             {
-                Vector3 pos = m_host.GetWorldPosition();
+                Vector3 pos = m_host.WorldPosition;
                 int x = (int)(pos.X + offset.x);
                 int y = (int)(pos.Y + offset.y);
 
@@ -2238,7 +2238,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         public LSL_Vector llGetPos()
         {
             m_host.AddScriptLPS(1);
-            return m_host.GetWorldPosition();
+            return m_host.WorldPosition;
         }
 
         public LSL_Vector llGetLocalPos()
@@ -2340,7 +2340,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             }
 
             m_host.AddScriptLPS(1);
-            Quaternion q = m_host.GetWorldRotation();
+            Quaternion q = m_host.WorldRotation;
             return new LSL_Rotation(q.X, q.Y, q.Z, q.W);
         }
 
@@ -2357,7 +2357,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                         if ((avatar.AgentControlFlags & (uint)AgentManager.ControlFlags.AGENT_CONTROL_MOUSELOOK) != 0)
                             q = avatar.CameraRotation; // Mouselook
                         else
-                            q = avatar.GetWorldRotation(); // Currently infrequently updated so may be inaccurate
+                            q = avatar.WorldRotation; // Currently infrequently updated so may be inaccurate
                     }
                     else
                         q = part.ParentGroup.GroupRotation; // Likely never get here but just in case
@@ -2368,7 +2368,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                 return new LSL_Rotation(q);
             }
 
-            return new LSL_Rotation(part.GetWorldRotation());
+            return new LSL_Rotation(part.WorldRotation);
         }
 
         public LSL_Rotation llGetLocalRot()
@@ -2516,7 +2516,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             if (m_host.ParentGroup.IsAttachment)
             {
                 ScenePresence avatar = m_host.ParentGroup.Scene.GetScenePresence(m_host.ParentGroup.AttachedAvatar);
-                vel = avatar.Velocity;
+                vel = avatar.WorldVelocity;
             }
             else
             {
@@ -4689,7 +4689,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                         {
                             if (local != 0)
                             {
-                                applied_linear_impulse *= m_host.GetWorldRotation();
+                                applied_linear_impulse *= m_host.WorldRotation;
                             }
 
                             pa.AddForce(applied_linear_impulse, true);
@@ -5896,7 +5896,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
             if (parcel || parcelOwned)
             {
-                land = World.LandChannel.GetLandObject(m_host.ParentGroup.RootPart.GetWorldPosition());
+                land = World.LandChannel.GetLandObject(m_host.ParentGroup.RootPart.WorldPosition);
                 if (land == null)
                 {
                     id = UUID.Zero;
@@ -6199,7 +6199,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         public LSL_Vector llGroundNormal(LSL_Vector offset)
         {
             m_host.AddScriptLPS(1);
-            Vector3 pos = m_host.GetWorldPosition() + (Vector3)offset;
+            Vector3 pos = m_host.WorldPosition + (Vector3)offset;
             // Clamp to valid position
             if (pos.X < 0)
                 pos.X = 0;
@@ -8987,7 +8987,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                             SceneObjectPart parentPart = sp.ParentPart;
 
                             if (parentPart != null)
-                                sp.Rotation = m_host.GetWorldRotation() * inRot;
+                                sp.Rotation = m_host.WorldRotation * inRot;
 
                             break;
 
@@ -9163,7 +9163,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                     if ((avatar.AgentControlFlags & (uint)AgentManager.ControlFlags.AGENT_CONTROL_MOUSELOOK) != 0)
                         q = avatar.CameraRotation; // Mouselook
                     else
-                        q = avatar.GetWorldRotation(); // Currently infrequently updated so may be inaccurate
+                        q = avatar.WorldRotation; // Currently infrequently updated so may be inaccurate
                 else
                     q = m_host.ParentGroup.GroupRotation; // Likely never get here but just in case
             }
@@ -9369,7 +9369,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                         break;
 
                     case (int)ScriptBaseClass.PRIM_ROTATION:
-                        res.Add(sp.GetWorldRotation());
+                        res.Add(sp.WorldRotation);
                         break;
 
                     case (int)ScriptBaseClass.PRIM_TYPE:
@@ -12146,10 +12146,10 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                                 ret.Add(new LSL_Vector((double)av.AbsolutePosition.X, (double)av.AbsolutePosition.Y, (double)av.AbsolutePosition.Z));
                                 break;
                             case ScriptBaseClass.OBJECT_ROT:
-                                ret.Add(new LSL_Rotation(av.GetWorldRotation()));
+                                ret.Add(new LSL_Rotation(av.WorldRotation));
                                 break;
                             case ScriptBaseClass.OBJECT_VELOCITY:
-                                ret.Add(new LSL_Vector(av.Velocity.X, av.Velocity.Y, av.Velocity.Z));
+                                ret.Add(new LSL_Vector(av.WorldVelocity));
                                 break;
                             case ScriptBaseClass.OBJECT_OWNER:
                                 ret.Add(new LSL_String(id));
@@ -12249,14 +12249,14 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                                         ScenePresence sp = World.GetScenePresence(obj.ParentGroup.AttachedAvatar);
 
                                         if (sp != null)
-                                            rot = sp.GetWorldRotation();
+                                            rot = sp.WorldRotation;
                                     }
                                     else
                                     {
                                         if (obj.ParentGroup.RootPart == obj)
                                             rot = obj.ParentGroup.GroupRotation;
                                         else
-                                            rot = obj.GetWorldRotation();
+                                            rot = obj.WorldRotation;
                                     }
 
                                     LSL_Rotation objrot = new LSL_Rotation(rot);
@@ -12272,7 +12272,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                                     if (sp != null)
                                     {
-                                        vel = sp.Velocity;
+                                        vel = sp.WorldVelocity;
                                     }
                                 }
                                 else
