@@ -162,6 +162,7 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Authorization
             }
             else
             {
+                message = "Region ID not found";
                 m_log.ErrorFormat(
                     "[REMOTE AUTHORIZATION CONNECTOR] IsAuthorizedForRegion, can't find scene to match region id of {0}",
                     regionID);

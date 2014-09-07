@@ -5573,7 +5573,7 @@ namespace OpenSim.Region.Framework.Scenes
             {
                 if (!AuthorizeUser(aCircuit, false, out reason))
                 {
-                    //m_log.DebugFormat("[SCENE]: Denying access for {0}", agentID);
+                    m_log.DebugFormat("[SCENE]: AuthorizeUser: Denying access for {0}", agentID);
                     return false;
                 }
             }
@@ -5622,7 +5622,7 @@ namespace OpenSim.Region.Framework.Scenes
 
                 if (!TestLandRestrictions(agentID, out reason, ref posX, ref posY))
                 {
-                    // m_log.DebugFormat("[SCENE]: Denying {0} because they are banned on all parcels", agentID);
+                    m_log.DebugFormat("[SCENE]: Denying {0} because they are banned on all parcels", agentID);
                     return false;
                 }
             }
@@ -5630,13 +5630,17 @@ namespace OpenSim.Region.Framework.Scenes
             {
                 ILandObject land = LandChannel.GetLandObject(position.X, position.Y);
                 if (land == null)
+                {
+                    m_log.DebugFormat("[SCENE]: Agent {0} has no parcel as target", agentID);
                     return false;
+                }
 
                 bool banned = land.IsBannedFromLand(agentID);
                 bool restricted = land.IsRestrictedFromLand(agentID);
 
                 if (banned || restricted)
                 {
+                    m_log.DebugFormat("[SCENE]: Agent {0} is banned or restricted", agentID);
                     return false;
                 }
             }

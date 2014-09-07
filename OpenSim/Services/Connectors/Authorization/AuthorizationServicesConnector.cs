@@ -111,6 +111,11 @@ namespace OpenSim.Services.Connectors
             }
             m_log.DebugFormat("[AUTHORIZATION CONNECTOR] response from remote service was {0}", response.Message);
             message = response.Message;
+
+            if(!response.IsAuthorized && message == "authorized")
+            {
+                message = "Not Authorized";
+            }
             
             return response.IsAuthorized;
         }
