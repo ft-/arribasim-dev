@@ -287,7 +287,7 @@ namespace OpenSim.Framework
                                 continue;
                         if (pair["seed"] != null)
                             seed = pair["seed"].AsString();
-                        if (!ChildrenCapSeeds.ContainsKey(handle) && !seed.StartsWith("http://agent/"))
+                        if (!ChildrenCapSeeds.ContainsKey(handle))
                             ChildrenCapSeeds.Add(handle, seed);
                     }
                 }
