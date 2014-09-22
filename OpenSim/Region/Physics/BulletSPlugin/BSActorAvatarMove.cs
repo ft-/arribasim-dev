@@ -275,7 +275,7 @@ public class BSActorAvatarMove : BSActor
                 // DetailLog("{0},BSCharacter.MoveMotor,taint,overrideStepZWithWorldZ,stepVel={1}", LocalID, stepVelocity);
             }
 
-            // 'stepVelocity' is now the speed we'd like the avatar to move in. Turn that into an instantanous force.
+            //Alicia: Maintain minimum height when flying.
             OMV.Vector3 moveForce = (stepVelocity - m_controllingPrim.RawVelocity) * m_controllingPrim.Mass;
 
             // Add special movement force to allow avatars to walk up stepped surfaces.

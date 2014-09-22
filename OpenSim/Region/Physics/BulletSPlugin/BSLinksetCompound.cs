@@ -372,20 +372,20 @@ public sealed class BSLinksetCompound : BSLinkset
                 OMV.Quaternion offsetRot = OMV.Quaternion.Normalize(cPrim.RawOrientation) * invRootOrientation;
 
                 // Add the child shape to the compound shape being built
-                m_physicsScene.PE.AddChildShapeToCompoundShape(linksetShape.physShapeInfo, childShape.physShapeInfo, offsetPos, offsetRot);
-                DetailLog("{0},BSLinksetCompound.RecomputeLinksetCompound,addChild,indx={1},cShape={2},offPos={3},offRot={4}",
-                                    LinksetRoot.LocalID, cPrim.LinksetChildIndex, childShape, offsetPos, offsetRot);
+                    m_physicsScene.PE.AddChildShapeToCompoundShape(linksetShape.physShapeInfo, childShape.physShapeInfo, offsetPos, offsetRot);
+                    DetailLog("{0},BSLinksetCompound.RecomputeLinksetCompound,addChild,indx={1},cShape={2},offPos={3},offRot={4}",
+                                LinksetRoot.LocalID, cPrim.LinksetChildIndex, childShape, offsetPos, offsetRot);
 
-                // Since we are borrowing the shape of the child, disable the origional child body
-                if (!IsRoot(cPrim))
-                {
-                    m_physicsScene.PE.AddToCollisionFlags(cPrim.PhysBody, CollisionFlags.CF_NO_CONTACT_RESPONSE);
-                    m_physicsScene.PE.ForceActivationState(cPrim.PhysBody, ActivationState.DISABLE_SIMULATION);
-                    // We don't want collisions from the old linkset children.
-                    m_physicsScene.PE.RemoveFromCollisionFlags(cPrim.PhysBody, CollisionFlags.BS_SUBSCRIBE_COLLISION_EVENTS);
-                    cPrim.PhysBody.collisionType = CollisionType.LinksetChild;
-                }
-
+                    // Since we are borrowing the shape of the child, disable the origional child body
+                    if (!IsRoot(cPrim))
+                    {
+                        m_physicsScene.PE.AddToCollisionFlags(cPrim.PhysBody, CollisionFlags.CF_NO_CONTACT_RESPONSE);
+                        m_physicsScene.PE.ForceActivationState(cPrim.PhysBody, ActivationState.DISABLE_SIMULATION);
+                        // We don't want collisions from the old linkset children.
+                        m_physicsScene.PE.RemoveFromCollisionFlags(cPrim.PhysBody, CollisionFlags.BS_SUBSCRIBE_COLLISION_EVENTS);
+                        cPrim.PhysBody.collisionType = CollisionType.LinksetChild;
+                    }
+                    // The linkset must be in an intermediate state where all the children have not yet
                 return false;   // 'false' says to move onto the next child in the list
             });
 

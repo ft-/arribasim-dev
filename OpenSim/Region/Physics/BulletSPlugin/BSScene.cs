@@ -789,7 +789,6 @@ public sealed class BSScene : PhysicsScene, IPhysicsParameters
         }
 
         BSPhysObject collider;
-        BSPhysObject collidee = null;
         if (!PhysObjects.TryGetValue(localID, out collider))
         {
             // If the object that is colliding cannot be found, just ignore the collision.
@@ -798,6 +797,7 @@ public sealed class BSScene : PhysicsScene, IPhysicsParameters
         }
 
         // Note: the terrain is not in the physical object list so 'collidee' can be null when Collide() is called.
+        BSPhysObject collidee = null;
         PhysObjects.TryGetValue(collidingWith, out collidee);
 
         // DetailLog("{0},BSScene.SendCollision,collide,id={1},with={2}", DetailLogZero, localID, collidingWith);
@@ -822,7 +822,7 @@ public sealed class BSScene : PhysicsScene, IPhysicsParameters
         while (m_initialized)
         {
             int beginSimulationRealtimeMS = Environment.TickCount;
-            DoPhysicsStep(BSParam.PhysicsTimeStep);
+	        DoPhysicsStep(BSParam.PhysicsTimeStep);
             int simulationRealtimeMS = Environment.TickCount - beginSimulationRealtimeMS;
             int simulationTimeVsRealtimeDifferenceMS = ((int)(BSParam.PhysicsTimeStep*1000f)) - simulationRealtimeMS;
 
