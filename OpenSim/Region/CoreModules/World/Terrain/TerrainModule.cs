@@ -203,8 +203,7 @@ namespace OpenSim.Region.CoreModules.World.Terrain
             if (terrainConfig != null)
             {
                 m_InitialTerrain = terrainConfig.GetString("InitialTerrain", m_InitialTerrain);
-                // DISABLED: As of now
-                //m_sendTerrainUpdatesByViewDistance = terrainConfig.GetBoolean("SendTerrainUpdatesByViewDistance", m_sendTerrainUpdatesByViewDistance);
+                m_sendTerrainUpdatesByViewDistance = terrainConfig.GetBoolean("SendTerrainUpdatesByViewDistance", m_sendTerrainUpdatesByViewDistance);
             }
         }
 
