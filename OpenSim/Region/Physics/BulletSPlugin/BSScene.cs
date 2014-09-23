@@ -609,33 +609,34 @@ public sealed class BSScene : PhysicsScene, IPhysicsParameters
         // step the physical world one interval
         m_simulationStep++;
         int numSubSteps = 0;
-        try
-        {
-            numSubSteps = PE.PhysicsStep(World, timeStep, m_maxSubSteps, m_fixedTimeStep, out updatedEntityCount, out collidersCount);
+        lock(CollisionLock)
+        { 
+            try
+            {
+                numSubSteps = PE.PhysicsStep(World, timeStep, m_maxSubSteps, m_fixedTimeStep, out updatedEntityCount, out collidersCount);
 
-        }
-        catch (Exception e)
-        {
-            m_log.WarnFormat("{0},PhysicsStep Exception: nTaints={1}, substeps={2}, updates={3}, colliders={4}, e={5}",
-                        LogHeader, numTaints, numSubSteps, updatedEntityCount, collidersCount, e);
-            DetailLog("{0},PhysicsStepException,call, nTaints={1}, substeps={2}, updates={3}, colliders={4}",
-                        DetailLogZero, numTaints, numSubSteps, updatedEntityCount, collidersCount);
-            updatedEntityCount = 0;
-            collidersCount = 0;
-        }
+            }
+            catch (Exception e)
+            {
+                m_log.WarnFormat("{0},PhysicsStep Exception: nTaints={1}, substeps={2}, updates={3}, colliders={4}, e={5}",
+                            LogHeader, numTaints, numSubSteps, updatedEntityCount, collidersCount, e);
+                DetailLog("{0},PhysicsStepException,call, nTaints={1}, substeps={2}, updates={3}, colliders={4}",
+                            DetailLogZero, numTaints, numSubSteps, updatedEntityCount, collidersCount);
+                updatedEntityCount = 0;
+                collidersCount = 0;
+            }
 
-        // Make the physics engine dump useful statistics periodically
-        if (PhysicsMetricDumpFrames != 0 && ((m_simulationStep % PhysicsMetricDumpFrames) == 0))
-            PE.DumpPhysicsStatistics(World);
+            // Make the physics engine dump useful statistics periodically
+            if (PhysicsMetricDumpFrames != 0 && ((m_simulationStep % PhysicsMetricDumpFrames) == 0))
+                PE.DumpPhysicsStatistics(World);
 
-        // Get a value for 'now' so all the collision and update routines don't have to get their own.
-        SimulationNowTime = Environment.TickCount;
+            // Get a value for 'now' so all the collision and update routines don't have to get their own.
+            SimulationNowTime = Environment.TickCount;
 
-        // Send collision information to the colliding objects. The objects decide if the collision
-        //     is 'real' (like linksets don't collide with themselves) and the individual objects
-        //     know if the simulator has subscribed to collisions.
-        lock (CollisionLock)
-        {
+            // Send collision information to the colliding objects. The objects decide if the collision
+            //     is 'real' (like linksets don't collide with themselves) and the individual objects
+            //     know if the simulator has subscribed to collisions.
+
             if (collidersCount > 0)
             {
                 for (int ii = 0; ii < collidersCount; ii++)
