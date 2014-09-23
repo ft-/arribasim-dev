@@ -264,8 +264,8 @@ namespace OpenSim.Region.Physics.Meshing
 
             List<Coord> coords;
             List<Face> faces;
-            hulls = new List<List<Vector3>>();
-            boundingHull = new List<Vector3>();
+            hulls = null;
+            boundingHull = null;
 
             if (primShape.SculptEntry)
             {
