@@ -40,7 +40,7 @@ public abstract class BSShape
 {
     private static string LogHeader = "[BULLETSIM SHAPE]";
 
-    public int referenceCount { get; set; }
+    public int referenceCount;
     public DateTime lastReferenced { get; set; }
     public BulletShape physShapeInfo { get; set; }
 
@@ -52,7 +52,7 @@ public abstract class BSShape
     }
     public BSShape(BulletShape pShape)
     {
-        referenceCount = 1;
+        Interlocked.Increment(ref referenceCount);
         lastReferenced = DateTime.Now;
         physShapeInfo = pShape;
     }
@@ -65,14 +65,14 @@ public abstract class BSShape
     //       the shape.
     protected virtual void IncrementReference()
     {
-        referenceCount++;
+        Interlocked.Increment(ref referenceCount);
         lastReferenced = DateTime.Now;
     }
 
     // Called when this shape is done being used.
     protected virtual void DecrementReference()
     {
-        referenceCount--;
+        Interlocked.Decrement(ref referenceCount);
         lastReferenced = DateTime.Now;
     }
 
@@ -394,22 +394,22 @@ public class BSShapeMesh : BSShape
 
                 // Check to see if mesh was created (might require an asset).
                 newShape = VerifyMeshCreated(physicsScene, newShape, prim);
-                if (!newShape.isNativeShape
-                            || prim.PrimAssetState == BSPhysObject.PrimAssetCondition.FailedMeshing
-                            || prim.PrimAssetState == BSPhysObject.PrimAssetCondition.FailedAssetFetch)
-                {
-                    // If a mesh was what was created, remember the built shape for later sharing.
-                    // Also note that if meshing failed we put it in the mesh list as there is nothing else to do about the mesh.
-                    Meshes.Add(newMeshKey, retMesh);
-                }
+                        if (!newShape.isNativeShape
+                                    || prim.PrimAssetState == BSPhysObject.PrimAssetCondition.FailedMeshing
+                                    || prim.PrimAssetState == BSPhysObject.PrimAssetCondition.FailedAssetFetch)
+                        {
+                            // If a mesh was what was created, remember the built shape for later sharing.
+                            // Also note that if meshing failed we put it in the mesh list as there is nothing else to do about the mesh.
+                            Meshes.Add(newMeshKey, retMesh);
+                        }
 
-                retMesh.physShapeInfo = newShape;
-            }
-        }
-        finally
-        {
+                        retMesh.physShapeInfo = newShape;
+                    }
+                }
+                finally
+                {
             MeshesRwLock.ReleaseWriterLock();
-        }
+                }
         physicsScene.DetailLog("{0},BSShapeMesh,getReference,mesh={1},size={2},lod={3}", prim.LocalID, retMesh, prim.Size, lod);
         return retMesh;
     }
