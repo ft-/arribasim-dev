@@ -328,8 +328,8 @@ namespace OpenSim.Region.Physics.Meshing
                     out List<List<Vector3>> hulls,
                     out List<Vector3> boundingHull)
         {
-            hulls = new List<List<Vector3>>();
-            boundingHull = new List<Vector3>();
+            hulls = null;
+            boundingHull = null;
 //            m_log.DebugFormat("[MESH]: experimental mesh proxy generation for {0}", primName);
 
             coords = new List<Coord>();
