@@ -600,7 +600,7 @@ namespace OpenSim.Region.CoreModules.World.Archiver
                 if (!ResolveUserUuid(scene, part.OwnerID))
                     part.OwnerID = m_defaultUser;
 
-                if (!(ResolveUserUuid(scene, part.LastOwnerID) || ResolveGroupUuid(part.LastOwnerID)))
+                if (!ResolveUserUuid(scene, part.LastOwnerID))
                     part.LastOwnerID = m_defaultUser;
 
                 if (!ResolveGroupUuid(part.GroupID))
