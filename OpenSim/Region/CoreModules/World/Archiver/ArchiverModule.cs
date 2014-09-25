@@ -104,6 +104,7 @@ namespace OpenSim.Region.CoreModules.World.Archiver
             bool forceTerrain = false;
             bool forceParcels = false;
             bool noObjects = false;
+            bool persistUuids = false;
             Vector3 displacement = new Vector3(0f, 0f, 0f);
             String defaultUser = "";
             float rotation = 0f;
@@ -111,6 +112,7 @@ namespace OpenSim.Region.CoreModules.World.Archiver
             
             OptionSet options = new OptionSet();
             options.Add("m|merge", delegate (string v) { mergeOar = (v != null); });
+            options.Add("persist-uuids", delegate(string v) { persistUuids = (v != null); });
             options.Add("s|skip-assets", delegate (string v) { skipAssets = (v != null); });
             options.Add("force-terrain", delegate (string v) { forceTerrain = (v != null); });
             options.Add("forceterrain", delegate (string v) { forceTerrain = (v != null); });   // downward compatibility
@@ -181,6 +183,7 @@ namespace OpenSim.Region.CoreModules.World.Archiver
             if (forceTerrain) archiveOptions.Add("force-terrain", null);
             if (forceParcels) archiveOptions.Add("force-parcels", null);
             if (noObjects) archiveOptions.Add("no-objects", null);
+            if (persistUuids) archiveOptions.Add("persist-uuids", null);
             if (defaultUser != "")
             {
                 UUID defaultUserUUID = UUID.Zero;

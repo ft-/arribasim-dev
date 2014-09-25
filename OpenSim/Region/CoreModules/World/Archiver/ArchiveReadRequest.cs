@@ -99,6 +99,11 @@ namespace OpenSim.Region.CoreModules.World.Archiver
         protected bool m_merge;
 
         /// <value>
+        /// Should the archive being loaded be persisting uuids?
+        /// </value>
+        protected bool m_persistuuids = false;
+
+        /// <value>
         /// If true, force the loading of terrain from the oar file
         /// </value>
         protected bool m_forceTerrain;
@@ -191,6 +196,11 @@ namespace OpenSim.Region.CoreModules.World.Archiver
             m_merge = options.ContainsKey("merge");
             m_forceTerrain = options.ContainsKey("force-terrain");
             m_forceParcels = options.ContainsKey("force-parcels");
+            m_persistuuids = options.ContainsKey("persist-uuids");
+            if (m_persistuuids)
+            {
+                m_merge = false;
+            }
             m_noObjects = options.ContainsKey("no-objects");
             m_skipAssets = options.ContainsKey("skipAssets");
             m_requestId = requestId;
@@ -214,6 +224,11 @@ namespace OpenSim.Region.CoreModules.World.Archiver
             m_loadStream = loadStream;
             m_skipAssets = options.ContainsKey("skipAssets");
             m_merge = options.ContainsKey("merge");
+            m_persistuuids = options.ContainsKey("persist-uuids");
+            if(m_persistuuids)
+            {
+                m_merge = false;
+            }
             m_requestId = requestId;
 
             m_defaultUser = scene.RegionInfo.EstateSettings.EstateOwner;
@@ -526,7 +541,10 @@ namespace OpenSim.Region.CoreModules.World.Archiver
                 // For now, give all incoming scene objects new uuids.  This will allow scenes to be cloned
                 // on the same region server and multiple examples a single object archive to be imported
                 // to the same scene (when this is possible).
-                sceneObject.ResetIDs();
+                if (!m_persistuuids)
+                {
+                    sceneObject.ResetIDs();
+                }
 
                 if (isTelehub)
                 {
