@@ -597,7 +597,7 @@ namespace OpenSim.Region.CoreModules.World.Archiver
                 if (UserManager != null)
                     UserManager.AddUser(part.CreatorID, part.CreatorData);
 
-                if (!(ResolveUserUuid(scene, part.OwnerID) || ResolveGroupUuid(part.OwnerID)))
+                if (!ResolveUserUuid(scene, part.OwnerID))
                     part.OwnerID = m_defaultUser;
 
                 if (!(ResolveUserUuid(scene, part.LastOwnerID) || ResolveGroupUuid(part.LastOwnerID)))
