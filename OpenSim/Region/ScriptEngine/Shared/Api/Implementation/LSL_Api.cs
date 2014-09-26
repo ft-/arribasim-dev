@@ -2497,7 +2497,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         {
             m_host.AddScriptLPS(1);
 
-            return new LSL_Vector(m_host.ParentGroup.GetTorque());
+            return m_host.ParentGroup.GetTorque();
         }
 
         public void llSetForceAndTorque(LSL_Vector force, LSL_Vector torque, int local)
@@ -2518,9 +2518,9 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                 ScenePresence avatar = m_host.ParentGroup.Scene.GetScenePresence(m_host.ParentGroup.AttachedAvatar);
                 vel = avatar.WorldVelocity;
             }
-            else
+            else 
             {
-                vel = m_host.Velocity;
+                vel = m_host.ParentGroup.RootPart.Velocity;
             }
 
             return new LSL_Vector(vel);
@@ -2530,14 +2530,14 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         {
             m_host.AddScriptLPS(1);
 
-            return new LSL_Vector(m_host.Acceleration);
+            return m_host.ParentGroup.RootPart.Acceleration;
         }
 
         public LSL_Vector llGetOmega()
         {
             m_host.AddScriptLPS(1);
 
-            return new LSL_Vector(m_host.AngularVelocity);
+            return m_host.ParentGroup.RootPart.AngularVelocity;
         }
 
         public LSL_Float llGetTimeOfDay()
@@ -12277,7 +12277,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                                 }
                                 else
                                 {
-                                    vel = obj.Velocity; 
+                                    vel = obj.ParentGroup.RootPart.Velocity; 
                                 }
 
                                 ret.Add(vel);
