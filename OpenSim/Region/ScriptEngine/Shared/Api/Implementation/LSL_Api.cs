@@ -2523,7 +2523,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                 vel = m_host.ParentGroup.RootPart.Velocity;
             }
 
-            return new LSL_Vector(vel);
+            return vel;
         }
 
         public LSL_Vector llGetAccel()
