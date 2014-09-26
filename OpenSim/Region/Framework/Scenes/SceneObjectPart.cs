@@ -946,7 +946,7 @@ namespace OpenSim.Region.Framework.Scenes
             get
             {
                 PhysicsActor actor = PhysActor;
-                if ((actor != null) && actor.IsPhysical)
+                if ((actor != null) && actor.IsPhysical && m_linkNum < 2)
                 {
                     m_angularVelocity = actor.RotationalVelocity;
                 }
