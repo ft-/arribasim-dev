@@ -760,6 +760,13 @@ namespace OpenSim.Region.OptionalModules.Avatar.XmlRpcGroups
             return m_groupData.GetAgentGroupMemberships(UUID.Zero, agentID).ToArray();
         }
 
+        public GroupMembershipData[] GetMembershipData(UUID agentID, bool forceUpdate)
+        {
+            if (m_debugEnabled) m_log.DebugFormat("[GROUPS]: {0} called", System.Reflection.MethodBase.GetCurrentMethod().Name);
+
+            return m_groupData.GetAgentGroupMemberships(UUID.Zero, agentID).ToArray();
+        }
+
         public GroupMembershipData GetMembershipData(UUID groupID, UUID agentID)
         {
             if (m_debugEnabled) 

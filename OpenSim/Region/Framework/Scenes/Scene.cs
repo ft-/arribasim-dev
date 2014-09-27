@@ -3953,7 +3953,7 @@ namespace OpenSim.Region.Framework.Scenes
 
                 if (m_groupsModule != null)
                 {
-                    GroupMembershipData[] GroupMembership = m_groupsModule.GetMembershipData(agent.AgentID);
+                    GroupMembershipData[] GroupMembership = m_groupsModule.GetMembershipData(agent.AgentID, true);
 
                     if (GroupMembership != null)
                     {

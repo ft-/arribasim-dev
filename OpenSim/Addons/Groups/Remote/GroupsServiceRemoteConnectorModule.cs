@@ -253,6 +253,14 @@ namespace OpenSim.Groups
             });
         }
 
+        public List<GroupMembershipData> GetAgentGroupMemberships(string RequestingAgentID, string AgentID, bool forceUpdate)
+        {
+            return m_CacheWrapper.GetAgentGroupMemberships(AgentID, delegate
+            {
+                return m_GroupsService.GetMemberships(RequestingAgentID, AgentID);
+            }, forceUpdate);
+        }
+
 
         public List<GroupMembersData> GetGroupMembers(string RequestingAgentID, UUID GroupID)
         {

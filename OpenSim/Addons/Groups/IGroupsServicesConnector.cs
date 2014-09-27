@@ -85,6 +85,7 @@ namespace OpenSim.Groups
         /// list is returned.
         /// </returns>
         List<GroupMembershipData> GetAgentGroupMemberships(string RequestingAgentID, string AgentID);
+        List<GroupMembershipData> GetAgentGroupMemberships(string RequestingAgentID, string AgentID, bool forceUpdate);
 
         bool AddGroupNotice(string RequestingAgentID, UUID groupID, UUID noticeID, string fromName, string subject, string message, 
             bool hasAttachment, byte attType, string attName, UUID attItemID, string attOwnerID);

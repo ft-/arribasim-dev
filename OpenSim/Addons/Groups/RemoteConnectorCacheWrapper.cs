@@ -337,6 +337,47 @@ namespace OpenSim.Groups
             }
         }
 
+        public List<GroupMembershipData> GetAgentGroupMemberships(string AgentID, GroupMembershipListDelegate d, bool forceUpdate)
+        {
+            object memberships = null;
+            bool firstCall = false;
+            string cacheKey = "memberships-" + AgentID.ToString();
+
+            //m_log.DebugFormat("[XXX]: GetAgentGroupMemberships {0}", cacheKey);
+
+            while (true)
+            {
+                lock (m_Cache)
+                {
+                    if (!forceUpdate && m_Cache.TryGetValue(cacheKey, out memberships))
+                    {
+                        //m_log.DebugFormat("[XXX]: GetAgentGroupMemberships {0} cached!", cacheKey);
+                        return (List<GroupMembershipData>)memberships;
+                    }
+
+                    // not cached
+                    if (!m_ActiveRequests.ContainsKey(cacheKey))
+                    {
+                        m_ActiveRequests.Add(cacheKey, true);
+                        firstCall = true;
+                    }
+                }
+
+                if (firstCall)
+                {
+                    memberships = d();
+                    lock (m_Cache)
+                    {
+                        m_Cache.AddOrUpdate(cacheKey, memberships, GROUPS_CACHE_TIMEOUT);
+                        m_ActiveRequests.Remove(cacheKey);
+                        return (List<GroupMembershipData>)memberships;
+                    }
+                }
+                else
+                    Thread.Sleep(50);
+            }
+        }
+
         public List<GroupMembersData> GetGroupMembers(string RequestingAgentID, UUID GroupID, GroupMembersListDelegate d)
         {
             object members = null;

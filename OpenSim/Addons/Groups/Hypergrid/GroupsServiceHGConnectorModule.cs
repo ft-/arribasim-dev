@@ -76,7 +76,7 @@ namespace OpenSim.Groups
 
             m_Config = config;
             m_ServiceLocation = groupsConfig.GetString("LocalService", "local"); // local or remote
-            m_LocalGroupsServiceLocation = groupsConfig.GetString("GroupsExternalURI", "http://127.0.0.1");
+            m_LocalGroupsServiceLocation = groupsConfig.GetString("GroupsServerURI", "http://127.0.0.1");
             m_Scenes = new List<Scene>();
 
             m_Enabled = true;
@@ -530,6 +530,11 @@ namespace OpenSim.Groups
         public List<GroupMembershipData> GetAgentGroupMemberships(string RequestingAgentID, string AgentID)
         {
             return m_LocalGroupsConnector.GetAgentGroupMemberships(AgentUUI(RequestingAgentID), AgentUUI(AgentID));
+        }
+
+        public List<GroupMembershipData> GetAgentGroupMemberships(string RequestingAgentID, string AgentID, bool forceUpdate)
+        {
+            return m_LocalGroupsConnector.GetAgentGroupMemberships(AgentUUI(RequestingAgentID), AgentUUI(AgentID), forceUpdate);
         }
 
         public bool AddGroupNotice(string RequestingAgentID, UUID groupID, UUID noticeID, string fromName, string subject, string message,

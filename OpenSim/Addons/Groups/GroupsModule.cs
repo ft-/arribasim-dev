@@ -695,6 +695,13 @@ namespace OpenSim.Groups
             return m_groupData.GetAgentGroupMemberships(UUID.Zero.ToString(), agentID.ToString()).ToArray();
         }
 
+        public GroupMembershipData[] GetMembershipData(UUID agentID, bool forceUpdate)
+        {
+            if (m_debugEnabled) m_log.DebugFormat("[Groups]: {0} called", System.Reflection.MethodBase.GetCurrentMethod().Name);
+
+            return m_groupData.GetAgentGroupMemberships(UUID.Zero.ToString(), agentID.ToString(), forceUpdate).ToArray();
+        }
+
         public GroupMembershipData GetMembershipData(UUID groupID, UUID agentID)
         {
             if (m_debugEnabled) 
