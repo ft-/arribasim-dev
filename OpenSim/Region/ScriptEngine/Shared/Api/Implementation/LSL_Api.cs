@@ -953,6 +953,9 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
             m_host.AddScriptLPS(1);
 
+            World.SimChat(Utils.StringToBytes(text),
+                          ChatTypeEnum.Region, channelID, m_host.ParentGroup.RootPart.AbsolutePosition, m_host.Name, m_host.UUID, false);
+
             IWorldComm wComm = m_ScriptEngine.World.RequestModuleInterface<IWorldComm>();
             if (wComm != null)
                 wComm.DeliverMessage(ChatTypeEnum.Region, channelID, m_host.Name, m_host.UUID, text);
@@ -972,6 +975,9 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
             UUID TargetID;
             UUID.TryParse(target, out TargetID);
+
+            World.SimChatToAgent(TargetID, Utils.StringToBytes(msg),
+                          channel, m_host.ParentGroup.RootPart.AbsolutePosition, m_host.Name, m_host.UUID, true);
 
             IWorldComm wComm = m_ScriptEngine.World.RequestModuleInterface<IWorldComm>();
             if (wComm != null)
