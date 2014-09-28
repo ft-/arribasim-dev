@@ -266,7 +266,7 @@ namespace OpenSim
                                           SavePrimsXml2);
 
             m_console.Commands.AddCommand("Archiving", false, "load oar",
-                                          "load oar [--merge] [--skip-assets]"
+                                          "load oar [--merge] [--persist-uuids] [--skip-assets]"
                                              + " [--force-terrain] [--force-parcels]"
                                              + " [--no-objects]"
                                              + " [--rotation degrees] [--rotation-center \"<x,y,z>\"]"
@@ -276,6 +276,7 @@ namespace OpenSim
                                           "Load a region's data from an OAR archive.",
                                           "--merge will merge the OAR with the existing scene (suppresses terrain and parcel info loading)." + Environment.NewLine
                                           + "--skip-assets will load the OAR but ignore the assets it contains." + Environment.NewLine
+                                          + "--persist-uuids will restore the saved uuids from the oar (not to be combined with --merge)" + Environment.NewLine
                                           + "--displacement will add this value to the position of every object loaded" + Environment.NewLine
                                           + "--force-terrain forces the loading of terrain from the oar (undoes suppression done by --merge)" + Environment.NewLine
                                           + "--force-parcels forces the loading of parcels from the oar (undoes suppression done by --merge)" + Environment.NewLine
