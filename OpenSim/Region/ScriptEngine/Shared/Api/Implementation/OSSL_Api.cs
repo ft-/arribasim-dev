@@ -694,6 +694,8 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
         public bool osConsoleCommand(string command)
         {
+            CheckThreatLevel(ThreatLevel.Severe, "osConsoleCommand");
+
             m_host.AddScriptLPS(1);
 
             if (World.Permissions.CanRunConsoleCommand(m_host.OwnerID))
