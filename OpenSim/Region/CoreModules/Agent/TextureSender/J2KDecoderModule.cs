@@ -72,7 +72,7 @@ namespace OpenSim.Region.CoreModules.Agent.TextureSender
 
         #region ISharedRegionModule
 
-        private bool m_useCSJ2K = true;
+        private bool m_useCSJ2K = false;
 
         public string Name { get { return "J2KDecoderModule"; } }
 
