@@ -196,7 +196,12 @@ namespace OpenSim.Capabilities.Handlers
                }
                else // it was on the cache
                {
-//                   m_log.DebugFormat("[GETTEXTURE]: texture was in the cache");
+                   if (texture.Type != (sbyte)AssetType.Texture)
+                   {
+                       httpResponse.StatusCode = (int)System.Net.HttpStatusCode.NotFound;
+                       return true;
+                   }
+                   //                   m_log.DebugFormat("[GETTEXTURE]: texture was in the cache");
                    WriteTextureData(httpRequest, httpResponse, texture, format);
                    return true;
                }
