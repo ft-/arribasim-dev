@@ -1175,7 +1175,7 @@ namespace OpenSim.Region.ScriptEngine.XEngine
                                                 startParam, postOnRez,
                                                 m_MaxScriptQueue);
 
-                if (!instance.Load(m_AppDomains[appDomain], assembly, stateSource))
+                if (!instance.Load(appDom, assembly, stateSource))
                 {
                     return false;
                 }
@@ -1260,7 +1260,10 @@ namespace OpenSim.Region.ScriptEngine.XEngine
             m_DomainScripts[instance.AppDomain].Remove(instance.ItemID);
             if(m_DomainScripts.RemoveIf(instance.AppDomain, delegate(ThreadedClasses.RwLockedList<UUID> appDomainList) { return appDomainList.Count == 0; }))
             {
-                UnloadAppDomain(instance.AppDomain);
+                if (m_AppDomainLoading)
+                {
+                    UnloadAppDomain(instance.AppDomain);
+                }
             }
 
             ObjectRemoved handlerObjectRemoved = OnObjectRemoved;
