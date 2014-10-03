@@ -229,7 +229,14 @@ namespace OpenSim.Framework.Serialization.External
             writer.WriteString(inventoryItem.InvType.ToString());
             writer.WriteEndElement();
             writer.WriteStartElement("CreatorUUID");
-            writer.WriteString(OspResolver.MakeOspa(inventoryItem.CreatorIdAsUuid, userAccountService));
+            if (options.ContainsKey("creators"))
+            {
+                writer.WriteString(inventoryItem.CreatorIdAsUuid.ToString());
+            }
+            else 
+            { 
+                writer.WriteString(OspResolver.MakeOspa(inventoryItem.CreatorIdAsUuid, userAccountService));
+            }
             writer.WriteEndElement();
             writer.WriteStartElement("CreationDate");
             writer.WriteString(inventoryItem.CreationDate.ToString());
