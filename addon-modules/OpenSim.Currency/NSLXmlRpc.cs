@@ -72,6 +72,7 @@ namespace NSL.Network.XmlRpc
 			}
 			catch (Exception ex) {
 				m_log.ErrorFormat("[MONEY NSL RPC]: XmlRpcResponse certSend: GetResponse Error: {0}", ex);
+                throw;
 			}
 			StreamReader input = new StreamReader(response.GetResponseStream());
 
