@@ -3003,8 +3003,6 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         /// </summary>
         public void osSetProjectionParams(bool projection, LSL_Key texture, double fov, double focus, double amb)
         {
-            CheckThreatLevel(ThreatLevel.High, "osSetProjectionParams");
-
             osSetProjectionParams(UUID.Zero.ToString(), projection, texture, fov, focus, amb);
         }
 
