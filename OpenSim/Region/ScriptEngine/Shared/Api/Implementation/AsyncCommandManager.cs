@@ -309,26 +309,34 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             staticLock.AcquireReaderLock(-1);
             try
             {
+                m_log.Debug("DoOneCmdHandlerPass: begin");
+                m_log.Debug("DoOneCmdHandlerPass: CheckHttpRequests");
                 // Check HttpRequests
                 m_HttpRequest[m_ScriptEngines[0]].CheckHttpRequests();
 
+                m_log.Debug("DoOneCmdHandlerPass: CheckXMLRPCRequests");
                 // Check XMLRPCRequests
                 m_XmlRequest[m_ScriptEngines[0]].CheckXMLRPCRequests();
 
                 foreach (IScriptEngine s in m_ScriptEngines)
                 {
+                    m_log.Debug("DoOneCmdHandlerPass: CheckListeners");
                     // Check Listeners
                     m_Listener[s].CheckListeners();
 
+                    m_log.Debug("DoOneCmdHandlerPass: CheckTimerEvents");
                     // Check timers
                     m_Timer[s].CheckTimerEvents();
 
+                    m_log.Debug("DoOneCmdHandlerPass: CheckSenseRepeaterEvents");
                     // Check Sensors
                     m_SensorRepeat[s].CheckSenseRepeaterEvents();
 
+                    m_log.Debug("DoOneCmdHandlerPass: ExpireRequests");
                     // Check dataserver
                     m_Dataserver[s].ExpireRequests();
                 }
+                m_log.Debug("DoOneCmdHandlerPass: finished");
             }
             finally
             {

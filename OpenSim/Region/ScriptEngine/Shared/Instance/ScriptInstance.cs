@@ -572,31 +572,31 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
 
             IScriptWorkItem workItem;
 
-            lock (EventQueue)
+            // If we are waiting to run an event then we can try to cancel it.
+            lock (this)
             {
-                if (!Running)
-                    return true;
-
-                // If we're not running or waiting to run an event then we can safely stop.
-                if (m_CurrentWorkItem == null)
+                lock (EventQueue)
                 {
-                    Running = false;
-                    return true;
-                }
+                    if (!Running)
+                        return true;
 
-                // If we are waiting to run an event then we can try to cancel it.
-                lock (this)
-                {
+                    // If we're not running or waiting to run an event then we can safely stop.
+                    if (m_CurrentWorkItem == null)
+                    {
+                        Running = false;
+                        return true;
+                    }
+
                     if (m_CurrentWorkItem.Cancel())
                     {
                         m_CurrentWorkItem = null;
                         Running = false;
                         return true;
                     }
-                }
 
-                workItem = m_CurrentWorkItem;
-                Running = false;
+                    workItem = m_CurrentWorkItem;
+                    Running = false;
+                }
             }
 
             // Wait for the current event to complete.
