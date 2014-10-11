@@ -261,7 +261,17 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             int idx = 0;
             while (idx < rules.Length)
             {
-                uint rule = (uint)rules.GetLSLIntegerItem(idx);
+                uint rule;
+
+                try
+                {
+                    rule = (uint)rules.GetLSLIntegerItem(idx);
+                }
+                catch (InvalidCastException)
+                {
+                    throw new InvalidCastException(string.Format("Error running rule type: arg #{0} - parameter type must be integer", idx));
+                }
+
                 LSL_Types.Quaternion iQ;
                 LSL_Types.Vector3 iV;
                 switch (rule)
