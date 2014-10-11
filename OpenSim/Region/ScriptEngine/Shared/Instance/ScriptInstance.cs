@@ -120,8 +120,12 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
             {
                 bool reEnqueueScript = false;
                 // Need to do this inside a lock in order to avoid races with EventProcessor()
-                lock (m_Script)
+                lock (this)
                 {
+                    if(m_Script == null)
+                    {
+                        return;
+                    }
                     bool wasSuspended = m_Suspended;
                     m_Suspended = value;
     
@@ -129,14 +133,14 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
                     {
                         reEnqueueScript = true;
                     }
-                }
-                if (reEnqueueScript)
-                {
-                    lock (EventQueue)
+                    if (reEnqueueScript)
                     {
-                        // Need to place ourselves back in a work item if there are events to process
-                        if (EventQueue.Count > 0 && Running && !ShuttingDown)
-                            m_CurrentWorkItem = Engine.QueueEventHandler(this);
+                        lock (EventQueue)
+                        {
+                            // Need to place ourselves back in a work item if there are events to process
+                            if (EventQueue.Count > 0 && Running && !ShuttingDown)
+                                m_CurrentWorkItem = Engine.QueueEventHandler(this);
+                        }
                     }
                 }
             }
@@ -260,7 +264,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
             foreach (string api in am.GetApis())
             {
                 m_Apis[api] = am.CreateApi(api);
-                m_Apis[api].Initialize(Engine, Part, ScriptTask, m_coopSleepHandle);
+                m_Apis[api].Initialize(Engine, Part, ScriptTask, m_coopSleepHandle, this);
             }
     
             try
@@ -500,8 +504,12 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
 
         public void DestroyScriptInstance()
         {
-            ReleaseControls();
-            AsyncCommandManager.UnregisterScriptFacilities(Engine, LocalID, ItemID, true);
+            lock (this)
+            {
+                ReleaseControls();
+                AsyncCommandManager.UnregisterScriptFacilities(Engine, LocalID, ItemID, true);
+                m_Script = null;
+            }
         }
 
         public void RemoveState()
@@ -577,11 +585,14 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
                 }
 
                 // If we are waiting to run an event then we can try to cancel it.
-                if (m_CurrentWorkItem.Cancel())
+                lock (this)
                 {
-                    m_CurrentWorkItem = null;
-                    Running = false;
-                    return true;
+                    if (m_CurrentWorkItem.Cancel())
+                    {
+                        m_CurrentWorkItem = null;
+                        Running = false;
+                        return true;
+                    }
                 }
 
                 workItem = m_CurrentWorkItem;
@@ -591,25 +602,8 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
             // Wait for the current event to complete.
             if (!m_InSelfDelete)
             {
-                if (DebugLevel >= 1)
-                    m_log.DebugFormat(
-                        "[SCRIPT INSTANCE]: Co-operatively stopping script {0} {1} in {2} {3}",
-                        ScriptName, ItemID, PrimName, ObjectID);
-
-                // This will terminate the event on next handle check by the script.
-                m_coopSleepHandle.Set();
-
-                // For now, we will wait forever since the event should always cleanly terminate once LSL loop
-                // checking is implemented.  May want to allow a shorter timeout option later.
-                if (workItem.Wait(Timeout.Infinite))
-                {
-                    if (DebugLevel >= 1)
-                        m_log.DebugFormat(
-                            "[SCRIPT INSTANCE]: Co-operatively stopped script {0} {1} in {2} {3}",
-                            ScriptName, ItemID, PrimName, ObjectID);
-
+                if (workItem.Wait(timeout))
                     return true;
-                }
             }
 
             lock (EventQueue)
@@ -622,14 +616,16 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
 
             // If the event still hasn't stopped and we the stop isn't the result of script or object removal, then
             // forcibly abort the work item (this aborts the underlying thread).
-            // Co-operative termination should never reach this point.
             if (!m_InSelfDelete)
             {
                 m_log.DebugFormat(
                     "[SCRIPT INSTANCE]: Aborting unstopped script {0} {1} in prim {2}, localID {3}, timeout was {4} ms", 
                     ScriptName, ItemID, PrimName, LocalID, timeout);
 
-                workItem.Abort();
+                lock (this) /* guard for that we have to leave the actual code first to have a clean state on objects */
+                {
+                    workItem.Abort();
+                }
             }
 
             lock (EventQueue)
@@ -745,12 +741,16 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
             if (!Running)
                 return 0;
 
-            lock (m_Script)
+            lock (this)
             {
 //                m_log.DebugFormat("[XEngine]: EventProcessor() invoked for {0}.{1}", PrimName, ScriptName);
 
                 if (Suspended)
                     return 0;
+                if(m_Script == null)
+                {
+                    return 0;
+                }
 
                 EventParams data = null;
 
@@ -836,7 +836,10 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
                             if (start - MeasurementPeriodTickStart > MaxMeasurementPeriod)
                                 MeasurementPeriodTickStart = start;
 
-                            m_Script.ExecuteEvent(State, data.EventName, data.Params);
+                            if (m_Script != null)
+                            {
+                                m_Script.ExecuteEvent(State, data.EventName, data.Params);
+                            }
 
                             MeasurementPeriodExecutionTime += Environment.TickCount - start;
 
@@ -881,14 +884,15 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
                                                            Part.Name, Part.UUID, false);
 
 
-                                    m_log.Debug(string.Format(
-                                        "[SCRIPT INSTANCE]: Runtime error in script {0}, part {1} {2} at {3} in {4} ", 
+                                    m_log.DebugFormat(
+                                        "[SCRIPT INSTANCE]: Runtime error in script {0}, part {1} {2} at {3} in {4}\n{5}", 
                                         ScriptName, 
                                         PrimName, 
                                         Part.UUID,
                                         Part.AbsolutePosition,
-                                        Part.ParentGroup.Scene.Name), 
-                                        e);
+                                        Part.ParentGroup.Scene.Name, 
+                                        e,
+                                        e.StackTrace.ToString());
                                 }
                                 catch (Exception)
                                 {
@@ -956,73 +960,92 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
 
         public void ResetScript(int timeout)
         {
-            if (m_Script == null)
-                return;
+            lock (this)
+            {
+                if (m_Script == null)
+                    return;
 
-            bool running = Running;
+                bool running = Running;
 
-            RemoveState();
-            ReleaseControls();
+                RemoveState();
+                ReleaseControls();
 
-            Stop(timeout);
-            Part.Inventory.GetInventoryItem(ItemID).PermsMask = 0;
-            Part.Inventory.GetInventoryItem(ItemID).PermsGranter = UUID.Zero;
-            AsyncCommandManager.UnregisterScriptFacilities(Engine, LocalID, ItemID, true);
-            EventQueue.Clear();
-            m_Script.ResetVars();
-            StartParam = 0;
-            State = "default";
+                Stop(timeout);
+                Part.Inventory.GetInventoryItem(ItemID).PermsMask = 0;
+                Part.Inventory.GetInventoryItem(ItemID).PermsGranter = UUID.Zero;
+                AsyncCommandManager.UnregisterScriptFacilities(Engine, LocalID, ItemID, true);
+                EventQueue.Clear();
+                m_Script.ResetVars();
+                StartParam = 0;
+                State = "default";
 
-            Part.SetScriptEvents(ItemID,
-                                 (int)m_Script.GetStateEventFlags(State));
-            if (running)
-                Start();
-            m_SaveState = true;
-            PostEvent(new EventParams("state_entry",
-                    new Object[0], new DetectParams[0]));
+                Part.SetScriptEvents(ItemID,
+                                     (int)m_Script.GetStateEventFlags(State));
+                if (running)
+                    Start();
+                m_SaveState = true;
+                PostEvent(new EventParams("state_entry",
+                        new Object[0], new DetectParams[0]));
+            }
         }
 
         public void ApiResetScript()
         {
             // bool running = Running;
 
-            RemoveState();
-            ReleaseControls();
-
-            m_Script.ResetVars();
-            Part.Inventory.GetInventoryItem(ItemID).PermsMask = 0;
-            Part.Inventory.GetInventoryItem(ItemID).PermsGranter = UUID.Zero;
-            AsyncCommandManager.UnregisterScriptFacilities(Engine, LocalID, ItemID, true);
-
-            EventQueue.Clear();
-            m_Script.ResetVars();
-            string oldState = State;
-            StartParam = 0;
-            State = "default";
-
-            Part.SetScriptEvents(ItemID,
-                                 (int)m_Script.GetStateEventFlags(State));
-
-            if (m_CurrentEvent != "state_entry" || oldState != "default")
+            lock(this)
             {
-                m_SaveState = true;
-                PostEvent(new EventParams("state_entry",
-                        new Object[0], new DetectParams[0]));
-                throw new EventAbortException();
+                if(m_Script == null)
+                {
+                    return;
+                }
+                RemoveState();
+                ReleaseControls();
+
+                m_Script.ResetVars();
+                Part.Inventory.GetInventoryItem(ItemID).PermsMask = 0;
+                Part.Inventory.GetInventoryItem(ItemID).PermsGranter = UUID.Zero;
+                AsyncCommandManager.UnregisterScriptFacilities(Engine, LocalID, ItemID, true);
+
+                EventQueue.Clear();
+                m_Script.ResetVars();
+                string oldState = State;
+                StartParam = 0;
+                State = "default";
+
+                Part.SetScriptEvents(ItemID,
+                                     (int)m_Script.GetStateEventFlags(State));
+
+                if (m_CurrentEvent != "state_entry" || oldState != "default")
+                {
+                    m_SaveState = true;
+                    PostEvent(new EventParams("state_entry",
+                            new Object[0], new DetectParams[0]));
+                    throw new EventAbortException();
+                }
             }
         }
 
         public Dictionary<string, object> GetVars()
         {
-            if (m_Script != null)
-                return m_Script.GetVars();
-            else
-                return new Dictionary<string, object>();
+            lock (this)
+            {
+                if (m_Script != null)
+                    return m_Script.GetVars();
+                else
+                    return new Dictionary<string, object>();
+            }
         }
 
         public void SetVars(Dictionary<string, object> vars)
         {
-            m_Script.SetVars(vars);
+            lock (this)
+            {
+                if (m_Script != null)
+                {
+                    m_Script.SetVars(vars);
+                }
+            }
         }
 
         public DetectParams GetDetectParams(int idx)
@@ -1055,9 +1078,18 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
                 return;
             }
 
-            PluginData = AsyncCommandManager.GetSerializationData(Engine, ItemID);
+            string xml;
+            lock(this)
+            {
+                if(m_Script == null)
+                {
+                    return;
+                }
 
-            string xml = ScriptSerializer.Serialize(this);
+                PluginData = AsyncCommandManager.GetSerializationData(Engine, ItemID);
+
+                xml = ScriptSerializer.Serialize(this);
+            }
 
             // Compare hash of the state we just just created with the state last written to disk
             // If the state is different, update the disk file.

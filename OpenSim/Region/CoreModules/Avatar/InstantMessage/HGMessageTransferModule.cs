@@ -49,6 +49,7 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         protected bool m_Enabled = false;
+        protected bool m_EnableObjectIM = true;
         private ThreadedClasses.RwLockedList<Scene> m_Scenes = new ThreadedClasses.RwLockedList<Scene>();
 
         protected IInstantMessage m_IMService;
@@ -74,6 +75,10 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
             {
                 m_log.Debug("[HG MESSAGE TRANSFER]: Disabled by configuration");
                 return;
+            }
+            if(cnf != null)
+            {
+                m_EnableObjectIM = cnf.GetBoolean("EnableGridWideObjectIM", true);
             }
 
             InstantMessageServerConnector imServer = new InstantMessageServerConnector(config, MainServer.Instance, this);
@@ -177,6 +182,14 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
             // Is the user a local user?
             string url = string.Empty;
             bool foreigner = false;
+
+            byte dialog = im.dialog;
+
+            if(dialog == (byte)InstantMessageDialog.MessageFromObject && !m_EnableObjectIM)
+            {
+                return;
+            }
+
             if (UserManagementModule != null && !UserManagementModule.IsLocalGridUser(toAgentID)) // foreign user
             {
                 url = UserManagementModule.GetUserServerURL(toAgentID, "IMServerURI");

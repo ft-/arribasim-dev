@@ -156,6 +156,7 @@ namespace OpenSim.Region.ScriptEngine.XEngine
             new ThreadedClasses.RwLockedDictionary<string, Dictionary<KeyValuePair<int, int>, KeyValuePair<int, int>>>();
 
         // This will list AppDomains by script asset
+        private object m_ScriptLoadUnloadLock = new object();
 
         private ThreadedClasses.RwLockedDictionary<UUID, AppDomain> m_AppDomains =
                 new ThreadedClasses.RwLockedDictionary<UUID, AppDomain>();
@@ -682,10 +683,13 @@ namespace OpenSim.Region.ScriptEngine.XEngine
                 // down since it takes a long time with many scripts.
                 if (!m_SimulatorShuttingDown)
                 {
-                    m_DomainScripts[instance.AppDomain].Remove(instance.ItemID);
-                    if(m_DomainScripts.RemoveIf(instance.AppDomain, delegate(ThreadedClasses.RwLockedList<UUID> l) { return l.Count == 0; }))
+                    lock (m_ScriptLoadUnloadLock)
                     {
-                        UnloadAppDomain(instance.AppDomain);
+                        m_DomainScripts[instance.AppDomain].Remove(instance.ItemID);
+                        if (m_DomainScripts.RemoveIf(instance.AppDomain, delegate(ThreadedClasses.RwLockedList<UUID> l) { return l.Count == 0; }))
+                        {
+                            UnloadAppDomain(instance.AppDomain);
+                        }
                     }
                 }
             }
@@ -1119,65 +1123,77 @@ namespace OpenSim.Region.ScriptEngine.XEngine
                     appDomain = part.ParentGroup.RootPart.UUID;
 
                 AppDomain appDom;
-                try
+                lock (m_ScriptLoadUnloadLock)
                 {
-                    appDom = m_AppDomains.GetOrAddIfNotExists(appDomain, delegate()
+                    try
                     {
-                        AppDomainSetup appSetup = new AppDomainSetup();
-                        appSetup.PrivateBinPath = Path.Combine(
-                                m_ScriptEnginesPath,
-                                m_Scene.RegionInfo.RegionID.ToString());
-
-                        Evidence baseEvidence = AppDomain.CurrentDomain.Evidence;
-                        Evidence evidence = new Evidence(baseEvidence);
-
-                        AppDomain sandbox;
-                        if (m_AppDomainLoading)
+                        appDom = m_AppDomains.GetOrAddIfNotExists(appDomain, delegate()
                         {
-                            sandbox = AppDomain.CreateDomain(
-                                            m_Scene.RegionInfo.RegionID.ToString(),
-                                            evidence, appSetup);
-                            sandbox.AssemblyResolve +=
-                                new ResolveEventHandler(
-                                    AssemblyResolver.OnAssemblyResolve);
-                        }
-                        else
-                        {
-                            sandbox = AppDomain.CurrentDomain;
-                        }
+                            AppDomainSetup appSetup = new AppDomainSetup();
+                            appSetup.PrivateBinPath = Path.Combine(
+                                    m_ScriptEnginesPath,
+                                    m_Scene.RegionInfo.RegionID.ToString());
 
-                        //PolicyLevel sandboxPolicy = PolicyLevel.CreateAppDomainLevel();
-                        //AllMembershipCondition sandboxMembershipCondition = new AllMembershipCondition();
-                        //PermissionSet sandboxPermissionSet = sandboxPolicy.GetNamedPermissionSet("Internet");
-                        //PolicyStatement sandboxPolicyStatement = new PolicyStatement(sandboxPermissionSet);
-                        //CodeGroup sandboxCodeGroup = new UnionCodeGroup(sandboxMembershipCondition, sandboxPolicyStatement);
-                        //sandboxPolicy.RootCodeGroup = sandboxCodeGroup;
-                        //sandbox.SetAppDomainPolicy(sandboxPolicy);
+                            Evidence baseEvidence = AppDomain.CurrentDomain.Evidence;
+                            Evidence evidence = new Evidence(baseEvidence);
 
-                        return sandbox;
-                    });
-                    m_DomainScripts[appDomain].Add(itemID);
-                }
-                catch (Exception e)
-                {
-                    m_log.ErrorFormat("[XEngine] Exception creating app domain:\n {0}", e.ToString());
-                    m_ScriptErrorMessage += "Exception creating app domain:\n";
-                    Interlocked.Increment(ref m_ScriptFailCount);
-                    lock(m_AddingAssemblies)
-                    {
-                        m_AddingAssemblies[assembly]--;
+                            AppDomain sandbox;
+                            if (m_AppDomainLoading)
+                            {
+                                sandbox = AppDomain.CreateDomain(
+                                                m_Scene.RegionInfo.RegionID.ToString() + " " + appDomain.ToString(),
+                                                evidence, appSetup);
+                                sandbox.AssemblyResolve +=
+                                    new ResolveEventHandler(
+                                        AssemblyResolver.OnAssemblyResolve);
+                            }
+                            else
+                            {
+                                sandbox = AppDomain.CurrentDomain;
+                            }
+
+                            //PolicyLevel sandboxPolicy = PolicyLevel.CreateAppDomainLevel();
+                            //AllMembershipCondition sandboxMembershipCondition = new AllMembershipCondition();
+                            //PermissionSet sandboxPermissionSet = sandboxPolicy.GetNamedPermissionSet("Internet");
+                            //PolicyStatement sandboxPolicyStatement = new PolicyStatement(sandboxPermissionSet);
+                            //CodeGroup sandboxCodeGroup = new UnionCodeGroup(sandboxMembershipCondition, sandboxPolicyStatement);
+                            //sandboxPolicy.RootCodeGroup = sandboxCodeGroup;
+                            //sandbox.SetAppDomainPolicy(sandboxPolicy);
+
+                            return sandbox;
+                        });
+                        m_DomainScripts[appDomain].Add(itemID);
                     }
-                    return false;
-                }
+                    catch (Exception e)
+                    {
+                        m_log.ErrorFormat("[XEngine] Exception creating app domain:\n {0}", e.ToString());
+                        m_ScriptErrorMessage += "Exception creating app domain:\n";
+                        Interlocked.Increment(ref m_ScriptFailCount);
+                        lock (m_AddingAssemblies)
+                        {
+                            m_AddingAssemblies[assembly]--;
+                        }
+                        return false;
+                    }
 
-                instance = new ScriptInstance(this, part,
-                                                item,
-                                                startParam, postOnRez,
-                                                m_MaxScriptQueue);
+                    instance = new ScriptInstance(this, part,
+                                                    item,
+                                                    startParam, postOnRez,
+                                                    m_MaxScriptQueue);
 
-                if (!instance.Load(appDom, assembly, stateSource))
-                {
-                    return false;
+                    if (!instance.Load(appDom, assembly, stateSource))
+                    {
+                        m_DomainScripts[instance.AppDomain].Remove(instance.ItemID);
+                        if (m_DomainScripts.RemoveIf(instance.AppDomain, delegate(ThreadedClasses.RwLockedList<UUID> appDomainList) { return appDomainList.Count == 0; }))
+                        {
+                            if (m_AppDomainLoading)
+                            {
+                                UnloadAppDomain(instance.AppDomain);
+                            }
+                        }
+
+                        return false;
+                    }
                 }
 
     //                    if (DebugLevel >= 1)
@@ -1257,12 +1273,15 @@ namespace OpenSim.Region.ScriptEngine.XEngine
             instance.RemoveState();
             instance.DestroyScriptInstance();
 
-            m_DomainScripts[instance.AppDomain].Remove(instance.ItemID);
-            if(m_DomainScripts.RemoveIf(instance.AppDomain, delegate(ThreadedClasses.RwLockedList<UUID> appDomainList) { return appDomainList.Count == 0; }))
+            lock (m_ScriptLoadUnloadLock)
             {
-                if (m_AppDomainLoading)
+                m_DomainScripts[instance.AppDomain].Remove(instance.ItemID);
+                if (m_DomainScripts.RemoveIf(instance.AppDomain, delegate(ThreadedClasses.RwLockedList<UUID> appDomainList) { return appDomainList.Count == 0; }))
                 {
-                    UnloadAppDomain(instance.AppDomain);
+                    if (m_AppDomainLoading)
+                    {
+                        UnloadAppDomain(instance.AppDomain);
+                    }
                 }
             }
 

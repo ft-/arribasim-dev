@@ -103,7 +103,7 @@ namespace OpenSim.Data.MySQL
             }
             catch (Exception e)
             {
-                m_log.Error("[REGION DB]: MySQL error in ExecuteNonQuery: " + e.Message);
+                m_log.ErrorFormat("[REGION DB]: MySQL error in ExecuteNonQuery: {0}\n{1}", e.Message, e.StackTrace.ToString());
                 throw;
             }
         }
