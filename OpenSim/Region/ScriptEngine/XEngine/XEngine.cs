@@ -1275,14 +1275,14 @@ namespace OpenSim.Region.ScriptEngine.XEngine
 
             lock (m_ScriptLoadUnloadLock)
             {
-                m_DomainScripts[instance.AppDomain].Remove(instance.ItemID);
-                if (m_DomainScripts.RemoveIf(instance.AppDomain, delegate(ThreadedClasses.RwLockedList<UUID> appDomainList) { return appDomainList.Count == 0; }))
+            m_DomainScripts[instance.AppDomain].Remove(instance.ItemID);
+            if(m_DomainScripts.RemoveIf(instance.AppDomain, delegate(ThreadedClasses.RwLockedList<UUID> appDomainList) { return appDomainList.Count == 0; }))
+            {
+                if (m_AppDomainLoading)
                 {
-                    if (m_AppDomainLoading)
-                    {
-                        UnloadAppDomain(instance.AppDomain);
-                    }
+                    UnloadAppDomain(instance.AppDomain);
                 }
+            }
             }
 
             ObjectRemoved handlerObjectRemoved = OnObjectRemoved;
