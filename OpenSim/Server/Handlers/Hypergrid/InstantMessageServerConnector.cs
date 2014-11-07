@@ -154,7 +154,14 @@ namespace OpenSim.Server.Handlers.Hypergrid
                     else
                     {
                         byte[] dialogdata = Convert.FromBase64String(requestData1);
-                        dialog = dialogdata[0];
+                        try
+                        {
+                            dialog = dialogdata[0];
+                        }
+                        catch
+                        {
+                            dialog = 0;
+                        }
                     }
 
                     if ((string)requestData["from_group"] == "TRUE")
@@ -168,7 +175,14 @@ namespace OpenSim.Server.Handlers.Hypergrid
                     else
                     {
                         byte[] offlinedata = Convert.FromBase64String(requestData2);
-                        offline = offlinedata[0];
+                        try
+                        {
+                            offline = offlinedata[0];
+                        }
+                        catch
+                        {
+                            offline = 0;
+                        }
                     }
 
                     try
