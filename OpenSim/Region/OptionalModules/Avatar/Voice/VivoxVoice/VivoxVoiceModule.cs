@@ -642,8 +642,11 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
                 if ((land.Flags & (uint)ParcelFlags.AllowVoiceChat) == 0)
                 {
-                    m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: region \"{0}\": Parcel \"{1}\" ({2}): avatar \"{3}\": voice not enabled for parcel",
+                    //uncommented log, quickfix to stop excesive spamming of logs....
+                    
+                    /*m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: region \"{0}\": Parcel \"{1}\" ({2}): avatar \"{3}\": voice not enabled for parcel",
                                       scene.RegionInfo.RegionName, land.Name, land.LocalID, avatarName);
+                                      */
                     channel_uri = String.Empty;
                 }
                 else
