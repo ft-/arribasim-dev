@@ -725,7 +725,14 @@ namespace OpenSim.Framework.Servers
                 using (StreamReader CommitFile = File.OpenText(manualVersionFileName))
                     buildVersion = CommitFile.ReadLine();
 
-                m_version = buildVersion ?? "";
+                if (string.IsNullOrEmpty(buildVersion))
+                {
+                    m_version = VersionInfo.Version;
+                }
+                else
+                {
+                    m_version = "OpenSim Arriba (Codename: That is Not True) " + buildVersion;
+                }
             }
         }
 
