@@ -78,6 +78,7 @@ namespace OpenSim.Capabilities.Handlers
             {
                 m_log.ErrorFormat("[WEB FETCH INV DESC HANDLER]: Fetch error: {0}{1}" + e.Message, e.StackTrace);
                 m_log.Error("Request: " + request);
+                throw;
             }
     
             ArrayList foldersrequested = (ArrayList)hash["folders"];
