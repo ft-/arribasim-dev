@@ -37,6 +37,7 @@ using System.IO;
 using System.Reflection;
 using System.Xml;
 using FriendInfo = OpenSim.Services.Interfaces.FriendInfo;
+using OpenSim.Framework.ServiceAuth;
 
 namespace OpenSim.Server.Handlers.Friends
 {
@@ -46,8 +47,8 @@ namespace OpenSim.Server.Handlers.Friends
 
         private IFriendsService m_FriendsService;
 
-        public FriendsServerPostHandler(IFriendsService service) :
-                base("POST", "/friends")
+        public FriendsServerPostHandler(IFriendsService service, IServiceAuth auth) :
+                base("POST", "/friends", auth)
         {
             m_FriendsService = service;
         }
@@ -223,7 +224,7 @@ namespace OpenSim.Server.Handlers.Friends
 
             rootElement.AppendChild(result);
 
-            return DocToBytes(doc);
+            return Util.DocToBytes(doc);
         }
 
         private byte[] FailureResult()
@@ -255,18 +256,7 @@ namespace OpenSim.Server.Handlers.Friends
 
             rootElement.AppendChild(message);
 
-            return DocToBytes(doc);
-        }
-
-        private byte[] DocToBytes(XmlDocument doc)
-        {
-            MemoryStream ms = new MemoryStream();
-            XmlTextWriter xw = new XmlTextWriter(ms, null);
-            xw.Formatting = Formatting.Indented;
-            doc.WriteTo(xw);
-            xw.Flush();
-
-            return ms.ToArray();
+            return Util.DocToBytes(doc);
         }
 
         void FromKeyValuePairs(Dictionary<string, object> kvp, out string principalID, out string friend, out int flags)

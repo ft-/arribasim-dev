@@ -30,6 +30,8 @@ using Nini.Config;
 using OpenMetaverse;
 using OpenSim.Framework;
 using OpenSim.Server.Base;
+using OpenSim.Framework.ServiceAuth;
+using OpenSim.Framework.Communications;
 using OpenSim.Services.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -38,7 +40,7 @@ using FriendInfo = OpenSim.Services.Interfaces.FriendInfo;
 
 namespace OpenSim.Services.Connectors.Friends
 {
-    public class FriendsServicesConnector : IFriendsService
+    public class FriendsServicesConnector : BaseServiceConnector, IFriendsService
     {
         private static readonly ILog m_log =
                 LogManager.GetLogger(
@@ -78,6 +80,7 @@ namespace OpenSim.Services.Connectors.Friends
                 throw new Exception("Friends connector init error");
             }
             m_ServerURI = serviceURI;
+            base.Initialise(source, "FriendsService");
         }
 
 
@@ -110,7 +113,7 @@ namespace OpenSim.Services.Connectors.Friends
 
             try
             {
-                string reply = SynchronousRestFormsRequester.MakeRequest("POST", uri, reqString);
+                string reply = SynchronousRestFormsRequester.MakeRequest("POST", uri, reqString, m_Auth);
                 if (reply != string.Empty)
                 {
                     Dictionary<string, object> replyData = ServerUtils.ParseXmlResponse(reply);
@@ -166,7 +169,7 @@ namespace OpenSim.Services.Connectors.Friends
             string uri = m_ServerURI + "/friends";
             try
             {
-                reply = SynchronousRestFormsRequester.MakeRequest("POST", uri, ServerUtils.BuildQueryString(sendData));
+                reply = SynchronousRestFormsRequester.MakeRequest("POST", uri, ServerUtils.BuildQueryString(sendData), m_Auth);
             }
             catch (Exception e)
             {
@@ -221,7 +224,7 @@ namespace OpenSim.Services.Connectors.Friends
             string uri = m_ServerURI + "/friends";
             try
             {
-                reply = SynchronousRestFormsRequester.MakeRequest("POST", uri, ServerUtils.BuildQueryString(sendData));
+                reply = SynchronousRestFormsRequester.MakeRequest("POST", uri, ServerUtils.BuildQueryString(sendData), m_Auth);
             }
             catch (Exception e)
             {

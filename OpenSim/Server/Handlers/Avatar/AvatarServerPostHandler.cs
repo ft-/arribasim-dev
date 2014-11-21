@@ -25,6 +25,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using Nini.Config;
 using log4net;
 using OpenMetaverse;
 using OpenSim.Framework;
@@ -36,6 +37,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Xml;
+using OpenSim.Framework.ServiceAuth;
 
 namespace OpenSim.Server.Handlers.Avatar
 {
@@ -45,8 +47,8 @@ namespace OpenSim.Server.Handlers.Avatar
 
         private IAvatarService m_AvatarService;
 
-        public AvatarServerPostHandler(IAvatarService service) :
-                base("POST", "/avatar")
+        public AvatarServerPostHandler(IAvatarService service, IServiceAuth auth) :
+                base("POST", "/avatar", auth)
         {
             m_AvatarService = service;
         }
@@ -241,7 +243,7 @@ namespace OpenSim.Server.Handlers.Avatar
 
             rootElement.AppendChild(result);
 
-            return DocToBytes(doc);
+            return Util.DocToBytes(doc);
         }
 
         private byte[] FailureResult()
@@ -263,18 +265,7 @@ namespace OpenSim.Server.Handlers.Avatar
 
             rootElement.AppendChild(result);
 
-            return DocToBytes(doc);
-        }
-
-        private byte[] DocToBytes(XmlDocument doc)
-        {
-            MemoryStream ms = new MemoryStream();
-            XmlTextWriter xw = new XmlTextWriter(ms, null);
-            xw.Formatting = Formatting.Indented;
-            doc.WriteTo(xw);
-            xw.Flush();
-
-            return ms.ToArray();
+            return Util.DocToBytes(doc);
         }
 
     }

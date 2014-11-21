@@ -32,6 +32,7 @@ using System;
 using System.IO;
 using System.Net;
 using System.Xml.Serialization;
+using OpenSim.Framework.ServiceAuth;
 
 namespace OpenSim.Server.Handlers.Asset
 {
@@ -43,6 +44,12 @@ namespace OpenSim.Server.Handlers.Asset
 
         public AssetsExistHandler(IAssetService service) :
             base("POST", "/get_assets_exist")
+        {
+            m_AssetService = service;
+        }
+
+        public AssetsExistHandler(IAssetService service, IServiceAuth auth) :
+            base("POST", "/get_assets_exist", auth)
         {
             m_AssetService = service;
         }

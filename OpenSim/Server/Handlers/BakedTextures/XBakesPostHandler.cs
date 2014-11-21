@@ -25,6 +25,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using OpenSim.Framework.ServiceAuth;
 using OpenSim.Framework.Servers.HttpServer;
 using OpenSim.Services.Interfaces;
 using System.IO;
@@ -40,14 +41,14 @@ namespace OpenSim.Server.Handlers.BakedTextures
         private System.Text.UTF8Encoding utf8 =
                 new System.Text.UTF8Encoding();
 
-        public BakesServerPostHandler(IBakedTextureService service) :
-                base("POST", "/bakes")
+        public BakesServerPostHandler(IBakedTextureService service, IServiceAuth auth) :
+                base("POST", "/bakes", auth)
         {
             m_BakesService = service;
         }
 
-        public override byte[] Handle(string path, Stream request,
-                IOSHttpRequest httpRequest, IOSHttpResponse httpResponse)
+        protected override byte[] ProcessRequest(
+            string path, Stream request, IOSHttpRequest httpRequest, IOSHttpResponse httpResponse)
         {
             string[] p = SplitParams(path);
 

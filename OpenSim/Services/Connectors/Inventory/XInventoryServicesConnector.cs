@@ -37,7 +37,7 @@ using System.Reflection;
 
 namespace OpenSim.Services.Connectors
 {
-    public class XInventoryServicesConnector : IInventoryService
+    public class XInventoryServicesConnector : BaseServiceConnector, IInventoryService
     {
         private static readonly ILog m_log =
                 LogManager.GetLogger(
@@ -45,7 +45,13 @@ namespace OpenSim.Services.Connectors
 
         private string m_ServerURI = String.Empty;
 
-        private object m_Lock = new object();
+        /// <summary>
+        /// Timeout for remote requests.
+        /// </summary>
+        /// <remarks>
+        /// In this case, -1 is default timeout (100 seconds), not infinite.
+        /// </remarks>
+        private int m_requestTimeoutSecs = -1;
 
         public XInventoryServicesConnector()
         {
@@ -57,20 +63,21 @@ namespace OpenSim.Services.Connectors
         }
 
         public XInventoryServicesConnector(IConfigSource source)
+            : base(source, "InventoryService")
         {
             Initialise(source);
         }
 
         public virtual void Initialise(IConfigSource source)
         {
-            IConfig assetConfig = source.Configs["InventoryService"];
-            if (assetConfig == null)
+            IConfig config = source.Configs["InventoryService"];
+            if (config == null)
             {
                 m_log.Error("[INVENTORY CONNECTOR]: InventoryService missing from OpenSim.ini");
                 throw new Exception("Inventory connector init error");
             }
 
-            string serviceURI = assetConfig.GetString("InventoryServerURI",
+            string serviceURI = config.GetString("InventoryServerURI",
                     String.Empty);
 
             if (serviceURI == String.Empty)
@@ -79,6 +86,8 @@ namespace OpenSim.Services.Connectors
                 throw new Exception("Inventory connector init error");
             }
             m_ServerURI = serviceURI;
+
+            m_requestTimeoutSecs = config.GetInt("RemoteRequestTimeout", m_requestTimeoutSecs);
         }
 
         private bool CheckReturn(Dictionary<string, object> ret)
@@ -472,11 +481,10 @@ namespace OpenSim.Services.Connectors
             foreach (KeyValuePair<string, object> kvp in temp)
                 sendData.Add(kvp.Key, kvp.Value);
 
-            string reply = string.Empty;
-            //lock (m_Lock)
-                reply = SynchronousRestFormsRequester.MakeRequest("POST",
-                         m_ServerURI + "/xinventory",
-                         ServerUtils.BuildQueryString(sendData));
+            string reply 
+                = SynchronousRestFormsRequester.MakeRequest(
+                    "POST", m_ServerURI + "/xinventory",
+                     ServerUtils.BuildQueryString(sendData), m_requestTimeoutSecs, m_Auth);
 
             Dictionary<string, object> replyData = ServerUtils.ParseXmlResponse(
                     reply);

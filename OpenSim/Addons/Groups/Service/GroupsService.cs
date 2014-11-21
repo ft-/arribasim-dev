@@ -148,7 +148,8 @@ namespace OpenSim.Groups
             data.Data["ShowInList"] = showInList ? "1" : "0";
             data.Data["AllowPublish"] = allowPublish ? "1" : "0";
             data.Data["MaturePublish"] = maturePublish ? "1" : "0";
-            data.Data["OwnerRoleID"] = UUID.Random().ToString();
+            UUID roleID = UUID.Random();
+            data.Data["OwnerRoleID"] = roleID.ToString();
 
             if (!m_Database.StoreGroup(data))
                 return UUID.Zero;
@@ -157,7 +158,6 @@ namespace OpenSim.Groups
             _AddOrUpdateGroupRole(RequestingAgentID, data.GroupID, UUID.Zero, "Everyone", "Everyone in the group", "Member of " + name, (ulong)DefaultEveryonePowers, true);
 
             // Create Owner role
-            UUID roleID = UUID.Random();
             _AddOrUpdateGroupRole(RequestingAgentID, data.GroupID, roleID, "Owners", "Owners of the group", "Owner of " + name, (ulong)OwnerPowers, true);
 
             // Add founder to group
@@ -245,6 +245,9 @@ namespace OpenSim.Groups
             if (group == null)
                 return members;
 
+            // Unfortunately this doesn't quite work on legacy group data because of a bug
+            // that's also being fixed here on CreateGroup. The OwnerRoleID sent to the DB was wrong.
+            // See how to find the ownerRoleID a few lines below.
             UUID ownerRoleID = new UUID(group.Data["OwnerRoleID"]);
 
             RoleData[] roles = m_Database.RetrieveRoles(GroupID);
@@ -252,6 +255,11 @@ namespace OpenSim.Groups
                 // something wrong with this group
                 return members;
             List<RoleData> rolesList = new List<RoleData>(roles);
+
+            // Let's find the "real" ownerRoleID
+            RoleData ownerRole = rolesList.Find(r => r.Data["Powers"] == ((long)OwnerPowers).ToString());
+            if (ownerRole != null)
+                ownerRoleID = ownerRole.RoleID;
 
             // Check visibility? 
             // When we don't want to check visibility, we pass it "all" as the requestingAgentID
@@ -289,17 +297,17 @@ namespace OpenSim.Groups
                 {
                     m.Title = selected.Data["Title"];
                     m.AgentPowers = UInt64.Parse(selected.Data["Powers"]);
-
-                    m.AgentID = d.PrincipalID;
-                    m.AcceptNotices = d.Data["AcceptNotices"] == "1" ? true : false;
-                    m.Contribution = Int32.Parse(d.Data["Contribution"]);
-                    m.ListInProfile = d.Data["ListInProfile"] == "1" ? true : false;
-
-                    // Is this person an owner of the group?
-                    m.IsOwner = (rolemembershipsList.Find(r => r.RoleID == ownerRoleID) != null) ? true : false;
-
-                    members.Add(m);
                 }
+
+                m.AgentID = d.PrincipalID;
+                m.AcceptNotices = d.Data["AcceptNotices"] == "1" ? true : false;
+                m.Contribution = Int32.Parse(d.Data["Contribution"]);
+                m.ListInProfile = d.Data["ListInProfile"] == "1" ? true : false;
+
+                // Is this person an owner of the group?
+                m.IsOwner = (rolemembershipsList.Find(r => r.RoleID == ownerRoleID) != null) ? true : false;
+
+                members.Add(m);
             }
 
             return members;
@@ -391,13 +399,15 @@ namespace OpenSim.Groups
             return true;
         }
 
-        public void RemoveAgentFromGroup(string RequestingAgentID, string AgentID, UUID GroupID)
+        public bool RemoveAgentFromGroup(string RequestingAgentID, string AgentID, UUID GroupID)
         {
             // check perms
             if (RequestingAgentID != AgentID && !HasPower(RequestingAgentID, GroupID, GroupPowers.Eject))
-                    return;
+                return false;
 
             _RemoveAgentFromGroup(RequestingAgentID, AgentID, GroupID);
+
+            return true;
         }
 
         public bool AddAgentToGroupInvite(string RequestingAgentID, UUID inviteID, UUID groupID, UUID roleID, string agentID)

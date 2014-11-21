@@ -29,6 +29,8 @@ using log4net;
 using Nini.Config;
 using OpenMetaverse;
 using OpenSim.Framework;
+using OpenSim.Framework.Communications;
+using OpenSim.Framework.ServiceAuth;
 using OpenSim.Server.Base;
 using OpenSim.Services.Interfaces;
 using System;
@@ -37,7 +39,7 @@ using System.Reflection;
 
 namespace OpenSim.Services.Connectors
 {
-    public class UserAccountServicesConnector : IUserAccountService
+    public class UserAccountServicesConnector : BaseServiceConnector, IUserAccountService
     {
         private static readonly ILog m_log =
                 LogManager.GetLogger(
@@ -77,6 +79,8 @@ namespace OpenSim.Services.Connectors
                 throw new Exception("User account connector init error");
             }
             m_ServerURI = serviceURI;
+
+            base.Initialise(source, "UserAccountService");
         }
 
         public virtual UserAccount GetUserAccount(UUID scopeID, string firstName, string lastName)
@@ -142,7 +146,8 @@ namespace OpenSim.Services.Connectors
             {
                 reply = SynchronousRestFormsRequester.MakeRequest("POST",
                         uri,
-                        reqString);
+                        reqString,
+                        m_Auth);
                 if (reply == null || (reply != null && reply == string.Empty))
                 {
                     m_log.DebugFormat("[ACCOUNT CONNECTOR]: GetUserAccounts received null or empty reply");
@@ -222,7 +227,8 @@ namespace OpenSim.Services.Connectors
             {
                 reply = SynchronousRestFormsRequester.MakeRequest("POST",
                         uri,
-                        reqString);
+                        reqString,
+                        m_Auth);
                 if (reply == null || (reply != null && reply == string.Empty))
                 {
                     m_log.DebugFormat("[ACCOUNT CONNECTOR]: GetUserAccount received null or empty reply");
@@ -258,7 +264,8 @@ namespace OpenSim.Services.Connectors
             {
                 string reply = SynchronousRestFormsRequester.MakeRequest("POST",
                         uri,
-                        reqString);
+                        reqString,
+                        m_Auth);
                 if (reply != string.Empty)
                 {
                     Dictionary<string, object> replyData = ServerUtils.ParseXmlResponse(reply);

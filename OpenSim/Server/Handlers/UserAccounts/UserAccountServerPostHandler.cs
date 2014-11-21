@@ -38,6 +38,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Xml;
+using OpenSim.Framework.ServiceAuth;
 
 namespace OpenSim.Server.Handlers.UserAccounts
 {
@@ -50,10 +51,10 @@ namespace OpenSim.Server.Handlers.UserAccounts
         private bool m_AllowSetAccount = false;
 
         public UserAccountServerPostHandler(IUserAccountService service)
-            : this(service, null) {}
+            : this(service, null, null) {}
 
-        public UserAccountServerPostHandler(IUserAccountService service, IConfig config) :
-                base("POST", "/accounts")
+        public UserAccountServerPostHandler(IUserAccountService service, IConfig config, IServiceAuth auth) :
+                base("POST", "/accounts", auth)
         {
             m_UserAccountService = service;
 
@@ -310,7 +311,7 @@ namespace OpenSim.Server.Handlers.UserAccounts
 
             rootElement.AppendChild(result);
 
-            return DocToBytes(doc);
+            return Util.DocToBytes(doc);
         }
 
         private byte[] FailureResult()
@@ -332,18 +333,7 @@ namespace OpenSim.Server.Handlers.UserAccounts
 
             rootElement.AppendChild(result);
 
-            return DocToBytes(doc);
-        }
-
-        private byte[] DocToBytes(XmlDocument doc)
-        {
-            MemoryStream ms = new MemoryStream();
-            XmlTextWriter xw = new XmlTextWriter(ms, null);
-            xw.Formatting = Formatting.Indented;
-            doc.WriteTo(xw);
-            xw.Flush();
-
-            return ms.ToArray();
+            return Util.DocToBytes(doc);
         }
 
         private byte[] ResultToBytes(Dictionary<string, object> result)

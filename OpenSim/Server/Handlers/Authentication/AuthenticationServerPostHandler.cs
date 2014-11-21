@@ -37,6 +37,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Xml;
+using OpenSim.Framework.ServiceAuth;
 
 namespace OpenSim.Server.Handlers.Authentication
 {
@@ -51,10 +52,10 @@ namespace OpenSim.Server.Handlers.Authentication
         private bool m_AllowSetPassword = false;
 
         public AuthenticationServerPostHandler(IAuthenticationService service) :
-                this(service, null) {}
+                this(service, null, null) {}
 
-        public AuthenticationServerPostHandler(IAuthenticationService service, IConfig config) :
-                base("POST", "/auth")
+        public AuthenticationServerPostHandler(IAuthenticationService service, IConfig config, IServiceAuth auth) :
+                base("POST", "/auth", auth)
         {
             m_AuthenticationService = service;
 
@@ -203,7 +204,7 @@ namespace OpenSim.Server.Handlers.Authentication
 
             rootElement.AppendChild(result);
 
-            return DocToBytes(doc);
+            return Util.DocToBytes(doc);
         }
 
         byte[] GetAuthInfo(UUID principalID)
@@ -273,7 +274,7 @@ namespace OpenSim.Server.Handlers.Authentication
 
             rootElement.AppendChild(result);
 
-            return DocToBytes(doc);
+            return Util.DocToBytes(doc);
         }
 
         private byte[] SuccessResult(string token)
@@ -300,18 +301,7 @@ namespace OpenSim.Server.Handlers.Authentication
 
             rootElement.AppendChild(t);
 
-            return DocToBytes(doc);
-        }
-
-        private byte[] DocToBytes(XmlDocument doc)
-        {
-            MemoryStream ms = new MemoryStream();
-            XmlTextWriter xw = new XmlTextWriter(ms, null);
-            xw.Formatting = Formatting.Indented;
-            doc.WriteTo(xw);
-            xw.Flush();
-
-            return ms.GetBuffer();
+            return Util.DocToBytes(doc);
         }
 
         private byte[] ResultToBytes(Dictionary<string, object> result)

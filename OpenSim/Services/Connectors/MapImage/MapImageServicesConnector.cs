@@ -28,6 +28,8 @@
 using log4net;
 using Nini.Config;
 using OpenSim.Framework;
+using OpenSim.Framework.Communications;
+using OpenSim.Framework.ServiceAuth;
 using OpenSim.Server.Base;
 using OpenSim.Services.Interfaces;
 using System;
@@ -36,7 +38,7 @@ using System.Reflection;
 
 namespace OpenSim.Services.Connectors
 {
-    public class MapImageServicesConnector : IMapImageService
+    public class MapImageServicesConnector : BaseServiceConnector, IMapImageService
     {
         private static readonly ILog m_log =
                 LogManager.GetLogger(
@@ -77,6 +79,7 @@ namespace OpenSim.Services.Connectors
             }
             m_ServerURI = serviceURI;
             m_ServerURI = serviceURI.TrimEnd('/');
+            base.Initialise(source, "MapImageService");
         }
 
         public bool RemoveMapTile(int x, int y, out string reason)
@@ -94,7 +97,8 @@ namespace OpenSim.Services.Connectors
             {
                 string reply = SynchronousRestFormsRequester.MakeRequest("POST",
                         uri,
-                        reqString);
+                        reqString,
+                        m_Auth);
                 if (reply != string.Empty)
                 {
                     Dictionary<string, object> replyData = ServerUtils.ParseXmlResponse(reply);
@@ -156,7 +160,8 @@ namespace OpenSim.Services.Connectors
             {
                 string reply = SynchronousRestFormsRequester.MakeRequest("POST",
                         uri,
-                        reqString);
+                        reqString,
+                        m_Auth);
                 if (reply != string.Empty)
                 {
                     Dictionary<string, object> replyData = ServerUtils.ParseXmlResponse(reply);

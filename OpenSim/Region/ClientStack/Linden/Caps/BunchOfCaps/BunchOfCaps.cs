@@ -31,6 +31,7 @@ using OpenMetaverse;
 using OpenMetaverse.StructuredData;
 using OpenSim.Framework;
 using OpenSim.Framework.Capabilities;
+using OpenSim.Framework.Client;
 using OpenSim.Framework.Servers.HttpServer;
 using OpenSim.Region.Framework.Scenes;
 using OpenSim.Region.Framework.Scenes.Serialization;
@@ -262,8 +263,8 @@ namespace OpenSim.Region.ClientStack.Linden
         public string SeedCapRequest(string request, string path, string param,
                                   IOSHttpRequest httpRequest, IOSHttpResponse httpResponse)
         {
-            m_log.DebugFormat(
-                "[CAPS]: Received SEED caps request in {0} for agent {1}", m_regionName, m_HostCapsObj.AgentID);
+//            m_log.DebugFormat(
+//                "[CAPS]: Received SEED caps request in {0} for agent {1}", m_regionName, m_HostCapsObj.AgentID);
 
             if (!m_Scene.CheckClient(m_HostCapsObj.AgentID, httpRequest.RemoteIPEndPoint))
             {
@@ -531,6 +532,41 @@ namespace OpenSim.Region.ClientStack.Linden
                 OSDArray texture_list = (OSDArray)request["texture_list"];
                 SceneObjectGroup grp = null;
 
+                InventoryFolderBase textureUploadFolder = null;
+
+                List<InventoryFolderBase> foldersToUpdate = new List<InventoryFolderBase>();
+                List<InventoryItemBase> itemsToUpdate = new List<InventoryItemBase>();
+                IClientInventory clientInv = null;
+                
+                if (texture_list.Count > 0)
+                {
+                    ScenePresence avatar = null;
+                    m_Scene.TryGetScenePresence(m_HostCapsObj.AgentID, out avatar);
+
+                    if (avatar != null)
+                    {
+                        IClientCore core = (IClientCore)avatar.ControllingClient;
+
+                        if (core.TryGet<IClientInventory>(out clientInv))
+                        {
+                            var systemTextureFolder = m_Scene.InventoryService.GetFolderForType(m_HostCapsObj.AgentID, AssetType.Texture);
+                            textureUploadFolder = new InventoryFolderBase(UUID.Random(), assetName, m_HostCapsObj.AgentID, (short)AssetType.Unknown, systemTextureFolder.ID, 1);
+                            if (m_Scene.InventoryService.AddFolder(textureUploadFolder))
+                            {
+                                foldersToUpdate.Add(textureUploadFolder);
+
+                                m_log.DebugFormat(
+                                    "[BUNCH OF CAPS]: Created new folder '{0}' ({1}) for textures uploaded with mesh object {2}", 
+                                    textureUploadFolder.Name, textureUploadFolder.ID, assetName);
+                            }
+                            else
+                            {
+                                textureUploadFolder = null;
+                            }
+                        }
+                    }
+                }
+
                 List<UUID> textures = new List<UUID>();
                 for (int i = 0; i < texture_list.Count; i++)
                 {
@@ -538,6 +574,38 @@ namespace OpenSim.Region.ClientStack.Linden
                     textureAsset.Data = texture_list[i].AsBinary();
                     m_assetService.Store(textureAsset);
                     textures.Add(textureAsset.FullID);
+
+                    if (textureUploadFolder != null)
+                    {
+                        InventoryItemBase textureItem = new InventoryItemBase();
+                        textureItem.Owner = m_HostCapsObj.AgentID;
+                        textureItem.CreatorId = m_HostCapsObj.AgentID.ToString();
+                        textureItem.CreatorData = String.Empty;
+                        textureItem.ID = UUID.Random();
+                        textureItem.AssetID = textureAsset.FullID;
+                        textureItem.Description = assetDescription;
+                        textureItem.Name = assetName + " - Texture " + (i + 1).ToString();
+                        textureItem.AssetType = (int)AssetType.Texture;
+                        textureItem.InvType = (int)InventoryType.Texture;
+                        textureItem.Folder = textureUploadFolder.ID;
+                        textureItem.CurrentPermissions
+                            = (uint)(PermissionMask.Move | PermissionMask.Copy | PermissionMask.Modify | PermissionMask.Transfer | PermissionMask.Export);
+                        textureItem.BasePermissions = (uint)PermissionMask.All | (uint)PermissionMask.Export;
+                        textureItem.EveryOnePermissions = 0;
+                        textureItem.NextPermissions = (uint)PermissionMask.All;
+                        textureItem.CreationDate = Util.UnixTimeSinceEpoch();
+                        m_Scene.InventoryService.AddItem(textureItem);
+                        itemsToUpdate.Add(textureItem);
+
+                        m_log.DebugFormat(
+                            "[BUNCH OF CAPS]: Created new inventory item '{0}' ({1}) for texture uploaded with mesh object {2}", 
+                            textureItem.Name, textureItem.ID, assetName);
+                    }
+                }
+
+                if (clientInv != null && (foldersToUpdate.Count > 0 || itemsToUpdate.Count > 0))
+                {
+                    clientInv.SendBulkUpdateInventory(foldersToUpdate.ToArray(), itemsToUpdate.ToArray());
                 }
 
                 for (int i = 0; i < mesh_list.Count; i++)

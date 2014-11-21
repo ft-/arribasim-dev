@@ -30,6 +30,7 @@ using OpenSim.Framework.Servers.HttpServer;
 using OpenSim.Services.Interfaces;
 using System.IO;
 using System.Reflection;
+using OpenSim.Framework.ServiceAuth;
 
 namespace OpenSim.Server.Handlers.BakedTextures
 {
@@ -41,14 +42,14 @@ namespace OpenSim.Server.Handlers.BakedTextures
         private System.Text.UTF8Encoding utf8 =
                 new System.Text.UTF8Encoding();
 
-        public BakesServerGetHandler(IBakedTextureService service) :
-                base("GET", "/bakes")
+        public BakesServerGetHandler(IBakedTextureService service, IServiceAuth auth) :
+                base("GET", "/bakes", auth)
         {
             m_BakesService = service;
         }
 
-        public override byte[] Handle(string path, Stream request,
-                IOSHttpRequest httpRequest, IOSHttpResponse httpResponse)
+        protected override byte[] ProcessRequest(
+            string path, Stream request, IOSHttpRequest httpRequest, IOSHttpResponse httpResponse)
         {
             string[] p = SplitParams(path);
 

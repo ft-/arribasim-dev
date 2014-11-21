@@ -30,6 +30,7 @@ using Nini.Config;
 using OpenMetaverse;
 using OpenSim.Framework;
 using OpenSim.Framework.Servers.HttpServer;
+using OpenSim.Framework.ServiceAuth;
 using OpenSim.Server.Base;
 using OpenSim.Server.Handlers.Base;
 using OpenSim.Services.Interfaces;
@@ -58,7 +59,9 @@ namespace OpenSim.OfflineIM
 
             m_OfflineIMService = new OfflineIMService(config);
 
-            server.AddStreamHandler(new OfflineIMServicePostHandler(m_OfflineIMService));
+            IServiceAuth auth = ServiceAuth.Create(config, m_ConfigName);
+
+            server.AddStreamHandler(new OfflineIMServicePostHandler(m_OfflineIMService, auth));
         }
     }
 
@@ -68,8 +71,8 @@ namespace OpenSim.OfflineIM
 
         private IOfflineIMService m_OfflineIMService;
 
-        public OfflineIMServicePostHandler(IOfflineIMService service) :
-            base("POST", "/offlineim")
+        public OfflineIMServicePostHandler(IOfflineIMService service, IServiceAuth auth) :
+            base("POST", "/offlineim", auth)
         {
             m_OfflineIMService = service;
         }
@@ -211,18 +214,7 @@ namespace OpenSim.OfflineIM
 
             rootElement.AppendChild(result);
 
-            return DocToBytes(doc);
-        }
-
-        private byte[] DocToBytes(XmlDocument doc)
-        {
-            MemoryStream ms = new MemoryStream();
-            XmlTextWriter xw = new XmlTextWriter(ms, null);
-            xw.Formatting = Formatting.Indented;
-            doc.WriteTo(xw);
-            xw.Flush();
-
-            return ms.ToArray();
+            return Util.DocToBytes(doc);
         }
 
         #endregion

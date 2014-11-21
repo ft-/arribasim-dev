@@ -117,6 +117,8 @@ namespace OpenSim.Services.Interfaces
         /// <param name='scopeID'></param>
         /// <param name='regionID'></param>
         int GetRegionFlags(UUID scopeID, UUID regionID);
+
+        Dictionary<string,object> GetExtraFeatures();
     }
 
     public class GridRegion
@@ -184,12 +186,12 @@ namespace OpenSim.Services.Interfaces
         protected IPEndPoint m_internalEndPoint;
 
         /// <summary>
-        /// The co-ordinate of this region.
+        /// The co-ordinate of this region in region units.
         /// </summary>
         public int RegionCoordX { get { return (int)Util.WorldToRegionLoc((uint)RegionLocX); } }
 
         /// <summary>
-        /// The co-ordinate of this region
+        /// The co-ordinate of this region in region units
         /// </summary>
         public int RegionCoordY { get { return (int)Util.WorldToRegionLoc((uint)RegionLocY); } }
 

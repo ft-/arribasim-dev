@@ -347,6 +347,17 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Grid
 
             return flags;
         }
+
+        public Dictionary<string, object> GetExtraFeatures()
+        {
+            Dictionary<string, object> extraFeatures;
+            extraFeatures = m_LocalGridService.GetExtraFeatures();
+
+            if (extraFeatures.Count == 0)
+                extraFeatures = m_RemoteGridService.GetExtraFeatures();
+
+            return extraFeatures;
+        }
         #endregion
     }
 }
