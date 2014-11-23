@@ -30,8 +30,6 @@ using Nini.Config;
 using OpenMetaverse;
 using OpenSim.Framework;
 using OpenSim.Server.Base;
-using OpenSim.Framework.ServiceAuth;
-using OpenSim.Services.Interfaces;
 using OpenSim.Services.Interfaces;
 using System;
 using System.Collections.Generic;
