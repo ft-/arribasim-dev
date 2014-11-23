@@ -271,10 +271,19 @@ namespace OpenSim.Services.HypergridService
             //
             // Authenticate the user
             //
-            if (!Authenticate(aCircuit))
+            string verifymessage = "";
+            if (!Authenticate(aCircuit, out verifymessage))
             {
                 reason = "Unable to verify identity";
-                m_log.InfoFormat("[GATEKEEPER SERVICE]: Unable to verify identity of agent {0} {1}. Refusing service.", aCircuit.firstname, aCircuit.lastname);
+                if (!string.IsNullOrEmpty(verifymessage))
+                {
+                    reason += ". " + verifymessage;
+                    m_log.InfoFormat("[GATEKEEPER SERVICE]: Unable to verify identity of agent {0} {1}. Refusing service. Reason: {2}", aCircuit.firstname, aCircuit.lastname, verifymessage);
+                }
+                else
+                {
+                    m_log.InfoFormat("[GATEKEEPER SERVICE]: Unable to verify identity of agent {0} {1}. Refusing service.", aCircuit.firstname, aCircuit.lastname);
+                }
                 return false;
             }
             m_log.DebugFormat("[GATEKEEPER SERVICE]: Identity verified for {0} {1} @ {2}", aCircuit.firstname, aCircuit.lastname, authURL);
@@ -431,10 +440,14 @@ namespace OpenSim.Services.HypergridService
             return m_SimulationService.CreateAgent(source, destination, aCircuit, (uint)loginFlag, out reason);
         }
 
-        protected bool Authenticate(AgentCircuitData aCircuit)
+        protected bool Authenticate(AgentCircuitData aCircuit, out string message)
         {
+            message = "";
             if (!CheckAddress(aCircuit.ServiceSessionID))
+            {
+                message = "Please use " + m_Uri.GetLeftPart(UriPartial.Authority) + " instead.";
                 return false;
+            }
 
             if (string.IsNullOrEmpty(aCircuit.IPAddress))
             {
@@ -449,6 +462,7 @@ namespace OpenSim.Services.HypergridService
             if (userURL == string.Empty)
             {
                 m_log.DebugFormat("[GATEKEEPER SERVICE]: Agent did not provide an authentication server URL");
+                message = "Agent did not provide an authentication server URL.";
                 return false;
             }
 
@@ -467,6 +481,7 @@ namespace OpenSim.Services.HypergridService
                 catch
                 {
                     m_log.DebugFormat("[GATEKEEPER SERVICE]: Unable to contact authentication service at {0}", userURL);
+                    message = string.Format("Unable to contact authentication service at {0}.", userURL);
                     return false;
                 }
             }
