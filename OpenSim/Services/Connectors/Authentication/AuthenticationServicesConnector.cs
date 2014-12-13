@@ -32,7 +32,6 @@ using OpenSim.Framework;
 using OpenSim.Framework.ServiceAuth;
 using OpenSim.Services.Interfaces;
 using OpenSim.Server.Base;
-using OpenSim.Services.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
