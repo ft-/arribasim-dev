@@ -764,22 +764,29 @@ namespace OpenSim.Region.CoreModules.Asset
 
                     foreach (UUID assetID in assets.Keys)
                     {
-                        uniqueUuids.Add(assetID);
-
                         string filename = GetFileName(assetID.ToString());
 
                         if (File.Exists(filename))
                         {
-                            File.SetLastAccessTime(filename, DateTime.Now);
+                            if (!uniqueUuids.Contains(assetID))
+                            {
+                                File.SetLastAccessTime(filename, DateTime.Now);
+                            }
                         }
                         else if (storeUncached)
                         {
-                            AssetBase cachedAsset = m_AssetService.Get(assetID.ToString());
+                            AssetBase cachedAsset = null;
+                            if (!uniqueUuids.Contains(assetID))
+                            {
+                                cachedAsset = m_AssetService.Get(assetID.ToString());
+                            }
                             if (cachedAsset == null && assets[assetID] != (sbyte)AssetType.Unknown)
                                 m_log.DebugFormat(
                                 "[FLOTSAM ASSET CACHE]: Could not find asset {0}, type {1} referenced by object {2} at {3} in scene {4} when pre-caching all scene assets",
                                     assetID, assets[assetID], e.Name, e.AbsolutePosition, s.Name);
                         }
+
+                        uniqueUuids.Add(assetID);
                     }
 
                     assets.Clear();
