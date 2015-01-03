@@ -126,6 +126,9 @@ namespace OpenSim.Services.GridService
                             String.Empty,
                             HandleSetFlags);
                 }
+
+                SetExtraServiceURLs(config);
+
                 m_HypergridLinker = new HypergridLinker(m_config, this, m_Database);
             }
         }
