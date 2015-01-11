@@ -54,8 +54,6 @@ namespace OpenSim.Region.ClientStack.Linden
 
         private string m_fetchInventory2Url;
 
-        private FetchInventory2Handler m_fetchHandler;
-
         #region ISharedRegionModule Members
 
         public void Initialise(IConfigSource source)
@@ -94,10 +92,6 @@ namespace OpenSim.Region.ClientStack.Linden
 
             m_inventoryService = m_scene.InventoryService;
 
-            // We'll reuse the same handler for all requests.
-            if (m_fetchInventory2Url == "localhost")
-                m_fetchHandler = new FetchInventory2Handler(m_inventoryService);
-
             m_scene.EventManager.OnRegisterCaps += RegisterCaps;
         }
 
@@ -127,9 +121,11 @@ namespace OpenSim.Region.ClientStack.Linden
             {
                 capUrl = "/CAPS/" + UUID.Random();
 
+                FetchInventory2Handler fetchHandler = new FetchInventory2Handler(m_inventoryService, agentID);
+
                 IRequestHandler reqHandler
                     = new RestStreamHandler(
-                        "POST", capUrl, m_fetchHandler.FetchInventoryRequest, capName, agentID.ToString());
+                        "POST", capUrl, fetchHandler.FetchInventoryRequest, capName, agentID.ToString());
 
                 caps.RegisterHandler(capName, reqHandler);
             }
