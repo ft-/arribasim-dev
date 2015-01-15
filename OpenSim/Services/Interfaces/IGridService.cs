@@ -181,6 +181,17 @@ namespace OpenSim.Services.Interfaces
         }
         protected string m_regionName = String.Empty;
 
+        /// <summary>
+        /// Region flags.
+        /// </summary>
+        /// <remarks>
+        /// If not set (chiefly if a robust service is running code pre OpenSim 0.8.1) then this will be null and
+        /// should be ignored.  If you require flags information please use the separate IGridService.GetRegionFlags() call
+        /// XXX: This field is currently ignored when used in RegisterRegion, but could potentially be
+        /// used to set flags at this point.
+        /// </remarks>
+        public OpenSim.Framework.RegionFlags? RegionFlags { get; set; }
+
         protected string m_externalHostName;
 
         protected IPEndPoint m_internalEndPoint;
@@ -415,6 +426,10 @@ namespace OpenSim.Services.Interfaces
             kvp["sizeX"] = RegionSizeX.ToString();
             kvp["sizeY"] = RegionSizeY.ToString();
             kvp["regionName"] = RegionName;
+
+            if (RegionFlags != null)
+                kvp["flags"] = ((int)RegionFlags).ToString();
+
             kvp["serverIP"] = ExternalHostName; //ExternalEndPoint.Address.ToString();
             kvp["serverHttpPort"] = HttpPort.ToString();
             kvp["serverURI"] = ServerURI;
@@ -452,6 +467,9 @@ namespace OpenSim.Services.Interfaces
 
             if (kvp.ContainsKey("regionName"))
                 RegionName = (string)kvp["regionName"];
+
+            if (kvp.ContainsKey("flags") && kvp["flags"] != null)
+                RegionFlags = (OpenSim.Framework.RegionFlags?)Convert.ToInt32((string)kvp["flags"]);
 
             if (kvp.ContainsKey("serverIP"))
             {

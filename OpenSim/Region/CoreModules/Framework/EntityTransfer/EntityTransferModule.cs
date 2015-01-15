@@ -2382,7 +2382,11 @@ namespace OpenSim.Region.CoreModules.Framework.EntityTransfer
                 List<GridRegion> neighbours =
                     avatar.Scene.GridService.GetRegionRange(m_regionInfo.ScopeID, (int)startX, (int)endX, (int)startY, (int)endY);
 
-                neighbours.RemoveAll(delegate(GridRegion r) { return r.RegionID == m_regionInfo.RegionID; });
+                // The r.RegionFlags == null check only needs to be made for simulators before 2015-01-14 (pre 0.8.1).
+                neighbours.RemoveAll(
+                    r =>
+                        r.RegionID == m_regionInfo.RegionID
+                            || (r.RegionFlags != null && (r.RegionFlags & OpenSim.Framework.RegionFlags.RegionOnline) == 0));
                 return neighbours;
             }
             else
@@ -2396,7 +2400,11 @@ namespace OpenSim.Region.CoreModules.Framework.EntityTransfer
                         (int)Util.RegionToWorldLoc((uint)swCorner.X), (int)Util.RegionToWorldLoc((uint)neCorner.X),
                         (int)Util.RegionToWorldLoc((uint)swCorner.Y), (int)Util.RegionToWorldLoc((uint)neCorner.Y) );
 
-                neighbours.RemoveAll(delegate(GridRegion r) { return r.RegionID == m_regionInfo.RegionID; });
+                // The r.RegionFlags == null check only needs to be made for simulators before 2015-01-14 (pre 0.8.1).
+                neighbours.RemoveAll(
+                    r =>
+                        r.RegionID == m_regionInfo.RegionID
+                            || (r.RegionFlags != null && (r.RegionFlags & OpenSim.Framework.RegionFlags.RegionOnline) == 0));
 
                 return neighbours;
             }
