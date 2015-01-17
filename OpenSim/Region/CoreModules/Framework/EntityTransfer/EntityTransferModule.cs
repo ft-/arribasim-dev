@@ -1367,6 +1367,10 @@ namespace OpenSim.Region.CoreModules.Framework.EntityTransfer
         //    child and then teleport into the region.
         protected virtual bool NeedsNewAgent(float drawdist, uint oldRegionX, uint newRegionX, uint oldRegionY, uint newRegionY)
         {
+            if(Math.Abs((int)oldRegionX - (int)newRegionX) > 64 * 256 || Math.Abs((int)oldRegionY - (int)newRegionY) > 64 * 256)
+            {
+                return false;
+            }
             if (m_regionCombinerModule != null && m_regionCombinerModule.IsRootForMegaregion(Scene.RegionInfo.RegionID))
             {
                 Vector2 swCorner, neCorner;
@@ -2373,11 +2377,11 @@ namespace OpenSim.Region.CoreModules.Framework.EntityTransfer
                 uint dd = Math.Max((uint)avatar.Scene.DefaultDrawDistance, 
                                 Math.Max(Scene.RegionInfo.RegionSizeX, Scene.RegionInfo.RegionSizeY));
 
-                uint startX = Util.RegionToWorldLoc(pRegionLocX) - dd + Constants.RegionSize/2;
-                uint startY = Util.RegionToWorldLoc(pRegionLocY) - dd + Constants.RegionSize/2;
+                uint startX = Util.RegionToWorldLoc(pRegionLocX) - dd;
+                uint startY = Util.RegionToWorldLoc(pRegionLocY) - dd;
 
-                uint endX = Util.RegionToWorldLoc(pRegionLocX) + dd + Constants.RegionSize/2;
-                uint endY = Util.RegionToWorldLoc(pRegionLocY) + dd + Constants.RegionSize/2;
+                uint endX = Util.RegionToWorldLoc(pRegionLocX) + dd + Scene.RegionInfo.RegionSizeX;
+                uint endY = Util.RegionToWorldLoc(pRegionLocY) + dd + Scene.RegionInfo.RegionSizeY;
 
                 List<GridRegion> neighbours =
                     avatar.Scene.GridService.GetRegionRange(m_regionInfo.ScopeID, (int)startX, (int)endX, (int)startY, (int)endY);
