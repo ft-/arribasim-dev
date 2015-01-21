@@ -4833,7 +4833,10 @@ namespace OpenSim.Region.Framework.Scenes
             if (OwnerID != item.Owner)
             {
                 //LogPermissions("Before ApplyNextOwnerPermissions");
-                ApplyNextOwnerPermissions();
+
+                if (scene.Permissions.PropagatePermissions())
+                    ApplyNextOwnerPermissions();
+
                 //LogPermissions("After ApplyNextOwnerPermissions");
 
                 LastOwnerID = OwnerID;
