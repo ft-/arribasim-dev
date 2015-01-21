@@ -87,12 +87,12 @@ namespace OpenSim.Services.Connectors
                 return String.Empty;
             }
 
-            HttpWebRequest req = (HttpWebRequest)HttpWebRequest.Create(m_ServerURI);
-            // Eventually we need to switch to HEAD
-            /* req.Method = "HEAD"; */
-
             try
             {
+                HttpWebRequest req = (HttpWebRequest)HttpWebRequest.Create(m_ServerURI);
+                // Eventually we need to switch to HEAD
+                /* req.Method = "HEAD"; */
+
                 using (WebResponse response = req.GetResponse())
                 {
                     if (response.Headers.Get("X-Handlers-Provided") == null) // just in case this ever returns a null
