@@ -149,7 +149,13 @@ namespace OpenSim.Services.GridService
 
             configVal = loginConfig.GetString("MapTileURL", string.Empty);
             if (!string.IsNullOrEmpty(configVal))
+            {
+                // This URL must end with '/', the viewer doesn't check
+                configVal = configVal.Trim();
+                if (!configVal.EndsWith("/"))
+                    configVal = configVal + "/";
                 m_ExtraFeatures["map-server-url"] = configVal;
+            }
             
             configVal = loginConfig.GetString("DestinationGuide", string.Empty);
             if (!string.IsNullOrEmpty(configVal))
