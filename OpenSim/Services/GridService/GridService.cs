@@ -56,6 +56,8 @@ namespace OpenSim.Services.GridService
         protected bool m_AllowDuplicateNames = false;
         protected bool m_AllowHypergridMapSearch = false;
 
+        private static Dictionary<string,object> m_ExtraFeatures = new Dictionary<string, object>();
+
         public GridService(IConfigSource config)
             : base(config)
         {
@@ -124,8 +126,42 @@ namespace OpenSim.Services.GridService
                             String.Empty,
                             HandleSetFlags);
                 }
+
+                SetExtraServiceURLs(config);
+
                 m_HypergridLinker = new HypergridLinker(m_config, this, m_Database);
             }
+        }
+
+        private void SetExtraServiceURLs(IConfigSource config)
+        {
+            IConfig loginConfig = config.Configs["LoginService"];
+            IConfig gridConfig = config.Configs["GridService"];
+
+            if (loginConfig == null || gridConfig == null)
+                return;
+            
+            string configVal;
+            
+            configVal = loginConfig.GetString("SearchURL", string.Empty);
+            if (!string.IsNullOrEmpty(configVal))
+                m_ExtraFeatures["search-server-url"] = configVal;
+
+            configVal = loginConfig.GetString("MapTileURL", string.Empty);
+            if (!string.IsNullOrEmpty(configVal))
+            {
+                // This URL must end with '/', the viewer doesn't check
+                configVal = configVal.Trim();
+                if (!configVal.EndsWith("/"))
+                    configVal = configVal + "/";
+                m_ExtraFeatures["map-server-url"] = configVal;
+            }
+            
+            configVal = loginConfig.GetString("DestinationGuide", string.Empty);
+            if (!string.IsNullOrEmpty(configVal))
+                m_ExtraFeatures["destination-guide-url"] = configVal;
+
+            m_ExtraFeatures["ExportSupported"] = gridConfig.GetString("ExportSupported", "true");
         }
 
         #region IGridService
@@ -783,7 +819,8 @@ namespace OpenSim.Services.GridService
             ConsoleDisplayList dispList = new ConsoleDisplayList();
             dispList.AddRow("Region Name", r.RegionName);
             dispList.AddRow("Region ID", r.RegionID);
-            dispList.AddRow("Location", string.Format("{0},{1}", r.coordX, r.coordY));
+            dispList.AddRow("Position", string.Format("{0},{1}", r.coordX, r.coordY));
+            dispList.AddRow("Size", string.Format("{0}x{1}", r.sizeX, r.sizeY));
             dispList.AddRow("URI", r.Data["serverURI"]);
             dispList.AddRow("Owner ID", r.Data["owner_uuid"]);
             dispList.AddRow("Flags", flags);
@@ -800,10 +837,10 @@ namespace OpenSim.Services.GridService
         private void OutputRegionsToConsoleSummary(List<RegionData> regions)
         {
             ConsoleDisplayTable dispTable = new ConsoleDisplayTable();
-            dispTable.AddColumn("Name", 16);
+            dispTable.AddColumn("Name", 44);
             dispTable.AddColumn("ID", 36);
             dispTable.AddColumn("Position", 11);
-            dispTable.AddColumn("Owner ID", 36);
+            dispTable.AddColumn("Size", 11);
             dispTable.AddColumn("Flags", 60);
 
             foreach (RegionData r in regions)
@@ -813,7 +850,7 @@ namespace OpenSim.Services.GridService
                     r.RegionName,
                     r.RegionID.ToString(),
                     string.Format("{0},{1}", r.coordX, r.coordY),
-                    r.Data["owner_uuid"].ToString(),
+                    string.Format("{0}x{1}", r.sizeX, r.sizeY),
                     flags.ToString());
             }
 
@@ -882,6 +919,19 @@ namespace OpenSim.Services.GridService
                 MainConsole.Instance.Output(String.Format("Set region {0} to {1}", r.RegionName, f));
                 m_Database.Store(r);
             }
+        }
+
+        /// <summary>
+        /// Gets the grid extra service URls we wish for the region to send in OpenSimExtras to dynamically refresh 
+        /// parameters in the viewer used to access services like map, search and destination guides.
+        /// <para>see "SimulatorFeaturesModule" </para>
+        /// </summary>
+        /// <returns>
+        /// The grid extra service URls.
+        /// </returns>
+        public Dictionary<string,object> GetExtraFeatures()
+        {
+            return m_ExtraFeatures;
         }
     }
 }

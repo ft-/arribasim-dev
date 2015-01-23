@@ -2996,9 +2996,6 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         /// </summary>
         public void osSetProjectionParams(LSL_Key prim, bool projection, LSL_Key texture, double fov, double focus, double amb)
         {
-            CheckThreatLevel(ThreatLevel.High, "osSetProjectionParams");
-            m_host.AddScriptLPS(1);
-
             SceneObjectPart obj = null;
             if (prim == UUID.Zero.ToString())
             {
@@ -3006,10 +3003,13 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             }
             else
             {
+                /* make only accessing other prims addressed by threat level */
+                CheckThreatLevel(ThreatLevel.High, "osSetProjectionParams");
                 obj = World.GetSceneObjectPart(new UUID(prim));
                 if (obj == null)
                     return;
             }
+            m_host.AddScriptLPS(1);
 
             obj.Shape.ProjectionEntry = projection;
             obj.Shape.ProjectionTextureUUID = new UUID(texture);

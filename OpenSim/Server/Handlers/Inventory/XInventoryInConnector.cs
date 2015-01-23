@@ -29,6 +29,7 @@ using log4net;
 using Nini.Config;
 using OpenMetaverse;
 using OpenSim.Framework;
+using OpenSim.Framework.ServiceAuth;
 using OpenSim.Framework.Servers.HttpServer;
 using OpenSim.Server.Base;
 using OpenSim.Server.Handlers.Base;
@@ -70,7 +71,9 @@ namespace OpenSim.Server.Handlers.Asset
             m_InventoryService =
                     ServerUtils.LoadPlugin<IInventoryService>(inventoryService, args);
 
-            server.AddStreamHandler(new XInventoryConnectorPostHandler(m_InventoryService));
+            IServiceAuth auth = ServiceAuth.Create(config, m_ConfigName);
+
+            server.AddStreamHandler(new XInventoryConnectorPostHandler(m_InventoryService, auth));
         }
     }
 
@@ -80,8 +83,8 @@ namespace OpenSim.Server.Handlers.Asset
 
         private IInventoryService m_InventoryService;
 
-        public XInventoryConnectorPostHandler(IInventoryService service) :
-                base("POST", "/xinventory")
+        public XInventoryConnectorPostHandler(IInventoryService service, IServiceAuth auth) :
+                base("POST", "/xinventory", auth)
         {
             m_InventoryService = service;
         }
@@ -185,18 +188,7 @@ namespace OpenSim.Server.Handlers.Asset
 
             rootElement.AppendChild(result);
 
-            return DocToBytes(doc);
-        }
-
-        private byte[] DocToBytes(XmlDocument doc)
-        {
-            MemoryStream ms = new MemoryStream();
-            XmlTextWriter xw = new XmlTextWriter(ms, null);
-            xw.Formatting = Formatting.Indented;
-            doc.WriteTo(xw);
-            xw.Flush();
-
-            return ms.ToArray();
+            return Util.DocToBytes(doc);
         }
 
         byte[] HandleCreateUserInventory(Dictionary<string,object> request)

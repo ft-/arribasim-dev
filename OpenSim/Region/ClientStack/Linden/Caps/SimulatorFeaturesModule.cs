@@ -29,11 +29,13 @@ using Mono.Addins;
 using Nini.Config;
 using OpenMetaverse;
 using OpenMetaverse.StructuredData;
+using OpenSim.Framework;
 using OpenSim.Framework.Servers.HttpServer;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Threading;
 using Caps = OpenSim.Framework.Capabilities.Caps;
 
@@ -67,18 +69,29 @@ namespace OpenSim.Region.ClientStack.Linden
         private ReaderWriterLock m_featuresRwLock = new ReaderWriterLock();
 
         private string m_SearchURL = string.Empty;
+        private string m_DestinationGuideURL = string.Empty;
         private bool m_ExportSupported = false;
+        private string m_GridName = string.Empty;
+        private string m_GridURL = string.Empty;
 
         #region ISharedRegionModule Members
 
         public void Initialise(IConfigSource source)
         {
             IConfig config = source.Configs["SimulatorFeatures"];
-            if (config != null)
-            {    
-                m_SearchURL = config.GetString("SearchServerURI", string.Empty);
 
+            if (config != null)
+            {  
+                // These are normaly set in their respective modules
+                m_SearchURL = config.GetString("SearchServerURI", m_SearchURL);
+                m_DestinationGuideURL = config.GetString ("DestinationGuideURI", m_DestinationGuideURL);
                 m_ExportSupported = config.GetBoolean("ExportSupported", m_ExportSupported);
+                m_GridURL = Util.GetConfigVarFromSections<string>(source, "GatekeeperURI",
+                        new string[] { "Startup", "Hypergrid", "SimulatorFeatures" }, String.Empty);
+                m_GridName = config.GetString("GridName", string.Empty);
+                if (m_GridName == string.Empty)
+                    m_GridName = Util.GetConfigVarFromSections<string>(source, "gridname",
+                            new string[] { "GridInfo", "SimulatorFeatures" }, String.Empty);
             }
 
             AddDefaultFeatures();
@@ -99,6 +112,7 @@ namespace OpenSim.Region.ClientStack.Linden
 
         public void RegionLoaded(Scene s)
         {
+            GetGridExtraFeatures(s);
         }
 
         public void PostInitialise()
@@ -140,11 +154,24 @@ namespace OpenSim.Region.ClientStack.Linden
     
                 // Extra information for viewers that want to use it
                 // TODO: Take these out of here into their respective modules, like map-server-url
-                OSDMap extrasMap = new OSDMap();
+                OSDMap extrasMap;
+                if(m_features.ContainsKey("OpenSimExtras"))
+                {
+                    extrasMap = (OSDMap)m_features["OpenSimExtras"];
+                }
+                else
+                    extrasMap = new OSDMap();
+
                 if (m_SearchURL != string.Empty)
                     extrasMap["search-server-url"] = m_SearchURL;
+                if (!string.IsNullOrEmpty(m_DestinationGuideURL))
+                    extrasMap["destination-guide-url"] = m_DestinationGuideURL;
                 if (m_ExportSupported)
                     extrasMap["ExportSupported"] = true;
+                if (m_GridURL != string.Empty)
+                    extrasMap["GridURL"] = m_GridURL;
+                if (m_GridName != string.Empty)
+                    extrasMap["GridName"] = m_GridName;
 
                 if (extrasMap.Count > 0)
                     m_features["OpenSimExtras"] = extrasMap;
@@ -255,6 +282,38 @@ namespace OpenSim.Region.ClientStack.Linden
             responsedata["str_response_string"] = OSDParser.SerializeLLSDXmlString(copy);
 
             return responsedata;
+        }
+
+        /// <summary>
+        /// Gets the grid extra features.
+        /// </summary>
+        /// <param name='featuresURI'>
+        /// The URI Robust uses to handle the get_extra_features request
+        /// </param>
+        private void GetGridExtraFeatures(Scene scene)
+        {
+            Dictionary<string, object> extraFeatures = scene.GridService.GetExtraFeatures();
+
+            m_featuresRwLock.AcquireWriterLock(-1);
+            try
+            {
+                OSDMap extrasMap = new OSDMap();
+
+                foreach(string key in extraFeatures.Keys)
+                {
+                    extrasMap[key] = (string)extraFeatures[key];
+
+                    if (key == "ExportSupported")
+                    {
+                        bool.TryParse(extraFeatures[key].ToString(), out m_ExportSupported);
+                    }
+                }
+                m_features["OpenSimExtras"] = extrasMap;
+            }
+            finally
+            {
+                m_featuresRwLock.ReleaseWriterLock();
+            }
         }
     }
 }

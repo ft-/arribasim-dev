@@ -37,7 +37,6 @@ using OpenSim.Services.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Threading;
 using GridRegion = OpenSim.Services.Interfaces.GridRegion;
 
 namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Grid
@@ -94,15 +93,14 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Grid
 
         private void InitialiseService(IConfigSource source)
         {
-            IConfig assetConfig = source.Configs["GridService"];
-            if (assetConfig == null)
+            IConfig config = source.Configs["GridService"];
+            if (config == null)
             {
                 m_log.Error("[LOCAL GRID SERVICE CONNECTOR]: GridService missing from OpenSim.ini");
                 return;
             }
 
-            string serviceDll = assetConfig.GetString("LocalServiceModule",
-                    String.Empty);
+            string serviceDll = config.GetString("LocalServiceModule", String.Empty);
 
             if (serviceDll == String.Empty)
             {
@@ -273,6 +271,11 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Grid
         public int GetRegionFlags(UUID scopeID, UUID regionID)
         {
             return m_GridService.GetRegionFlags(scopeID, regionID);
+        }
+
+        public Dictionary<string, object> GetExtraFeatures()
+        {
+            return m_GridService.GetExtraFeatures();
         }
 
         #endregion

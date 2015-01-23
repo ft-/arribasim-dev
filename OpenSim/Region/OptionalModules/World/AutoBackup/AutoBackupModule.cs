@@ -709,7 +709,7 @@ namespace OpenSim.Region.OptionalModules.World.AutoBackup
             if (state.SkipAssets)
                 options["noassets"] = true;
 
-            iram.ArchiveRegion(savePath, guid, null);
+            iram.ArchiveRegion(savePath, guid, options);
         }
 
         // For the given state, remove backup files older than the states KeepFilesForDays property

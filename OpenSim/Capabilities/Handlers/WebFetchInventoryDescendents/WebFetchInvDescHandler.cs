@@ -78,6 +78,7 @@ namespace OpenSim.Capabilities.Handlers
             {
                 m_log.ErrorFormat("[WEB FETCH INV DESC HANDLER]: Fetch error: {0}{1}" + e.Message, e.StackTrace);
                 m_log.Error("Request: " + request);
+                throw;
             }
     
             ArrayList foldersrequested = (ArrayList)hash["folders"];
@@ -101,16 +102,18 @@ namespace OpenSim.Capabilities.Handlers
                     m_log.Debug("[WEB FETCH INV DESC HANDLER]: caught exception doing OSD deserialize" + e);
                 }
                 LLSDInventoryDescendents reply = FetchInventoryReply(llsdRequest);
-                if(null == reply)
+                if (null == reply)
                 {
-                    bad_folders_response += "<uuid>"+llsdRequest.folder_id.ToString()+"</uuid>";
+                    bad_folders_response += "<uuid>" + llsdRequest.folder_id.ToString() + "</uuid>";
                 }
+                else
+                {
+                    inventoryitemstr = LLSDHelpers.SerialiseLLSDReply(reply);
+                    inventoryitemstr = inventoryitemstr.Replace("<llsd><map><key>folders</key><array>", "");
+                    inventoryitemstr = inventoryitemstr.Replace("</array></map></llsd>", "");
 
-                inventoryitemstr = LLSDHelpers.SerialiseLLSDReply(reply);
-                inventoryitemstr = inventoryitemstr.Replace("<llsd><map><key>folders</key><array>", "");
-                inventoryitemstr = inventoryitemstr.Replace("</array></map></llsd>", "");
-
-                response += inventoryitemstr;
+                    response += inventoryitemstr;
+                }
             }
 
             if (response.Length == 0)

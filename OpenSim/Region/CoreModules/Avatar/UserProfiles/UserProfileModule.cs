@@ -1130,26 +1130,33 @@ namespace OpenSim.Region.CoreModules.Avatar.UserProfiles
             OSDMap parameters= new OSDMap();
             parameters.Add("avatarId", OSD.FromUUID(avatarId));
             OSD Params = (OSD)parameters;
-            if(!rpc.JsonRpcRequest(ref Params, "image_assets_request", profileServerURI, UUID.Random().ToString()))
+            try
             {
-                return false;
-            }
-            
-            parameters = (OSDMap)Params;
-
-            if (parameters.ContainsKey("result"))
-            {
-                OSDArray list = (OSDArray)parameters["result"];
-
-                foreach (OSD asset in list)
+                if (!rpc.JsonRpcRequest(ref Params, "image_assets_request", profileServerURI, UUID.Random().ToString()))
                 {
-                    OSDString assetId = (OSDString)asset;
-
-                    Scene.AssetService.Get(string.Format("{0}/{1}", assetServerURI, assetId.AsString()));
+                    return false;
                 }
-                return true;
+
+                parameters = (OSDMap)Params;
+
+                if (parameters.ContainsKey("result"))
+                {
+                    OSDArray list = (OSDArray)parameters["result"];
+
+                    foreach (OSD asset in list)
+                    {
+                        OSDString assetId = (OSDString)asset;
+
+                        Scene.AssetService.Get(string.Format("{0}/{1}", assetServerURI, assetId.AsString()));
+                    }
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
             }
-            else
+            catch
             {
                 return false;
             }

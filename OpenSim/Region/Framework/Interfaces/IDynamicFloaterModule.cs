@@ -25,45 +25,27 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using Nini.Config;
-using OpenSim.Framework.ServiceAuth;
-using OpenSim.Framework.Servers.HttpServer;
-using OpenSim.Server.Base;
-using OpenSim.Server.Handlers.Base;
-using OpenSim.Services.Interfaces;
-using System;
+using OpenMetaverse;
+using OpenSim.Framework;
+using OpenSim.Region.Framework.Scenes;
 
-namespace OpenSim.Server.Handlers.BakedTextures
+namespace OpenSim.Region.Framework.Interfaces
 {
-    public class XBakesConnector : ServiceConnector
+    public delegate bool HandlerDelegate(IClientAPI client, FloaterData data, string[] msg);
+
+    public abstract class FloaterData
     {
-        private IBakedTextureService m_BakesService;
-        private string m_ConfigName = "BakedTextureService";
+        public abstract int Channel { get; } 
+        public abstract string FloaterName { get; set; }
+        public virtual string XmlName { get; set; }
+        public virtual string XmlText { get; set; }
+        public virtual HandlerDelegate Handler { get; set; }
+    }
 
-        public XBakesConnector(IConfigSource config, IHttpServer server, string configName) :
-                base(config, server, configName)
-        {
-            if (configName != String.Empty)
-                m_ConfigName = configName;
 
-            IConfig serverConfig = config.Configs[m_ConfigName];
-            if (serverConfig == null)
-                throw new Exception(String.Format("No section '{0}' in config file", m_ConfigName));
-
-            string assetService = serverConfig.GetString("LocalServiceModule",
-                    String.Empty);
-
-            if (assetService == String.Empty)
-                throw new Exception("No BakedTextureService in config file");
-
-            Object[] args = new Object[] { config };
-            m_BakesService =
-                    ServerUtils.LoadPlugin<IBakedTextureService>(assetService, args);
-
-            IServiceAuth auth = ServiceAuth.Create(config, m_ConfigName);
-            
-            server.AddStreamHandler(new BakesServerGetHandler(m_BakesService, auth));
-            server.AddStreamHandler(new BakesServerPostHandler(m_BakesService, auth));
-        }
+    public interface IDynamicFloaterModule
+    {
+        void DoUserFloater(UUID agentID, FloaterData dialogData, string configuration);
+        void FloaterControl(ScenePresence sp, FloaterData d, string msg);
     }
 }

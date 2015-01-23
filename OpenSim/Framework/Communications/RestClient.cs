@@ -33,6 +33,7 @@ using System.Net;
 using System.Reflection;
 using System.Text;
 using System.Web;
+using OpenSim.Framework.ServiceAuth;
 
 namespace OpenSim.Framework.Communications
 {
@@ -53,7 +54,7 @@ namespace OpenSim.Framework.Communications
     /// other threads to execute, while it waits for a response from the web-service. RestClient itself can be
     /// invoked by the caller in either synchronous mode or asynchronous modes.
     /// </remarks>
-    public class RestClient
+    public class RestClient : IDisposable
     {
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
@@ -144,6 +145,33 @@ namespace OpenSim.Framework.Communications
         private object _lock;
 
         #endregion constructors
+
+
+        #region Dispose
+
+        private bool disposed = false;
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this); 
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposed)
+                return;
+
+            if (disposing)
+            {
+                _resource.Dispose();
+            }
+
+            disposed = true;
+        }
+
+        #endregion Dispose
+
 
         /// <summary>
         /// Add a path element to the query, e.g. assets
@@ -298,6 +326,14 @@ namespace OpenSim.Framework.Communications
         /// </summary>
         public Stream Request()
         {
+            return Request(null);
+        }
+
+        /// <summary>
+        /// Perform a synchronous request
+        /// </summary>
+        public Stream Request(IServiceAuth auth)
+        {
             lock (_lock)
             {
                 _request = (HttpWebRequest) WebRequest.Create(buildUri());
@@ -306,6 +342,11 @@ namespace OpenSim.Framework.Communications
                 _request.Timeout = 200000;
                 _request.Method = RequestMethod;
                 _asyncException = null;
+                if (auth != null)
+                    auth.AddAuthorization(_request.Headers);
+
+                if (WebUtil.DebugLevel >= 3)
+                    m_log.DebugFormat("[LOGHTTP]: HTTP OUT REST {0} to {1}", _request.Method, _request.RequestUri);
 
 //                IAsyncResult responseAsyncResult = _request.BeginGetResponse(new AsyncCallback(ResponseIsReadyDelegate), _request);
                 try
@@ -357,7 +398,7 @@ namespace OpenSim.Framework.Communications
             }
         }
 
-        public Stream Request(Stream src)
+        public Stream Request(Stream src, IServiceAuth auth)
         {
             _request = (HttpWebRequest) WebRequest.Create(buildUri());
             _request.KeepAlive = false;
@@ -366,17 +407,15 @@ namespace OpenSim.Framework.Communications
             _request.Method = RequestMethod;
             _asyncException = null;
             _request.ContentLength = src.Length;
+            if (auth != null)
+                auth.AddAuthorization(_request.Headers);
 
-            m_log.InfoFormat("[REST]: Request Length {0}", _request.ContentLength);
-            m_log.InfoFormat("[REST]: Sending Web Request {0}", buildUri());
             src.Seek(0, SeekOrigin.Begin);
-            m_log.Info("[REST]: Seek is ok");
+            
             Stream dst = _request.GetRequestStream();
-            m_log.Info("[REST]: GetRequestStream is ok");
 
             byte[] buf = new byte[1024];
             int length = src.Read(buf, 0, 1024);
-            m_log.Info("[REST]: First Read is ok");
             while (length > 0)
             {
                 dst.Write(buf, 0, length);

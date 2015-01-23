@@ -753,7 +753,14 @@ namespace OpenSim.Region.Framework.Scenes
                     }
                     else
                     {
-                        message = "Can't find a folder to add the item to.";
+                        if (null == UserAccountService.GetUserAccount(UUID.Zero, recipient))
+                        {
+                            message = "The recipient has not yet visited the grid you are located in.";
+                        }
+                        else
+                        {
+                            message = "Can't find a folder to add the item to.";
+                        }
                         return null;
                     }
                 }
@@ -802,7 +809,7 @@ namespace OpenSim.Region.Framework.Scenes
             UUID recipientId, UUID senderId, UUID folderId, UUID recipientParentFolderId)
         {
             //// Retrieve the folder from the sender
-            InventoryFolderBase folder = InventoryService.GetFolder(new InventoryFolderBase(folderId));
+            InventoryFolderBase folder = InventoryService.GetFolder(new InventoryFolderBase(folderId, senderId));
             if (null == folder)
             {
                 m_log.ErrorFormat(
@@ -1974,7 +1981,7 @@ namespace OpenSim.Region.Framework.Scenes
                     return;
             }
 
-            if (destPart.ScriptAccessPin != pin)
+            if (destPart.ScriptAccessPin == 0 || destPart.ScriptAccessPin != pin)
             {
                 m_log.WarnFormat(
                         "[PRIM INVENTORY]: " +

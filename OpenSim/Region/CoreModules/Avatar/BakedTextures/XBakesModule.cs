@@ -30,6 +30,7 @@ using Mono.Addins;
 using Nini.Config;
 using OpenMetaverse;
 using OpenSim.Framework;
+using OpenSim.Framework.ServiceAuth;
 using OpenSim.Framework.Communications;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
@@ -53,7 +54,7 @@ namespace OpenSim.Region.CoreModules.Avatar.BakedTextures
         private string m_URL = String.Empty;
         private static XmlSerializer m_serializer = new XmlSerializer(typeof(AssetBase));
 
-
+        private static IServiceAuth m_Auth;
 
         public void Initialise(IConfigSource configSource)
         {
@@ -62,6 +63,7 @@ namespace OpenSim.Region.CoreModules.Avatar.BakedTextures
                 return;
 
             m_URL = config.GetString("URL", String.Empty);
+            m_Auth = ServiceAuth.Create(configSource, "XBakes");
         }
 
         public void AddRegion(Scene scene)
@@ -109,7 +111,7 @@ namespace OpenSim.Region.CoreModules.Avatar.BakedTextures
 
             try
             {
-                Stream s = rc.Request();
+                Stream s = rc.Request(m_Auth);
                 XmlTextReader sr = new XmlTextReader(s);
 
                 sr.ReadStartElement("BakedAppearance");
@@ -132,7 +134,7 @@ namespace OpenSim.Region.CoreModules.Avatar.BakedTextures
 
                     sr.ReadEndElement();
                 }
-                m_log.DebugFormat("[XBakes]: Ended reading");
+                m_log.DebugFormat("[XBakes]: read {0} textures for user {1}", ret.Count, id);
                 sr.Close();
                 s.Close();
 
@@ -182,7 +184,7 @@ namespace OpenSim.Region.CoreModules.Avatar.BakedTextures
             Util.FireAndForget(
                 delegate
                 {
-                    rc.Request(reqStream);
+                    rc.Request(reqStream, m_Auth);
                 }
             );
         }

@@ -117,6 +117,8 @@ namespace OpenSim.Services.Interfaces
         /// <param name='scopeID'></param>
         /// <param name='regionID'></param>
         int GetRegionFlags(UUID scopeID, UUID regionID);
+
+        Dictionary<string,object> GetExtraFeatures();
     }
 
     public class GridRegion
@@ -179,17 +181,28 @@ namespace OpenSim.Services.Interfaces
         }
         protected string m_regionName = String.Empty;
 
+        /// <summary>
+        /// Region flags.
+        /// </summary>
+        /// <remarks>
+        /// If not set (chiefly if a robust service is running code pre OpenSim 0.8.1) then this will be null and
+        /// should be ignored.  If you require flags information please use the separate IGridService.GetRegionFlags() call
+        /// XXX: This field is currently ignored when used in RegisterRegion, but could potentially be
+        /// used to set flags at this point.
+        /// </remarks>
+        public OpenSim.Framework.RegionFlags? RegionFlags { get; set; }
+
         protected string m_externalHostName;
 
         protected IPEndPoint m_internalEndPoint;
 
         /// <summary>
-        /// The co-ordinate of this region.
+        /// The co-ordinate of this region in region units.
         /// </summary>
         public int RegionCoordX { get { return (int)Util.WorldToRegionLoc((uint)RegionLocX); } }
 
         /// <summary>
-        /// The co-ordinate of this region
+        /// The co-ordinate of this region in region units
         /// </summary>
         public int RegionCoordY { get { return (int)Util.WorldToRegionLoc((uint)RegionLocY); } }
 
@@ -413,6 +426,10 @@ namespace OpenSim.Services.Interfaces
             kvp["sizeX"] = RegionSizeX.ToString();
             kvp["sizeY"] = RegionSizeY.ToString();
             kvp["regionName"] = RegionName;
+
+            if (RegionFlags != null)
+                kvp["flags"] = ((int)RegionFlags).ToString();
+
             kvp["serverIP"] = ExternalHostName; //ExternalEndPoint.Address.ToString();
             kvp["serverHttpPort"] = HttpPort.ToString();
             kvp["serverURI"] = ServerURI;
@@ -450,6 +467,9 @@ namespace OpenSim.Services.Interfaces
 
             if (kvp.ContainsKey("regionName"))
                 RegionName = (string)kvp["regionName"];
+
+            if (kvp.ContainsKey("flags") && kvp["flags"] != null)
+                RegionFlags = (OpenSim.Framework.RegionFlags?)Convert.ToInt32((string)kvp["flags"]);
 
             if (kvp.ContainsKey("serverIP"))
             {

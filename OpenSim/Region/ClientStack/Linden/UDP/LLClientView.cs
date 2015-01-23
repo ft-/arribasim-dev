@@ -11824,6 +11824,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                         if (cache.GetCached(item.TextureID.ToString()) == null)
                         {
                             item.TextureAsset.Temporary = true;
+                            item.TextureAsset.Local = true;
                             cache.Store(item.TextureAsset);
                         }
 

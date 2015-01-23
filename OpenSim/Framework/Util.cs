@@ -509,6 +509,19 @@ namespace OpenSim.Framework
             return sb.ToString();
         }
 
+        public static byte[] DocToBytes(XmlDocument doc)
+        {
+            using (MemoryStream ms = new MemoryStream())
+            using (XmlTextWriter xw = new XmlTextWriter(ms, null))
+            {
+                xw.Formatting = Formatting.Indented;
+                doc.WriteTo(xw);
+                xw.Flush();
+
+                return ms.ToArray();
+            }
+        }
+
         /// <summary>
         /// Is the platform Windows?
         /// </summary>

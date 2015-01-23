@@ -45,8 +45,8 @@ namespace OpenSim.Region.OptionalModules.World.AutoBackup
             this.Enabled = false;
             this.BackupDir = ".";
             this.BusyCheck = true;
-            this.Timer = null;
             this.SkipAssets = false;
+            this.Timer = null;
             this.NamingType = NamingType.Time;
             this.Script = null;
             this.KeepFilesForDays = 0;

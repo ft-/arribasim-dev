@@ -41,10 +41,12 @@ namespace OpenSim.Capabilities.Handlers
 //        private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         private IInventoryService m_inventoryService;
+        private UUID m_agentID;
 
-        public FetchInventory2Handler(IInventoryService invService)
+        public FetchInventory2Handler(IInventoryService invService, UUID agentId)
         {
             m_inventoryService = invService;
+            m_agentID = agentId;
         }
 
         public string FetchInventoryRequest(string request, string path, string param, IOSHttpRequest httpRequest, IOSHttpResponse httpResponse)
@@ -61,7 +63,7 @@ namespace OpenSim.Capabilities.Handlers
             {
                 UUID itemId = osdItemId["item_id"].AsUUID();
 
-                InventoryItemBase item = m_inventoryService.GetItem(new InventoryItemBase(itemId));
+                InventoryItemBase item = m_inventoryService.GetItem(new InventoryItemBase(itemId, m_agentID));
 
                 if (item != null)
                 {
