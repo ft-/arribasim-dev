@@ -13479,12 +13479,6 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             // This does nothing for LSO scripts in SL
         }
 
-        #region Not Implemented
-        //
-        // Listing the unimplemented lsl functions here, please move
-        // them from this region as they are completed
-        //
-
         public void llSetSoundQueueing(int queue)
         {
             m_host.AddScriptLPS(1);
@@ -13578,7 +13572,6 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             return txn.ToString();
         }
 
-        #endregion
     }
 
     public class NotecardCache
