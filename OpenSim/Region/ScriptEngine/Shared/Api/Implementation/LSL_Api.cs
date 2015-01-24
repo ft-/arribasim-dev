@@ -9290,7 +9290,8 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             m_host.AddScriptLPS(1);
             try
             {
-                return Util.Base64ToString(str);
+                byte[] b = Convert.FromBase64String(str);
+                return Encoding.UTF8.GetString(b);
             }
             catch
             {

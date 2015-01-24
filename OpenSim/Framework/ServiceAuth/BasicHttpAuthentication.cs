@@ -1,10 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using log4net;
+using Nini.Config;
+using System;
 using System.Collections.Specialized;
 using System.Reflection;
-
-using Nini.Config;
-using log4net;
+using System.Text;
 
 namespace OpenSim.Framework.ServiceAuth
 {
@@ -42,7 +41,9 @@ namespace OpenSim.Framework.ServiceAuth
 
         public bool Authenticate(string data)
         {
-            string recovered = Util.Base64ToString(data);
+            byte[] b = Convert.FromBase64String(data);
+            string recovered = Encoding.UTF8.GetString(b);
+
             if (!String.IsNullOrEmpty(recovered))
             {
                 string[] parts = recovered.Split(new char[] { ':' });
