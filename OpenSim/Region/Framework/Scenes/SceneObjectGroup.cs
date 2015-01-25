@@ -294,8 +294,8 @@ namespace OpenSim.Region.Framework.Scenes
         protected SceneObjectPart m_rootPart;
         // private Dictionary<UUID, scriptEvents> m_scriptEvents = new Dictionary<UUID, scriptEvents>();
 
-        private Dictionary<uint, scriptPosTarget> m_targets = new Dictionary<uint, scriptPosTarget>();
-        private Dictionary<uint, scriptRotTarget> m_rotTargets = new Dictionary<uint, scriptRotTarget>();
+        private ThreadedClasses.RwLockedDictionary<uint, scriptPosTarget> m_targets = new ThreadedClasses.RwLockedDictionary<uint, scriptPosTarget>();
+        private ThreadedClasses.RwLockedDictionary<uint, scriptRotTarget> m_rotTargets = new ThreadedClasses.RwLockedDictionary<uint, scriptRotTarget>();
 
         private bool m_scriptListens_atTarget;
         private bool m_scriptListens_notAtTarget;
@@ -303,7 +303,8 @@ namespace OpenSim.Region.Framework.Scenes
         private bool m_scriptListens_atRotTarget;
         private bool m_scriptListens_notAtRotTarget;
 
-        internal ThreadedClasses.RwLockedDictionary<UUID, string> m_savedScriptState = new ThreadedClasses.RwLockedDictionary<UUID,string>();
+        internal ThreadedClasses.RwLockedDictionary<UUID, string> m_savedScriptState =
+            new ThreadedClasses.RwLockedDictionary<UUID, string>();
 
         #region Properties
 
@@ -825,6 +826,12 @@ namespace OpenSim.Region.Framework.Scenes
         public UUID FromFolderID { get; set; }
 
         /// <summary>
+        /// If true then grabs are blocked no matter what the individual part BlockGrab setting.
+        /// </summary>
+        /// <value><c>true</c> if block grab override; otherwise, <c>false</c>.</value>
+        public bool BlockGrabOverride { get; set; }
+
+        /// <summary>
         /// IDs of all avatars sat on this scene object.
         /// </summary>
         /// <remarks>
@@ -895,6 +902,37 @@ namespace OpenSim.Region.Framework.Scenes
                             m_savedScriptState[itemid] = node.InnerXml;
                     }
                 } 
+            }
+        }
+
+        public void LoadScriptState(XmlReader reader)
+        {
+            while (true)
+            {
+                if (reader.Name == "SavedScriptState" && reader.NodeType == XmlNodeType.Element)
+                {
+                    string uuid = reader.GetAttribute("UUID");
+
+                    if (uuid != null)
+                    {
+                        UUID itemid = new UUID(uuid);
+                        if (itemid != UUID.Zero)
+                        {
+                            m_savedScriptState[itemid] = reader.ReadInnerXml();
+                        }
+                    }
+                    else
+                    {
+                        m_log.WarnFormat("[SCENE OBJECT GROUP]: SavedScriptState element had no UUID in object {0}", Name);
+                    }
+                }
+                else
+                {
+                    if (!reader.Read())
+                    {
+                        break;
+                    }
+                }
             }
         }
 
@@ -1856,11 +1894,12 @@ namespace OpenSim.Region.Framework.Scenes
             return Vector3.Zero;
         }
 
-        public void moveToTarget(Vector3 target, float tau)
+        public void MoveToTarget(Vector3 target, float tau)
         {
             if (IsAttachment)
             {
                 ScenePresence avatar = m_scene.GetScenePresence(AttachedAvatar);
+
                 if (avatar != null)
                 {
                     avatar.MoveToTarget(target, false, false);
@@ -1879,12 +1918,26 @@ namespace OpenSim.Region.Framework.Scenes
             }
         }
 
-        public void stopMoveToTarget()
+        public void StopMoveToTarget()
         {
-            PhysicsActor pa = RootPart.PhysActor;
+            if (IsAttachment)
+            {
+                ScenePresence avatar = m_scene.GetScenePresence(AttachedAvatar);
 
-            if (pa != null)
-                pa.PIDActive = false;
+                if (avatar != null)
+                    avatar.ResetMoveToTarget();
+            }
+            else
+            {
+                PhysicsActor pa = RootPart.PhysActor;
+
+                if (pa != null && pa.PIDActive)
+                {
+                    pa.PIDActive = false;
+                    
+                    ScheduleGroupForTerseUpdate();
+                }
+            }
         }
         
         /// <summary>
@@ -2587,20 +2640,26 @@ namespace OpenSim.Region.Framework.Scenes
         /// If object is physical, apply force to move it around
         /// If object is not physical, just put it at the resulting location
         /// </summary>
+        /// <param name="partID">Part ID to check for grab</param>
         /// <param name="offset">Always seems to be 0,0,0, so ignoring</param>
         /// <param name="pos">New position.  We do the math here to turn it into a force</param>
         /// <param name="remoteClient"></param>
-        public void GrabMovement(Vector3 offset, Vector3 pos, IClientAPI remoteClient)
+        public void GrabMovement(UUID partID, Vector3 offset, Vector3 pos, IClientAPI remoteClient)
         {
             if (m_scene.EventManager.TriggerGroupMove(UUID, pos))
             {
+                SceneObjectPart part = GetPart(partID);
+
+                if (part == null)
+                    return;
+
                 PhysicsActor pa = m_rootPart.PhysActor;
 
                 if (pa != null)
                 {
                     if (pa.IsPhysical)
                     {
-                        if (!m_rootPart.BlockGrab)
+                        if (!BlockGrabOverride && !part.BlockGrab)
                         {
                             Vector3 llmoveforce = pos - AbsolutePosition;
                             Vector3 grabforce = llmoveforce;

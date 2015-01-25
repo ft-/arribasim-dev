@@ -2047,7 +2047,7 @@ namespace OpenSim.Region.Framework.Scenes
         /// </summary>
         /// <param name="xmlReader"></param>
         /// <returns></returns>
-        public static SceneObjectPart FromXml(XmlTextReader xmlReader)
+        public static SceneObjectPart FromXml(XmlReader xmlReader)
         {
             SceneObjectPart part = SceneObjectSerializer.Xml2ToSOP(xmlReader);
 
@@ -2080,22 +2080,6 @@ namespace OpenSim.Region.Framework.Scenes
                 return;
 
             ParentGroup.RootPart.RETURN_AT_EDGE = p;
-        }
-
-        public bool GetBlockGrab()
-        {
-            if (ParentGroup.IsDeleted)
-                return false;
-
-            return ParentGroup.RootPart.BlockGrab;
-        }
-
-        public void SetBlockGrab(bool p)
-        {
-            if (ParentGroup.IsDeleted)
-                return;
-
-            ParentGroup.RootPart.BlockGrab = p;
         }
 
         public void SetStatusSandbox(bool p)
@@ -2245,7 +2229,7 @@ namespace OpenSim.Region.Framework.Scenes
         {
             if (tau > 0)
             {
-                ParentGroup.moveToTarget(target, tau);
+                ParentGroup.MoveToTarget(target, tau);
             }
             else
             {
@@ -3276,10 +3260,7 @@ namespace OpenSim.Region.Framework.Scenes
 
         public void StopMoveToTarget()
         {
-            ParentGroup.stopMoveToTarget();
-
-            ParentGroup.ScheduleGroupForTerseUpdate();
-            //ParentGroup.ScheduleGroupForFullUpdate();
+            ParentGroup.StopMoveToTarget();
         }
 
         public void StoreUndoState()

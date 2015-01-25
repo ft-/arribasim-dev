@@ -289,7 +289,7 @@ namespace OpenSim.Region.Physics.Manager
 
         // Used for MoveTo
         public abstract Vector3 PIDTarget { set; }
-        public abstract bool  PIDActive { set;}
+        public abstract bool PIDActive { get; set; }
         public abstract float PIDTau { set; }
 
         // Used for llSetHoverHeight and maybe vehicle height
@@ -543,7 +543,13 @@ namespace OpenSim.Region.Physics.Manager
         }
 
         public override Vector3 PIDTarget { set { return; } }
-        public override bool PIDActive { set { return; } }
+
+        public override bool PIDActive 
+        {
+            get { return false; }
+            set { return; } 
+        }
+
         public override float PIDTau { set { return; } }
 
         public override float PIDHoverHeight { set { return; } }

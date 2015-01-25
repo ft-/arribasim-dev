@@ -41,11 +41,11 @@ namespace OpenSim.Framework.Serialization.External
     {
 //        private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
-        private static Dictionary<string, Action<LandData, XmlTextReader>> m_ldProcessors
-            = new Dictionary<string, Action<LandData, XmlTextReader>>();
+        private static Dictionary<string, Action<LandData, XmlReader>> m_ldProcessors
+            = new Dictionary<string, Action<LandData, XmlReader>>();
 
-        private static Dictionary<string, Action<LandAccessEntry, XmlTextReader>> m_laeProcessors
-            = new Dictionary<string, Action<LandAccessEntry, XmlTextReader>>();
+        private static Dictionary<string, Action<LandAccessEntry, XmlReader>> m_laeProcessors
+            = new Dictionary<string, Action<LandAccessEntry, XmlReader>>();
 
         static LandDataSerializer()
         {
@@ -131,7 +131,7 @@ namespace OpenSim.Framework.Serialization.External
                 "AccessList",       (lae, xtr) => lae.Flags = (AccessList)Convert.ToUInt32(xtr.ReadElementString("AccessList")));
         }
 
-        public static void ProcessParcelAccessList(LandData ld, XmlTextReader xtr)
+        public static void ProcessParcelAccessList(LandData ld, XmlReader xtr)
         {
             if (!xtr.IsEmptyElement)
             {

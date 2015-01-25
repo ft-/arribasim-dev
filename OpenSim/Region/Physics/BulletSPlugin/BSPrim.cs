@@ -1084,9 +1084,17 @@ public class BSPrim : BSPhysObject
         }
     }
 
-    public override bool PIDActive {
-        set {
-            base.MoveToTargetActive = value;
+    public override bool PIDActive 
+    {
+        get
+        {
+            return MoveToTargetActive;
+        }
+
+        set 
+        {
+            MoveToTargetActive = value;
+
             EnableActor(MoveToTargetActive, MoveToTargetActorName, delegate()
             {
                 return new BSActorMoveToTarget(PhysScene, this, MoveToTargetActorName);

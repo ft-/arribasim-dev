@@ -236,7 +236,9 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
                             varValue=ReadTypedValue(var, out varName);
 
                             if (vars.ContainsKey(varName))
+                            {
                                 vars[varName] = varValue;
+                            }
                         }
                         instance.SetVars(vars);
                         break;

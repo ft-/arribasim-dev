@@ -753,14 +753,7 @@ namespace OpenSim.Region.Framework.Scenes
                     }
                     else
                     {
-                        if (null == UserAccountService.GetUserAccount(UUID.Zero, recipient))
-                        {
-                            message = "The recipient has not yet visited the grid you are located in.";
-                        }
-                        else
-                        {
-                            message = "Can't find a folder to add the item to.";
-                        }
+                        message = "Can't find a folder to add the item to.";
                         return null;
                     }
                 }
