@@ -5426,7 +5426,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
             // If AgentUpdate is ever handled asynchronously, then we will also need to construct a new AgentUpdateArgs
             // for each AgentUpdate packet.
-            AddLocalPacketHandler(PacketType.AgentUpdate, HandleAgentUpdate);
+            AddLocalPacketHandler(PacketType.AgentUpdate, HandleAgentUpdate, false);
             
             AddLocalPacketHandler(PacketType.ViewerEffect, HandleViewerEffect);
             AddLocalPacketHandler(PacketType.AgentCachedTexture, HandleAgentTextureCached);
