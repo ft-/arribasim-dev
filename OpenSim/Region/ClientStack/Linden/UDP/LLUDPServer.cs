@@ -448,15 +448,11 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
             base.StartInbound(m_recvBufferSize, m_asyncPacketHandling);
 
-            // This thread will process the packets received that are placed on the packetInbox
-            Watchdog.StartThread(
-                IncomingPacketHandler,
-                string.Format("Incoming Packets ({0})", m_scene.RegionInfo.RegionName),
-                ThreadPriority.Normal,
-                false,
-                true,
-                GetWatchdogIncomingAlarmData,
-                Watchdog.DEFAULT_WATCHDOG_TIMEOUT_MS);
+            Thread thread = new Thread(IncomingPacketHandler);
+            thread.Name = string.Format("Incoming Packets ({0})", m_scene.RegionInfo.RegionName);
+            thread.Priority = ThreadPriority.Normal;
+            thread.IsBackground = false;
+            thread.Start();
         }
 
         private new void StartOutbound()
@@ -465,14 +461,11 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
             base.StartOutbound();
 
-            Watchdog.StartThread(
-                OutgoingPacketHandler,
-                string.Format("Outgoing Packets ({0})", m_scene.RegionInfo.RegionName),
-                ThreadPriority.Normal,
-                false,
-                true,
-                GetWatchdogOutgoingAlarmData,
-                Watchdog.DEFAULT_WATCHDOG_TIMEOUT_MS);
+            Thread thread = new Thread(OutgoingPacketHandler);
+            thread.Name = string.Format("Outgoing Packets ({0})", m_scene.RegionInfo.RegionName);
+            thread.Priority = ThreadPriority.Normal;
+            thread.IsBackground = false;
+            thread.Start();
         }
 
         public void Stop()
@@ -1998,14 +1991,11 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                     m_log.Error("[LLUDPSERVER]: Error in the incoming packet handler loop: " + ex.Message, ex);
                 }
 
-                Watchdog.UpdateThread();
             }
 
             if (packetInbox.Count > 0)
                 m_log.Warn("[LLUDPSERVER]: IncomingPacketHandler is shutting down, dropping " + packetInbox.Count + " packets");
             packetInbox.Clear();
-
-            Watchdog.RemoveThread();
         }
 
         private void OutgoingPacketHandler()
@@ -2086,15 +2076,12 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                     if (!m_packetSent)
                         m_dataPresentEvent.WaitOne(100);
 
-                    Watchdog.UpdateThread();
                 }
                 catch (Exception ex)
                 {
                     m_log.Error("[LLUDPSERVER]: OutgoingPacketHandler loop threw an exception: " + ex.Message, ex);
                 }
             }
-
-            Watchdog.RemoveThread();
         }
 
         protected void ClientOutgoingPacketHandler(IClientAPI client)
