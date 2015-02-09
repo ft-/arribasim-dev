@@ -47,6 +47,7 @@ namespace OpenSim.Groups
         private GroupsService m_GroupsService;
         private IUserManagement m_UserManagement;
         private List<Scene> m_Scenes;
+        private ForeignImporter m_ForeignImporter;
 
         #region constructors
         public GroupsServiceLocalConnectorModule()
@@ -57,6 +58,7 @@ namespace OpenSim.Groups
         {
             Init(config);
             m_UserManagement = uman;
+            m_ForeignImporter = new ForeignImporter(uman);
         }
         #endregion
 
@@ -123,6 +125,7 @@ namespace OpenSim.Groups
             if (m_UserManagement == null)
             {
                 m_UserManagement = scene.RequestModuleInterface<IUserManagement>();
+                m_ForeignImporter = new ForeignImporter(m_UserManagement);
             }
         }
 
@@ -170,44 +173,12 @@ namespace OpenSim.Groups
             return m_GroupsService.FindGroups(RequestingAgentID, search);
         }
 
-        GroupMembersData ConvertGroupMembersData(ExtendedGroupMembersData _m)
-        {
-            GroupMembersData m = new GroupMembersData();
-            m.AcceptNotices = _m.AcceptNotices;
-            m.AgentPowers = _m.AgentPowers;
-            m.Contribution = _m.Contribution;
-            m.IsOwner = _m.IsOwner;
-            m.ListInProfile = _m.ListInProfile;
-            m.OnlineStatus = _m.OnlineStatus;
-            m.Title = _m.Title;
-
-            string url = string.Empty, first = string.Empty, last = string.Empty, tmp = string.Empty;
-            Util.ParseUniversalUserIdentifier(_m.AgentID, out m.AgentID, out url, out first, out last, out tmp);
-            if (url != string.Empty)
-                m_UserManagement.AddUser(m.AgentID, first, last, url);
-
-            return m;
-        }
-
-        GroupRoleMembersData ConvertGroupRoleMembersData(ExtendedGroupRoleMembersData _rm)
-        {
-            GroupRoleMembersData rm = new GroupRoleMembersData();
-            rm.RoleID = _rm.RoleID;
-
-            string url = string.Empty, first = string.Empty, last = string.Empty, tmp = string.Empty;
-            Util.ParseUniversalUserIdentifier(_rm.MemberID, out rm.MemberID, out url, out first, out last, out tmp);
-            if (url != string.Empty)
-                m_UserManagement.AddUser(rm.MemberID, first, last, url);
-
-            return rm;
-        }
-        
         public List<GroupMembersData> GetGroupMembers(string RequestingAgentID, UUID GroupID)
         {
             List<ExtendedGroupMembersData> _members = m_GroupsService.GetGroupMembers(RequestingAgentID, GroupID);
             if (_members != null && _members.Count > 0)
             {
-                List<GroupMembersData> members = _members.ConvertAll<GroupMembersData>(new Converter<ExtendedGroupMembersData, GroupMembersData>(ConvertGroupMembersData));
+                List<GroupMembersData> members = _members.ConvertAll<GroupMembersData>(new Converter<ExtendedGroupMembersData, GroupMembersData>(m_ForeignImporter.ConvertGroupMembersData));
                 return members;
             }
 
@@ -239,7 +210,7 @@ namespace OpenSim.Groups
             List<ExtendedGroupRoleMembersData> _rm = m_GroupsService.GetGroupRoleMembers(RequestingAgentID, GroupID);
             if (_rm != null && _rm.Count > 0)
             {
-                List<GroupRoleMembersData> rm = _rm.ConvertAll<GroupRoleMembersData>(new Converter<ExtendedGroupRoleMembersData, GroupRoleMembersData>(ConvertGroupRoleMembersData));
+                List<GroupRoleMembersData> rm = _rm.ConvertAll<GroupRoleMembersData>(new Converter<ExtendedGroupRoleMembersData, GroupRoleMembersData>(m_ForeignImporter.ConvertGroupRoleMembersData));
                 return rm;
             }
 
