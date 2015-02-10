@@ -229,7 +229,7 @@ namespace OpenSim.Region.CoreModules.Asset
 
         private void UpdateMemoryCache(string key, AssetBase asset)
         {
-            m_MemoryCache.AddOrUpdate(key, asset, m_MemoryExpiration);
+            m_MemoryCache.AddOrUpdate(GetAssetID(key), asset, m_MemoryExpiration);
         }
 
         private void UpdateFileCache(string key, AssetBase asset)
@@ -329,7 +329,7 @@ namespace OpenSim.Region.CoreModules.Asset
         {
             AssetBase asset = null;
 
-            if (m_MemoryCache.TryGetValue(id, out asset))
+            if (m_MemoryCache.TryGetValue(GetAssetID(id), out asset))
                 m_MemoryHits++;
 
             return asset;
@@ -337,7 +337,7 @@ namespace OpenSim.Region.CoreModules.Asset
 
         private bool CheckFromMemoryCache(string id)
         {
-            return m_MemoryCache.ContainsKey(id);
+            return m_MemoryCache.ContainsKey(GetAssetID(id));
         }
 
         /// <summary>
@@ -489,7 +489,7 @@ namespace OpenSim.Region.CoreModules.Asset
                 }
 
                 if (m_MemoryCacheEnabled)
-                    m_MemoryCache.Remove(id);
+                    m_MemoryCache.Remove(GetAssetID(id));
             }
             catch (Exception e)
             {
@@ -580,6 +580,35 @@ namespace OpenSim.Region.CoreModules.Asset
             }
         }
 
+        private bool IsHG(string id)
+        {
+            Uri assetUri;
+
+            if (Uri.TryCreate(id, UriKind.Absolute, out assetUri) &&
+                    assetUri.Scheme == Uri.UriSchemeHttp)
+                return true;
+
+            return false;
+        }
+
+        private string GetAssetID(string id)
+        {
+            string assetid = id;
+            if (IsHG(id))
+            {
+                string url;
+                if (!Util.ParseForeignAssetID(id, out url, out assetid))
+                {
+                    assetid = id;
+                }
+            }
+            else
+            {
+                assetid = id;
+            }
+            return assetid;
+        }
+
         /// <summary>
         /// Determines the filename for an AssetID stored in the file cache
         /// </summary>
@@ -587,20 +616,22 @@ namespace OpenSim.Region.CoreModules.Asset
         /// <returns></returns>
         private string GetFileName(string id)
         {
+            string assetid = GetAssetID(id);
+
             // Would it be faster to just hash the darn thing?
             foreach (char c in m_InvalidChars)
             {
-                id = id.Replace(c, '_');
+                assetid = assetid.Replace(c, '_');
             }
 
             string path = m_CacheDirectory;
             for (int p = 1; p <= m_CacheDirectoryTiers; p++)
             {
-                string pathPart = id.Substring((p - 1) * m_CacheDirectoryTierLen, m_CacheDirectoryTierLen);
+                string pathPart = assetid.Substring((p - 1) * m_CacheDirectoryTierLen, m_CacheDirectoryTierLen);
                 path = Path.Combine(path, pathPart);
             }
 
-            return Path.Combine(path, id);
+            return Path.Combine(path, assetid);
         }
 
         /// <summary>
