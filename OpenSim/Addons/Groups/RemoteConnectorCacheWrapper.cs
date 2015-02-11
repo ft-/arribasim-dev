@@ -142,13 +142,22 @@ namespace OpenSim.Groups
                 if (firstCall)
                 {
                     //group = m_GroupsService.GetGroupRecord(RequestingAgentID, GroupID, GroupName);
-                    group = d();
-
-                    lock (m_Cache)
+                    try
                     {
-                        m_Cache.AddOrUpdate(cacheKey, group, GROUPS_CACHE_TIMEOUT);
-                        m_ActiveRequests.Remove(cacheKey);
-                        return (ExtendedGroupRecord)group;
+                        group = d();
+
+                        lock (m_Cache)
+                        {
+                            m_Cache.AddOrUpdate(cacheKey, group, GROUPS_CACHE_TIMEOUT);
+                            return (ExtendedGroupRecord)group;
+                        }
+                    }
+                    finally
+                    {
+                        lock (m_Cache)
+                        {
+                            m_ActiveRequests.Remove(cacheKey);
+                        }
                     }
                 }
                 else
@@ -240,13 +249,22 @@ namespace OpenSim.Groups
 
                 if (firstCall)
                 {
-                    membership = d();
-
-                    lock (m_Cache)
+                    try
                     {
-                        m_Cache.AddOrUpdate(cacheKey, membership, GROUPS_CACHE_TIMEOUT);
-                        m_ActiveRequests.Remove(cacheKey);
-                        return (ExtendedGroupMembershipData)membership;
+                        membership = d();
+
+                        lock (m_Cache)
+                        {
+                            m_Cache.AddOrUpdate(cacheKey, membership, GROUPS_CACHE_TIMEOUT);
+                            return (ExtendedGroupMembershipData)membership;
+                        }
+                    }
+                    finally
+                    {
+                        lock (m_Cache)
+                        {
+                            m_ActiveRequests.Remove(cacheKey);
+                        }
                     }
                 }
                 else
@@ -283,12 +301,21 @@ namespace OpenSim.Groups
 
                 if (firstCall)
                 {
-                    membership = d();
-                    lock (m_Cache)
+                    try
                     {
-                        m_Cache.AddOrUpdate(cacheKey, membership, GROUPS_CACHE_TIMEOUT);
-                        m_ActiveRequests.Remove(cacheKey);
-                        return (ExtendedGroupMembershipData)membership;
+                        membership = d();
+                        lock (m_Cache)
+                        {
+                            m_Cache.AddOrUpdate(cacheKey, membership, GROUPS_CACHE_TIMEOUT);
+                            return (ExtendedGroupMembershipData)membership;
+                        }
+                    }
+                    finally
+                    {
+                        lock(m_Cache)
+                        {
+                            m_ActiveRequests.Remove(cacheKey);
+                        }
                     }
                 }
                 else
@@ -324,12 +351,21 @@ namespace OpenSim.Groups
 
                 if (firstCall)
                 {
-                    memberships = d();
-                    lock (m_Cache)
+                    try
                     {
-                        m_Cache.AddOrUpdate(cacheKey, memberships, GROUPS_CACHE_TIMEOUT);
-                        m_ActiveRequests.Remove(cacheKey);
-                        return (List<GroupMembershipData>)memberships;
+                        memberships = d();
+                        lock (m_Cache)
+                        {
+                            m_Cache.AddOrUpdate(cacheKey, memberships, GROUPS_CACHE_TIMEOUT);
+                            return (List<GroupMembershipData>)memberships;
+                        }
+                    }
+                    finally
+                    {
+                        lock(m_Cache)
+                        {
+                            m_ActiveRequests.Remove(cacheKey);
+                        }
                     }
                 }
                 else
@@ -365,12 +401,21 @@ namespace OpenSim.Groups
 
                 if (firstCall)
                 {
-                    memberships = d();
-                    lock (m_Cache)
+                    try
                     {
-                        m_Cache.AddOrUpdate(cacheKey, memberships, GROUPS_CACHE_TIMEOUT);
-                        m_ActiveRequests.Remove(cacheKey);
-                        return (List<GroupMembershipData>)memberships;
+                        memberships = d();
+                        lock (m_Cache)
+                        {
+                            m_Cache.AddOrUpdate(cacheKey, memberships, GROUPS_CACHE_TIMEOUT);
+                            return (List<GroupMembershipData>)memberships;
+                        }
+                    }
+                    finally
+                    {
+                        lock(m_Cache)
+                        {
+                            m_ActiveRequests.Remove(cacheKey);
+                        }
                     }
                 }
                 else
@@ -407,20 +452,29 @@ namespace OpenSim.Groups
 
                 if (firstCall)
                 {
-                    List<ExtendedGroupMembersData> _members = d();
-
-                    if (_members != null && _members.Count > 0)
-                        members = _members.ConvertAll<GroupMembersData>(new Converter<ExtendedGroupMembersData, GroupMembersData>(m_ForeignImporter.ConvertGroupMembersData));
-                    else
-                        members = new List<GroupMembersData>();
-
-                    lock (m_Cache)
+                    try
                     {
-                        //m_Cache.AddOrUpdate(cacheKey, members, GROUPS_CACHE_TIMEOUT);
-                        m_Cache.AddOrUpdate(cacheKey, _members, GROUPS_CACHE_TIMEOUT);
-                        m_ActiveRequests.Remove(cacheKey);
+                        List<ExtendedGroupMembersData> _members = d();
 
-                        return (List<GroupMembersData>)members;
+                        if (_members != null && _members.Count > 0)
+                            members = _members.ConvertAll<GroupMembersData>(new Converter<ExtendedGroupMembersData, GroupMembersData>(m_ForeignImporter.ConvertGroupMembersData));
+                        else
+                            members = new List<GroupMembersData>();
+
+                        lock (m_Cache)
+                        {
+                            //m_Cache.AddOrUpdate(cacheKey, members, GROUPS_CACHE_TIMEOUT);
+                            m_Cache.AddOrUpdate(cacheKey, _members, GROUPS_CACHE_TIMEOUT);
+
+                            return (List<GroupMembersData>)members;
+                        }
+                    }
+                    finally
+                    {
+                        lock(m_Cache)
+                        {
+                            m_ActiveRequests.Remove(cacheKey);
+                        }
                     }
                 }
                 else
@@ -535,14 +589,23 @@ namespace OpenSim.Groups
 
                 if (firstCall)
                 {
-                    roles = d();
-                    if (roles != null)
+                    try
                     {
-                        lock (m_Cache)
+                        roles = d();
+                        if (roles != null)
                         {
-                            m_Cache.AddOrUpdate(cacheKey, roles, GROUPS_CACHE_TIMEOUT);
+                            lock (m_Cache)
+                            {
+                                m_Cache.AddOrUpdate(cacheKey, roles, GROUPS_CACHE_TIMEOUT);
+                                return (List<GroupRolesData>)roles;
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        lock(m_Cache)
+                        {
                             m_ActiveRequests.Remove(cacheKey);
-                            return (List<GroupRolesData>)roles;
                         }
                     }
                 }
@@ -579,23 +642,32 @@ namespace OpenSim.Groups
 
                 if (firstCall)
                 {
-                    List<ExtendedGroupRoleMembersData> _rmembers = d();
-
-                    if (_rmembers != null && _rmembers.Count > 0)
-                        rmembers = _rmembers.ConvertAll<GroupRoleMembersData>(new Converter<ExtendedGroupRoleMembersData, GroupRoleMembersData>(m_ForeignImporter.ConvertGroupRoleMembersData));
-                    else
-                        rmembers = new List<GroupRoleMembersData>();
-
-                    lock (m_Cache)
+                    try
                     {
-                        // For some strange reason, when I cache the list of GroupRoleMembersData,
-                        // it gets emptied out. The TryGet gets an empty list...
-                        //m_Cache.AddOrUpdate(cacheKey, rmembers, GROUPS_CACHE_TIMEOUT);
-                        // Caching the list of ExtendedGroupRoleMembersData doesn't show that issue
-                        // I don't get it.
-                        m_Cache.AddOrUpdate(cacheKey, _rmembers, GROUPS_CACHE_TIMEOUT);
-                        m_ActiveRequests.Remove(cacheKey);
-                        return (List<GroupRoleMembersData>)rmembers;
+                        List<ExtendedGroupRoleMembersData> _rmembers = d();
+
+                        if (_rmembers != null && _rmembers.Count > 0)
+                            rmembers = _rmembers.ConvertAll<GroupRoleMembersData>(new Converter<ExtendedGroupRoleMembersData, GroupRoleMembersData>(m_ForeignImporter.ConvertGroupRoleMembersData));
+                        else
+                            rmembers = new List<GroupRoleMembersData>();
+
+                        lock (m_Cache)
+                        {
+                            // For some strange reason, when I cache the list of GroupRoleMembersData,
+                            // it gets emptied out. The TryGet gets an empty list...
+                            //m_Cache.AddOrUpdate(cacheKey, rmembers, GROUPS_CACHE_TIMEOUT);
+                            // Caching the list of ExtendedGroupRoleMembersData doesn't show that issue
+                            // I don't get it.
+                            m_Cache.AddOrUpdate(cacheKey, _rmembers, GROUPS_CACHE_TIMEOUT);
+                            return (List<GroupRoleMembersData>)rmembers;
+                        }
+                    }
+                    finally
+                    {
+                        lock(m_Cache)
+                        {
+                            m_ActiveRequests.Remove(cacheKey);
+                        }
                     }
                 }
                 else
@@ -704,12 +776,21 @@ namespace OpenSim.Groups
 
                 if (firstCall)
                 {
-                    roles = d();
-                    lock (m_Cache)
+                    try
                     {
-                        m_Cache.AddOrUpdate(cacheKey, roles, GROUPS_CACHE_TIMEOUT);
-                        m_ActiveRequests.Remove(cacheKey);
-                        return (List<GroupRolesData>)roles;
+                        roles = d();
+                        lock (m_Cache)
+                        {
+                            m_Cache.AddOrUpdate(cacheKey, roles, GROUPS_CACHE_TIMEOUT);
+                            return (List<GroupRolesData>)roles;
+                        }
+                    }
+                    finally
+                    {
+                        lock(m_Cache)
+                        {
+                            m_ActiveRequests.Remove(cacheKey);
+                        }
                     }
                 }
                 else
@@ -805,13 +886,22 @@ namespace OpenSim.Groups
 
                 if (firstCall)
                 {
-                    GroupNoticeInfo _notice = d();
-
-                    lock (m_Cache)
+                    try
                     {
-                        m_Cache.AddOrUpdate(cacheKey, _notice, GROUPS_CACHE_TIMEOUT);
-                        m_ActiveRequests.Remove(cacheKey);
-                        return _notice;
+                        GroupNoticeInfo _notice = d();
+
+                        lock (m_Cache)
+                        {
+                            m_Cache.AddOrUpdate(cacheKey, _notice, GROUPS_CACHE_TIMEOUT);
+                            return _notice;
+                        }
+                    }
+                    finally
+                    {
+                        lock(m_Cache)
+                        {
+                            m_ActiveRequests.Remove(cacheKey);
+                        }
                     }
                 }
                 else
@@ -847,13 +937,22 @@ namespace OpenSim.Groups
 
                 if (firstCall)
                 {
-                    notices = d();
-
-                    lock (m_Cache)
+                    try
                     {
-                        m_Cache.AddOrUpdate(cacheKey, notices, GROUPS_CACHE_TIMEOUT);
-                        m_ActiveRequests.Remove(cacheKey);
-                        return (List<ExtendedGroupNoticeData>)notices;
+                        notices = d();
+
+                        lock (m_Cache)
+                        {
+                            m_Cache.AddOrUpdate(cacheKey, notices, GROUPS_CACHE_TIMEOUT);
+                            return (List<ExtendedGroupNoticeData>)notices;
+                        }
+                    }
+                    finally
+                    {
+                        lock(m_Cache)
+                        {
+                            m_ActiveRequests.Remove(cacheKey);
+                        }
                     }
                 }
                 else
