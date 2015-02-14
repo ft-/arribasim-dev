@@ -826,6 +826,22 @@ namespace OpenSim.Region.CoreModules.Framework.InventoryAccess
             Vector3 pos;
 
             bool single = m_Scene.GetObjectsToRez(rezAsset.Data, attachment, out objlist, out veclist, out bbox, out offsetHeight);
+            if(item != null)
+            {
+                foreach(SceneObjectGroup grp in objlist)
+                {
+                    grp.OwnerID = item.Owner;
+                    foreach(SceneObjectPart part in grp.Parts)
+                    {
+                        part.OwnerID = item.Owner;
+                        part.OwnerMask &= item.CurrentPermissions; /* ensure that we do not break (no copy, no mod, no trans) permissions */
+                        foreach (TaskInventoryItem inneritem in part.Inventory.GetInventoryItems())
+                        {
+                            inneritem.OwnerID = item.Owner;
+                        }
+                    }
+                }
+            }
 
             if (single)
             {
