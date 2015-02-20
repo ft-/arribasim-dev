@@ -174,11 +174,18 @@ namespace OpenSim.Capabilities.Handlers
                         start = Utils.Clamp(start, 0, end);
                         int len = end - start + 1;
 
-                        response.StatusCode = (int)System.Net.HttpStatusCode.PartialContent;
-
+                        if (0 == start && len == texture.Data.Length)
+                        {
+                            response.StatusCode = (int)System.Net.HttpStatusCode.OK;
+                        }
+                        else
+                        {
+                            response.StatusCode = (int)System.Net.HttpStatusCode.PartialContent;
+                            response.AddHeader("Content-Range", String.Format("bytes {0}-{1}/{2}", start, end, texture.Data.Length));
+                        }
+                        
                         response.ContentLength = len;
                         response.ContentType = "application/vnd.ll.mesh";
-                        response.AddHeader("Content-Range", String.Format("bytes {0}-{1}/{2}", start, end, texture.Data.Length));
     
                         response.Body.Write(texture.Data, start, len);
                     }

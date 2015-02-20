@@ -259,23 +259,18 @@ namespace OpenSim.Capabilities.Handlers
                         start = Utils.Clamp(start, 0, end);
                         int len = end - start + 1;
 
-//                        m_log.Debug("Serving " + start + " to " + end + " of " + texture.Data.Length + " bytes for texture " + texture.ID);
-
-                        // Always return PartialContent, even if the range covered the entire data length
-                        // We were accidentally sending back 404 before in this situation
-                        // https://issues.apache.org/bugzilla/show_bug.cgi?id=51878 supports sending 206 even if the
-                        // entire range is requested, and viewer 3.2.2 (and very probably earlier) seems fine with this.
-                        //
-                        // We also do not want to send back OK even if the whole range was satisfiable since this causes
-                        // HTTP textures on at least Imprudence 1.4.0-beta2 to never display the final texture quality.
-//                        if (end > maxEnd)
-//                            response.StatusCode = (int)System.Net.HttpStatusCode.OK;
-//                        else
-                        response.StatusCode = (int)System.Net.HttpStatusCode.PartialContent;
+                        if (0 == start && len == texture.Data.Length)
+                        {
+                            response.StatusCode = (int)System.Net.HttpStatusCode.OK;
+                        }
+                        else
+                        {
+                            response.StatusCode = (int)System.Net.HttpStatusCode.PartialContent;
+                            response.AddHeader("Content-Range", String.Format("bytes {0}-{1}/{2}", start, end, texture.Data.Length));
+                        }
 
                         response.ContentLength = len;
                         response.ContentType = texture.Metadata.ContentType;
-                        response.AddHeader("Content-Range", String.Format("bytes {0}-{1}/{2}", start, end, texture.Data.Length));
     
                         response.Body.Write(texture.Data, start, len);
                     }

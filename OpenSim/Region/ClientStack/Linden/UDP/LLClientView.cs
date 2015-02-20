@@ -737,19 +737,6 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
         # endregion
 
-        public void ActivateGesture(UUID assetId, UUID gestureId)
-        {
-        }
-
-        public void DeactivateGesture(UUID assetId, UUID gestureId)
-        {
-        }
-
-        // Sound
-        public void SoundTrigger(UUID soundId, UUID owerid, UUID Objectid, UUID ParentId, float Gain, Vector3 Position, UInt64 Handle)
-        {
-        }
-
         #region Scene/Avatar to Client
 
         public void SendRegionHandshake(RegionInfo regionInfo, RegionHandshakeArgs args)
