@@ -391,27 +391,30 @@ namespace OpenSim.Data.SQLite
 
         public void StoreSpawnPoints(RegionSettings rs)
         {
-            // remove region's spawnpoints
-            using (
-                SqliteCommand cmd =
-                    new SqliteCommand("delete from spawn_points where RegionID=:RegionID",
-                                        m_conn))
+            lock (this)
             {
-
-                cmd.Parameters.Add(new SqliteParameter(":RegionID", rs.RegionUUID.ToString()));
-                cmd.ExecuteNonQuery();
-            }
-
-            foreach (SpawnPoint sp in rs.SpawnPoints())
-            {
-                using (SqliteCommand cmd = new SqliteCommand("insert into spawn_points(RegionID, Yaw, Pitch, Distance)" +
-                                                              "values ( :RegionID, :Yaw, :Pitch, :Distance)", m_conn))
+                // remove region's spawnpoints
+                using (
+                    SqliteCommand cmd =
+                        new SqliteCommand("delete from spawn_points where RegionID=:RegionID",
+                                            m_conn))
                 {
+
                     cmd.Parameters.Add(new SqliteParameter(":RegionID", rs.RegionUUID.ToString()));
-                    cmd.Parameters.Add(new SqliteParameter(":Yaw", sp.Yaw));
-                    cmd.Parameters.Add(new SqliteParameter(":Pitch", sp.Pitch));
-                    cmd.Parameters.Add(new SqliteParameter(":Distance", sp.Distance));
                     cmd.ExecuteNonQuery();
+                }
+
+                foreach (SpawnPoint sp in rs.SpawnPoints())
+                {
+                    using (SqliteCommand cmd = new SqliteCommand("insert into spawn_points(RegionID, Yaw, Pitch, Distance)" +
+                                                                  "values ( :RegionID, :Yaw, :Pitch, :Distance)", m_conn))
+                    {
+                        cmd.Parameters.Add(new SqliteParameter(":RegionID", rs.RegionUUID.ToString()));
+                        cmd.Parameters.Add(new SqliteParameter(":Yaw", sp.Yaw));
+                        cmd.Parameters.Add(new SqliteParameter(":Pitch", sp.Pitch));
+                        cmd.Parameters.Add(new SqliteParameter(":Distance", sp.Distance));
+                        cmd.ExecuteNonQuery();
+                    }
                 }
             }
         }
@@ -422,19 +425,22 @@ namespace OpenSim.Data.SQLite
         /// <param name="regionUUID">RegionID</param>
         public RegionLightShareData LoadRegionWindlightSettings(UUID regionUUID)
         {
-            RegionLightShareData wl = null;
-
-            DataTable windlightTable = ds.Tables["regionwindlight"];
-            DataRow windlightRow = windlightTable.Rows.Find(regionUUID.ToString());
-            if (windlightRow == null)
+            lock (this)
             {
-                wl = new RegionLightShareData();
-                wl.regionID = regionUUID;
-                StoreRegionWindlightSettings(wl);
+                RegionLightShareData wl = null;
+
+                DataTable windlightTable = ds.Tables["regionwindlight"];
+                DataRow windlightRow = windlightTable.Rows.Find(regionUUID.ToString());
+                if (windlightRow == null)
+                {
+                    wl = new RegionLightShareData();
+                    wl.regionID = regionUUID;
+                    StoreRegionWindlightSettings(wl);
+                    return wl;
+                }
+                wl = buildRegionWindlight(windlightRow);
                 return wl;
             }
-            wl = buildRegionWindlight(windlightRow);
-            return wl;
         }
 
         /// <summary>
@@ -443,14 +449,17 @@ namespace OpenSim.Data.SQLite
         /// <param name="regionID">RegionID</param>
         public void RemoveRegionWindlightSettings(UUID regionID)
         {
-            DataTable windlightTable = ds.Tables["regionwindlight"];
-            DataRow windlightRow = windlightTable.Rows.Find(regionID.ToString());
-
-            if (windlightRow != null)
+            lock (this)
             {
-                windlightRow.Delete();
+                DataTable windlightTable = ds.Tables["regionwindlight"];
+                DataRow windlightRow = windlightTable.Rows.Find(regionID.ToString());
+
+                if (windlightRow != null)
+                {
+                    windlightRow.Delete();
+                }
+                Commit();
             }
-            Commit();
         }
 
         /// <summary>
@@ -459,113 +468,131 @@ namespace OpenSim.Data.SQLite
         /// <param name="wl">RegionLightShareData</param>
         public void StoreRegionWindlightSettings(RegionLightShareData wl)
         {
-            DataTable windlightTable = ds.Tables["regionwindlight"];
-            DataRow windlightRow = windlightTable.Rows.Find(wl.regionID.ToString());
-
-            if (windlightRow == null)
+            lock (this)
             {
-                windlightRow = windlightTable.NewRow();
-                fillRegionWindlightRow(windlightRow, wl);
-                windlightTable.Rows.Add(windlightRow);
-            }
-            else
-            {
-                fillRegionWindlightRow(windlightRow, wl);
-            }
+                DataTable windlightTable = ds.Tables["regionwindlight"];
+                DataRow windlightRow = windlightTable.Rows.Find(wl.regionID.ToString());
 
-            Commit();
+                if (windlightRow == null)
+                {
+                    windlightRow = windlightTable.NewRow();
+                    fillRegionWindlightRow(windlightRow, wl);
+                    windlightTable.Rows.Add(windlightRow);
+                }
+                else
+                {
+                    fillRegionWindlightRow(windlightRow, wl);
+                }
+
+                Commit();
+            }
         }
 
         #region Region Environment Settings
         public string LoadRegionEnvironmentSettings(UUID regionUUID)
         {
-            DataTable environmentTable = ds.Tables["regionenvironment"];
-            DataRow row = environmentTable.Rows.Find(regionUUID.ToString());
-            if (row == null)
+            lock (this)
             {
-                return String.Empty;
-            }
+                DataTable environmentTable = ds.Tables["regionenvironment"];
+                DataRow row = environmentTable.Rows.Find(regionUUID.ToString());
+                if (row == null)
+                {
+                    return String.Empty;
+                }
 
-            return (String)row["llsd_settings"];
+                return (String)row["llsd_settings"];
+            }
         }
 
         public void StoreRegionEnvironmentSettings(UUID regionUUID, string settings)
         {
-            DataTable environmentTable = ds.Tables["regionenvironment"];
-            DataRow row = environmentTable.Rows.Find(regionUUID.ToString());
-
-            if (row == null)
+            lock (this)
             {
-                row = environmentTable.NewRow();
-                row["region_id"] = regionUUID.ToString();
-                row["llsd_settings"] = settings;
-                environmentTable.Rows.Add(row);
-            }
-            else
-            {
-                row["llsd_settings"] = settings;
-            }
+                DataTable environmentTable = ds.Tables["regionenvironment"];
+                DataRow row = environmentTable.Rows.Find(regionUUID.ToString());
 
-            regionEnvironmentDa.Update(ds, "regionenvironment");
+                if (row == null)
+                {
+                    row = environmentTable.NewRow();
+                    row["region_id"] = regionUUID.ToString();
+                    row["llsd_settings"] = settings;
+                    environmentTable.Rows.Add(row);
+                }
+                else
+                {
+                    row["llsd_settings"] = settings;
+                }
+
+                regionEnvironmentDa.Update(ds, "regionenvironment");
+            }
         }
 
         public void RemoveRegionEnvironmentSettings(UUID regionUUID)
         {
-            DataTable environmentTable = ds.Tables["regionenvironment"];
-            DataRow row = environmentTable.Rows.Find(regionUUID.ToString());
-
-            if (row != null)
+            lock (this)
             {
-                row.Delete();
-            }
+                DataTable environmentTable = ds.Tables["regionenvironment"];
+                DataRow row = environmentTable.Rows.Find(regionUUID.ToString());
 
-            regionEnvironmentDa.Update(ds, "regionenvironment");
+                if (row != null)
+                {
+                    row.Delete();
+                }
+
+                regionEnvironmentDa.Update(ds, "regionenvironment");
+            }
         }
 
         #endregion
 
         public RegionSettings LoadRegionSettings(UUID regionUUID)
         {
-            DataTable regionsettings = ds.Tables["regionsettings"];
-
-            string searchExp = "regionUUID = '" + regionUUID.ToString() + "'";
-            DataRow[] rawsettings = regionsettings.Select(searchExp);
-            if (rawsettings.Length == 0)
+            lock (this)
             {
-                RegionSettings rs = new RegionSettings();
-                rs.RegionUUID = regionUUID;
-                rs.OnSave += StoreRegionSettings;
+                DataTable regionsettings = ds.Tables["regionsettings"];
 
-                StoreRegionSettings(rs);
+                string searchExp = "regionUUID = '" + regionUUID.ToString() + "'";
+                DataRow[] rawsettings = regionsettings.Select(searchExp);
+                if (rawsettings.Length == 0)
+                {
+                    RegionSettings rs = new RegionSettings();
+                    rs.RegionUUID = regionUUID;
+                    rs.OnSave += StoreRegionSettings;
 
-                return rs;
+                    StoreRegionSettings(rs);
+
+                    return rs;
+                }
+                DataRow row = rawsettings[0];
+
+                RegionSettings newSettings = buildRegionSettings(row);
+                newSettings.OnSave += StoreRegionSettings;
+
+                LoadSpawnPoints(newSettings);
+
+                return newSettings;
             }
-            DataRow row = rawsettings[0];
-
-            RegionSettings newSettings = buildRegionSettings(row);
-            newSettings.OnSave += StoreRegionSettings;
-
-            LoadSpawnPoints(newSettings);
-
-            return newSettings;
         }
 
         private void LoadSpawnPoints(RegionSettings rs)
         {
-            rs.ClearSpawnPoints();
-
-            DataTable spawnpoints = ds.Tables["spawn_points"];
-            string byRegion = "RegionID = '" + rs.RegionUUID + "'";
-            DataRow[] spForRegion = spawnpoints.Select(byRegion);
-
-            foreach (DataRow spRow in spForRegion)
+            lock (this)
             {
-                SpawnPoint sp = new SpawnPoint();
-                sp.Pitch = (float)spRow["Pitch"];
-                sp.Yaw = (float)spRow["Yaw"];
-                sp.Distance = (float)spRow["Distance"];
+                rs.ClearSpawnPoints();
 
-                rs.AddSpawnPoint(sp);
+                DataTable spawnpoints = ds.Tables["spawn_points"];
+                string byRegion = "RegionID = '" + rs.RegionUUID + "'";
+                DataRow[] spForRegion = spawnpoints.Select(byRegion);
+
+                foreach (DataRow spRow in spForRegion)
+                {
+                    SpawnPoint sp = new SpawnPoint();
+                    sp.Pitch = (float)spRow["Pitch"];
+                    sp.Yaw = (float)spRow["Yaw"];
+                    sp.Distance = (float)spRow["Distance"];
+
+                    rs.AddSpawnPoint(sp);
+                }
             }
         }
 
@@ -576,21 +603,24 @@ namespace OpenSim.Data.SQLite
         /// <param name="regionUUID">the region UUID</param>
         public void StoreObject(SceneObjectGroup obj, UUID regionUUID)
         {
-            uint flags = obj.RootPart.GetEffectiveObjectFlags();
-
-            // Eligibility check
-            //
-            if ((flags & (uint)PrimFlags.Temporary) != 0)
-                return;
-            if ((flags & (uint)PrimFlags.TemporaryOnRez) != 0)
-                return;
-
-            foreach (SceneObjectPart prim in obj.Parts)
+            lock (this)
             {
-                addPrim(prim, obj.UUID, regionUUID);
-            }
+                uint flags = obj.RootPart.GetEffectiveObjectFlags();
 
-            Commit();
+                // Eligibility check
+                //
+                if ((flags & (uint)PrimFlags.Temporary) != 0)
+                    return;
+                if ((flags & (uint)PrimFlags.TemporaryOnRez) != 0)
+                    return;
+
+                foreach (SceneObjectPart prim in obj.Parts)
+                {
+                    addPrim(prim, obj.UUID, regionUUID);
+                }
+
+                Commit();
+            }
         }
 
         /// <summary>
@@ -600,29 +630,32 @@ namespace OpenSim.Data.SQLite
         /// <param name="regionUUID">the region UUID</param>
         public void RemoveObject(UUID obj, UUID regionUUID)
         {
-
-            DataTable prims = ds.Tables["prims"];
-            DataTable shapes = ds.Tables["primshapes"];
-
-            string selectExp = "SceneGroupID = '" + obj + "' and RegionUUID = '" + regionUUID + "'";
-            DataRow[] primRows = prims.Select(selectExp);
-            foreach (DataRow row in primRows)
+            lock (this)
             {
-                // Remove shape rows
-                UUID uuid = new UUID((string)row["UUID"]);
-                DataRow shapeRow = shapes.Rows.Find(uuid.ToString());
-                if (shapeRow != null)
+
+                DataTable prims = ds.Tables["prims"];
+                DataTable shapes = ds.Tables["primshapes"];
+
+                string selectExp = "SceneGroupID = '" + obj + "' and RegionUUID = '" + regionUUID + "'";
+                DataRow[] primRows = prims.Select(selectExp);
+                foreach (DataRow row in primRows)
                 {
-                    shapeRow.Delete();
+                    // Remove shape rows
+                    UUID uuid = new UUID((string)row["UUID"]);
+                    DataRow shapeRow = shapes.Rows.Find(uuid.ToString());
+                    if (shapeRow != null)
+                    {
+                        shapeRow.Delete();
+                    }
+
+                    RemoveItems(uuid);
+
+                    // Remove prim row
+                    row.Delete();
                 }
 
-                RemoveItems(uuid);
-
-                // Remove prim row
-                row.Delete();
+                Commit();
             }
-
-            Commit();
         }
 
         /// <summary>
@@ -632,14 +665,17 @@ namespace OpenSim.Data.SQLite
         /// <param name="uuid">The item UUID</param>
         private void RemoveItems(UUID uuid)
         {
-            DataTable items = ds.Tables["primitems"];
-
-            String sql = String.Format("primID = '{0}'", uuid);
-            DataRow[] itemRows = items.Select(sql);
-
-            foreach (DataRow itemRow in itemRows)
+            lock (this)
             {
-                itemRow.Delete();
+                DataTable items = ds.Tables["primitems"];
+
+                String sql = String.Format("primID = '{0}'", uuid);
+                DataRow[] itemRows = items.Select(sql);
+
+                foreach (DataRow itemRow in itemRows)
+                {
+                    itemRow.Delete();
+                }
             }
         }
 
@@ -780,30 +816,33 @@ namespace OpenSim.Data.SQLite
         /// <param name="regionID">region UUID</param>
         public void StoreTerrain(TerrainData terrData, UUID regionID)
         {
-            using (
-                SqliteCommand cmd = new SqliteCommand("delete from terrain where RegionUUID=:RegionUUID", m_conn))
+            lock (this)
             {
-                cmd.Parameters.Add(new SqliteParameter(":RegionUUID", regionID.ToString()));
-                cmd.ExecuteNonQuery();
-            }
+                using (
+                    SqliteCommand cmd = new SqliteCommand("delete from terrain where RegionUUID=:RegionUUID", m_conn))
+                {
+                    cmd.Parameters.Add(new SqliteParameter(":RegionUUID", regionID.ToString()));
+                    cmd.ExecuteNonQuery();
+                }
 
-            // the following is an work around for .NET.  The perf
-            // issues associated with it aren't as bad as you think.
-            String sql = "insert into terrain(RegionUUID, Revision, Heightfield)" +
-                            " values(:RegionUUID, :Revision, :Heightfield)";
+                // the following is an work around for .NET.  The perf
+                // issues associated with it aren't as bad as you think.
+                String sql = "insert into terrain(RegionUUID, Revision, Heightfield)" +
+                                " values(:RegionUUID, :Revision, :Heightfield)";
 
-            int terrainDBRevision;
-            Array terrainDBblob;
-            terrData.GetDatabaseBlob(out terrainDBRevision, out terrainDBblob);
+                int terrainDBRevision;
+                Array terrainDBblob;
+                terrData.GetDatabaseBlob(out terrainDBRevision, out terrainDBblob);
 
-            m_log.DebugFormat("{0} Storing terrain revision r {1}", LogHeader, terrainDBRevision);
+                m_log.DebugFormat("{0} Storing terrain revision r {1}", LogHeader, terrainDBRevision);
 
-            using (SqliteCommand cmd = new SqliteCommand(sql, m_conn))
-            {
-                cmd.Parameters.Add(new SqliteParameter(":RegionUUID", regionID.ToString()));
-                cmd.Parameters.Add(new SqliteParameter(":Revision", terrainDBRevision));
-                cmd.Parameters.Add(new SqliteParameter(":Heightfield", terrainDBblob));
-                cmd.ExecuteNonQuery();
+                using (SqliteCommand cmd = new SqliteCommand(sql, m_conn))
+                {
+                    cmd.Parameters.Add(new SqliteParameter(":RegionUUID", regionID.ToString()));
+                    cmd.Parameters.Add(new SqliteParameter(":Revision", terrainDBRevision));
+                    cmd.Parameters.Add(new SqliteParameter(":Heightfield", terrainDBblob));
+                    cmd.ExecuteNonQuery();
+                }
             }
         }
 
@@ -856,24 +895,27 @@ namespace OpenSim.Data.SQLite
 
         public void RemoveLandObject(UUID globalID)
         {
-            DataTable land = ds.Tables["land"];
-            DataTable landaccesslist = ds.Tables["landaccesslist"];
-            DataRow landRow = land.Rows.Find(globalID.ToString());
-            if (landRow != null)
+            lock (this)
             {
-                landRow.Delete();
+                DataTable land = ds.Tables["land"];
+                DataTable landaccesslist = ds.Tables["landaccesslist"];
+                DataRow landRow = land.Rows.Find(globalID.ToString());
+                if (landRow != null)
+                {
+                    landRow.Delete();
+                }
+                List<DataRow> rowsToDelete = new List<DataRow>();
+                foreach (DataRow rowToCheck in landaccesslist.Rows)
+                {
+                    if (rowToCheck["LandUUID"].ToString() == globalID.ToString())
+                        rowsToDelete.Add(rowToCheck);
+                }
+                for (int iter = 0; iter < rowsToDelete.Count; iter++)
+                {
+                    rowsToDelete[iter].Delete();
+                }
+                Commit();
             }
-            List<DataRow> rowsToDelete = new List<DataRow>();
-            foreach (DataRow rowToCheck in landaccesslist.Rows)
-            {
-                if (rowToCheck["LandUUID"].ToString() == globalID.ToString())
-                    rowsToDelete.Add(rowToCheck);
-            }
-            for (int iter = 0; iter < rowsToDelete.Count; iter++)
-            {
-                rowsToDelete[iter].Delete();
-            }
-            Commit();
         }
 
         /// <summary>
@@ -882,42 +924,45 @@ namespace OpenSim.Data.SQLite
         /// <param name="parcel"></param>
         public void StoreLandObject(ILandObject parcel)
         {
-            DataTable land = ds.Tables["land"];
-            DataTable landaccesslist = ds.Tables["landaccesslist"];
+            lock (this)
+            {
+                DataTable land = ds.Tables["land"];
+                DataTable landaccesslist = ds.Tables["landaccesslist"];
 
-            DataRow landRow = land.Rows.Find(parcel.LandData.GlobalID.ToString());
-            if (landRow == null)
-            {
-                landRow = land.NewRow();
-                fillLandRow(landRow, parcel.LandData, parcel.RegionUUID);
-                land.Rows.Add(landRow);
-            }
-            else
-            {
-                fillLandRow(landRow, parcel.LandData, parcel.RegionUUID);
-            }
+                DataRow landRow = land.Rows.Find(parcel.LandData.GlobalID.ToString());
+                if (landRow == null)
+                {
+                    landRow = land.NewRow();
+                    fillLandRow(landRow, parcel.LandData, parcel.RegionUUID);
+                    land.Rows.Add(landRow);
+                }
+                else
+                {
+                    fillLandRow(landRow, parcel.LandData, parcel.RegionUUID);
+                }
 
-            // We can't modify the table with direct queries before calling Commit() and re-filling them.
-            List<DataRow> rowsToDelete = new List<DataRow>();
-            foreach (DataRow rowToCheck in landaccesslist.Rows)
-            {
-                if (rowToCheck["LandUUID"].ToString() == parcel.LandData.GlobalID.ToString())
-                    rowsToDelete.Add(rowToCheck);
-            }
-            for (int iter = 0; iter < rowsToDelete.Count; iter++)
-            {
-                rowsToDelete[iter].Delete();
-                landaccesslist.Rows.Remove(rowsToDelete[iter]);
-            }
-            rowsToDelete.Clear();
-            foreach (LandAccessEntry entry in parcel.LandData.ParcelAccessList)
-            {
-                DataRow newAccessRow = landaccesslist.NewRow();
-                fillLandAccessRow(newAccessRow, entry, parcel.LandData.GlobalID);
-                landaccesslist.Rows.Add(newAccessRow);
-            }
+                // We can't modify the table with direct queries before calling Commit() and re-filling them.
+                List<DataRow> rowsToDelete = new List<DataRow>();
+                foreach (DataRow rowToCheck in landaccesslist.Rows)
+                {
+                    if (rowToCheck["LandUUID"].ToString() == parcel.LandData.GlobalID.ToString())
+                        rowsToDelete.Add(rowToCheck);
+                }
+                for (int iter = 0; iter < rowsToDelete.Count; iter++)
+                {
+                    rowsToDelete[iter].Delete();
+                    landaccesslist.Rows.Remove(rowsToDelete[iter]);
+                }
+                rowsToDelete.Clear();
+                foreach (LandAccessEntry entry in parcel.LandData.ParcelAccessList)
+                {
+                    DataRow newAccessRow = landaccesslist.NewRow();
+                    fillLandAccessRow(newAccessRow, entry, parcel.LandData.GlobalID);
+                    landaccesslist.Rows.Add(newAccessRow);
+                }
 
-            Commit();
+                Commit();
+            }
         }
 
         /// <summary>
@@ -979,7 +1024,10 @@ namespace OpenSim.Data.SQLite
         /// </summary>
         public void Shutdown()
         {
-            Commit();
+            lock (this)
+            {
+                Commit();
+            }
         }
 
         /***********************************************************************
