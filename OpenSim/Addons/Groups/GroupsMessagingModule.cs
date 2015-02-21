@@ -109,7 +109,7 @@ namespace OpenSim.Groups
             if (!m_groupMessagingEnabled)
                 return;
 
-            m_messageOnlineAgentsOnly = groupsConfig.GetBoolean("MessageOnlineUsersOnly", false);
+            m_messageOnlineAgentsOnly = groupsConfig.GetBoolean("MessageOnlineUsersOnly", true);
 
             if (m_messageOnlineAgentsOnly)
             {
