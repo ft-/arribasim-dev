@@ -261,7 +261,7 @@ namespace OpenSim.Region.Framework.Scenes
 
         public Quaternion SpinOldOrientation = Quaternion.Identity;
 
-        protected int m_APIDIterations = 0;
+        protected bool m_APIDActive = false;
         protected Quaternion m_APIDTarget = Quaternion.Identity;
         protected float m_APIDDamp = 0;
         protected float m_APIDStrength = 0;
@@ -637,6 +637,12 @@ namespace OpenSim.Region.Framework.Scenes
             }
         }
 
+        protected bool APIDActive
+        {
+            get { return m_APIDActive; }
+            set { m_APIDActive = value; }
+        }
+
         protected Quaternion APIDTarget
         {
             get { return m_APIDTarget; }
@@ -918,14 +924,17 @@ namespace OpenSim.Region.Framework.Scenes
 
             set
             {
-                m_velocity = value;
+                if (Util.IsNanOrInfinity(value))
+                    m_velocity = Vector3.Zero;
+                else
+                    m_velocity = value;
 
                 PhysicsActor actor = PhysActor;
                 if (actor != null)
                 {
                     if (actor.IsPhysical)
                     {
-                        actor.Velocity = value;
+                        actor.Velocity = m_velocity;
                         ParentGroup.Scene.PhysicsScene.AddPhysicsActorTaint(actor);
                     }
                 }
@@ -954,7 +963,11 @@ namespace OpenSim.Region.Framework.Scenes
             }
             set
             {
-                m_angularVelocity = value;
+                if (Util.IsNanOrInfinity(value))
+                    m_angularVelocity = Vector3.Zero;
+                else
+                    m_angularVelocity = value;
+
                 PhysicsActor actor = PhysActor;
                 if ((actor != null) && actor.IsPhysical)
                     actor.RotationalVelocity = m_angularVelocity;
@@ -965,7 +978,13 @@ namespace OpenSim.Region.Framework.Scenes
         public Vector3 Acceleration
         {
             get { return m_acceleration; }
-            set { m_acceleration = value; }
+            set
+            {
+                if (Util.IsNanOrInfinity(value))
+                    m_acceleration = Vector3.Zero;
+                else
+                    m_acceleration = value;
+            }
         }
 
         public string Description { get; set; }
@@ -2609,8 +2628,8 @@ namespace OpenSim.Region.Framework.Scenes
                     m_log.WarnFormat("[SceneObjectPart] Invalid rotation strength {0}",APIDStrength);
                     return;
                 }
-                
-                m_APIDIterations = 1 + (int)(Math.PI * APIDStrength);
+
+                APIDActive = true;
             }
 
             // Necessary to get the lookat deltas applied
@@ -2624,7 +2643,7 @@ namespace OpenSim.Region.Framework.Scenes
 
         public void StopLookAt()
         {
-            APIDTarget = Quaternion.Identity;
+            APIDActive = false;
         }
 
 
@@ -4857,7 +4876,7 @@ namespace OpenSim.Region.Framework.Scenes
         {
             try
             {
-                if (APIDTarget != Quaternion.Identity)
+                if (APIDActive)
                 {
                     PhysicsActor pa = ParentGroup.RootPart.PhysActor;
                     if (pa == null || !pa.IsPhysical || APIDStrength < 0.04)
