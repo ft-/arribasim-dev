@@ -108,7 +108,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.XmlRpcGroups
                     return;
                 }
 
-                m_messageOnlineAgentsOnly = groupsConfig.GetBoolean("MessageOnlineUsersOnly", false);
+                m_messageOnlineAgentsOnly = groupsConfig.GetBoolean("MessageOnlineUsersOnly", true);
 
                 if (m_messageOnlineAgentsOnly)
                     m_usersOnlineCache = new ThreadedClasses.ExpiringCache<UUID, PresenceInfo[]>(30);
