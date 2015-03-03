@@ -438,7 +438,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
         public void osGrantScriptPermissions(LSL_Key avatar, LSL_List osfunctions)
         {
-            CheckThreatLevel(ThreatLevel.Severe, "osGrantScriptPermissions");
+            CheckThreatLevel(ThreatLevel.Impossible, "osGrantScriptPermissions");
             m_host.AddScriptLPS(1);
             UUID key;
             UUID.TryParse(avatar.m_string, out key);
@@ -452,7 +452,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
         public void osRevokeScriptPermissions(LSL_Key avatar, LSL_List osfunctions)
         {
-            CheckThreatLevel(ThreatLevel.Severe, "osRevokeScriptPermissions");
+            CheckThreatLevel(ThreatLevel.Impossible, "osRevokeScriptPermissions");
             m_host.AddScriptLPS(1);
             UUID key;
             UUID.TryParse(avatar.m_string, out key);
