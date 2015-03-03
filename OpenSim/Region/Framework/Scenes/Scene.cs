@@ -5803,14 +5803,6 @@ namespace OpenSim.Region.Framework.Scenes
 
         public bool AddOsslPerm(UUID key, string function)
         {
-            StackTrace calls = new StackTrace();
-            string caller = calls.GetFrame(1).GetMethod().Name;
-            if (caller != "osGrantScriptPermissions")
-            {
-                m_log.ErrorFormat("[SCENE]: {0} cannot adjust script perms!", caller);
-                return false;
-            }
-
             if (string.IsNullOrEmpty(function))
                 return false;
 
@@ -5832,14 +5824,6 @@ namespace OpenSim.Region.Framework.Scenes
 
         public bool RemoveOsslPerm(UUID key, string function)
         {
-            StackTrace calls = new StackTrace();
-            string caller = calls.GetFrame(1).GetMethod().Name;
-            if (caller != "osRevokeScriptPermissions")
-            {
-                m_log.ErrorFormat("[SCENE]: {0} cannot adjust script perms!", caller);
-                return false;
-            }
-
             ThreadedClasses.RwLockedDictionary<UUID, bool> dynKeys;
             if(m_DynaPerms.TryGetValue(function, out dynKeys))
             {
