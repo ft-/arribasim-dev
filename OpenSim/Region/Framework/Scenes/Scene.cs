@@ -138,6 +138,9 @@ namespace OpenSim.Region.Framework.Scenes
         }
         private bool m_scripts_enabled;
 
+        // Dynamic ossl function permissions
+        private ThreadedClasses.RwLockedDictionaryAutoAdd<string, ThreadedClasses.RwLockedDictionary<UUID, bool>> m_DynaPerms = new ThreadedClasses.RwLockedDictionaryAutoAdd<string, ThreadedClasses.RwLockedDictionary<UUID, bool>>(delegate() { return new ThreadedClasses.RwLockedDictionary<UUID, bool>(); });
+
         public SynchronizeSceneHandler SynchronizeScene;
 
         /// <summary>
@@ -5796,6 +5799,56 @@ namespace OpenSim.Region.Framework.Scenes
             m_SimulationDataService.RemoveExtra(RegionInfo.RegionID, name);
 
             m_eventManager.TriggerExtraSettingChanged(this, name, String.Empty);
+        }
+
+        public bool AddOsslPerm(UUID key, string function)
+        {
+            StackTrace calls = new StackTrace();
+            string caller = calls.GetFrame(1).GetMethod().Name;
+            if (caller != "osGrantScriptPermissions")
+            {
+                m_log.ErrorFormat("[SCENE]: {0} cannot adjust script perms!", caller);
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(function))
+                return false;
+
+            m_DynaPerms.GetOrAddIfNotExists(function, delegate() { return new ThreadedClasses.RwLockedDictionary<UUID, bool>();})[key] = true;
+
+            return true;
+        }
+
+        public bool GetOsslPerms(UUID avatar, string function)
+        {
+            ThreadedClasses.RwLockedDictionary<UUID, bool> dynKeys;
+            if (m_DynaPerms.TryGetValue(function, out dynKeys))
+            {
+                return m_DynaPerms[function].ContainsKey(avatar);
+            }
+
+            return false;
+        }
+
+        public bool RemoveOsslPerm(UUID key, string function)
+        {
+            StackTrace calls = new StackTrace();
+            string caller = calls.GetFrame(1).GetMethod().Name;
+            if (caller != "osRevokeScriptPermissions")
+            {
+                m_log.ErrorFormat("[SCENE]: {0} cannot adjust script perms!", caller);
+                return false;
+            }
+
+            ThreadedClasses.RwLockedDictionary<UUID, bool> dynKeys;
+            if(m_DynaPerms.TryGetValue(function, out dynKeys))
+            {
+                if (dynKeys.Remove(key))
+                {
+                    m_DynaPerms.RemoveIf(function, delegate(ThreadedClasses.RwLockedDictionary<UUID, bool> val) { return val.Count == 0; });
+                }
+            }
+            return true;
         }
     }
 }

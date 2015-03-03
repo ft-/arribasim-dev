@@ -107,12 +107,18 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Interfaces
         /// without consent, or allows deletion or modification of user data,
         /// or allows the compromise of sensitive data by design.
         /// </summary>
-        Severe = 7
+        Severe = 7,
+
+        Impossible = 8
     };
 
     public interface IOSSL_Api
     {
         void CheckThreatLevel(ThreatLevel level, string function);
+
+        // Scripted Script Permissions
+        void osGrantScriptPermissions(LSL_Key avatar, LSL_List functions);
+        void osRevokeScriptPermissions(LSL_Key avatar, LSL_List functions);
 
         //OpenSim functions
         string osSetDynamicTextureURL(string dynamicID, string contentType, string url, string extraParams, int timer);
