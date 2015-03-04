@@ -12512,7 +12512,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                                     vel = obj.ParentGroup.RootPart.Velocity; 
                                 }
 
-                                ret.Add(new LSL_Vector(vel));
+                                ret.Add(vel);
                                 break;
                             case ScriptBaseClass.OBJECT_OWNER:
                                 ret.Add(new LSL_String(obj.OwnerID.ToString()));
