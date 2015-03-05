@@ -204,6 +204,8 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
 
             instance.PluginData = new Object[0];
 
+            // Avoid removal of whitepace from LSL string vars
+            doc.PreserveWhitespace = true;
             doc.LoadXml(xml);
 
             XmlNodeList rootL = doc.GetElementsByTagName("ScriptState");
