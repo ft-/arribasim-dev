@@ -1216,27 +1216,72 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             SendLayerData(xPatches, yPatches, terrData);
         }
 
+        private Dictionary<int, uint> m_TransmittedTerrainSerials = new Dictionary<int, uint>();
+
         private void SendLayerData(int[] px, int[] py, HeightMapTerrainData terrData)
         {
             try
             {
-                // Many, many patches could have been passed to us. Since the patches will be compressed
-                //   into variable sized blocks, we cannot pre-compute how many will fit into one
-                //   packet. While some fancy packing algorithm is possible, 4 seems to always fit.
-                int PatchesAssumedToFit = 4;
-                for (int pcnt = 0; pcnt < px.Length; pcnt += PatchesAssumedToFit)
+                List<OpenSimTerrainCompressor.PatchInfo> patches = new List<OpenSimTerrainCompressor.PatchInfo>();
+                int pcnt;
+                
+                for (pcnt = 0; pcnt < px.Length; ++pcnt)
                 {
-                    int remaining = Math.Min(px.Length - pcnt, PatchesAssumedToFit);
-                    int[] xPatches = new int[remaining];
-                    int[] yPatches = new int[remaining];
-                    for (int ii = 0; ii < remaining; ii++)
-                    {
-                        xPatches[ii] = px[pcnt + ii];
-                        yPatches[ii] = py[pcnt + ii];
-                    }
-                    LayerDataPacket layerpack = OpenSimTerrainCompressor.CreateLandPacket(terrData, xPatches, yPatches);
+                    uint lastSerialNo = 0;
+                    uint newSerialNo = 0;
+                    int bitLength = 0;
+                    int patchID = (px[pcnt] << 16) | (py[pcnt]);
 
-                    SendTheLayerPacket(layerpack);
+                    lock(m_TransmittedTerrainSerials)
+                    {
+                        if(!m_TransmittedTerrainSerials.TryGetValue(patchID, out lastSerialNo))
+                        {
+                            lastSerialNo = 0;
+                        }
+
+                        byte[] pdata = terrData.GetCompressedPatch(px[pcnt], py[pcnt], out bitLength, lastSerialNo, out newSerialNo);
+                        if(null != pdata)
+                        {
+                            m_TransmittedTerrainSerials[patchID] = newSerialNo;
+                            OpenSimTerrainCompressor.PatchInfo pi = new OpenSimTerrainCompressor.PatchInfo();
+                            pi.X = px[pcnt];
+                            pi.Y = py[pcnt];
+                            pi.BitLength = bitLength;
+                            pi.PackedData = pdata;
+                            patches.Add(pi);
+                        }
+                    }
+
+                }
+
+                /* the largest possible patch holds 647 bytes => 20 bits * 256 + 7 byte header, so a dynamic approach is a lot better */
+
+                List<OpenSimTerrainCompressor.PatchInfo> packFrame = new List<OpenSimTerrainCompressor.PatchInfo>();
+
+                byte landPacketType = (byte)TerrainPatch.LayerType.Land;
+                if (terrData.SizeX > Constants.RegionSize || terrData.SizeY > Constants.RegionSize)
+                {
+                    landPacketType = (byte)TerrainPatch.LayerType.LandExtended;
+                }
+
+                pcnt = 0;
+                while(pcnt < patches.Count)
+                {
+                    int pstart = pcnt;
+                    int remainingbits = 1300 * 8;
+                    while(pcnt < patches.Count && remainingbits >= patches[pcnt].BitLength)
+                    {
+                        remainingbits -= patches[pcnt].BitLength;
+                        ++pcnt;
+                    }
+                    packFrame.Clear();
+                    while(pstart < pcnt)
+                    {
+                        m_log.InfoFormat("[CLIENT]: Packing terrain {0},{1}", patches[pstart].X, patches[pstart].Y);
+                        packFrame.Add(patches[pstart++]);
+                    }
+
+                    SendTheLayerPacket(OpenSimTerrainCompressor.CreateLandPacket(packFrame, landPacketType));
                 }
             }
             catch (Exception e)
