@@ -45,7 +45,7 @@ namespace OpenSim.Region.Framework.Scenes
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
         private static string LogHeader = "[TERRAIN CHANNEL]";
 
-        protected TerrainData m_terrainData;
+        protected HeightMapTerrainData m_terrainData;
 
         public int Width { get { return m_terrainData.SizeX; } }  // X dimension
         // Unfortunately, for historical reasons, in this module 'Width' is X and 'Height' is Y
@@ -55,7 +55,7 @@ namespace OpenSim.Region.Framework.Scenes
         // Default, not-often-used builder
         public TerrainChannel()
         {
-            m_terrainData = new HeightmapTerrainData((int)Constants.RegionSize, (int)Constants.RegionSize, (int)Constants.RegionHeight);
+            m_terrainData = new HeightMapTerrainData((int)Constants.RegionSize, (int)Constants.RegionSize, (int)Constants.RegionHeight);
             FlatLand();
             // PinHeadIsland();
         }
@@ -63,14 +63,14 @@ namespace OpenSim.Region.Framework.Scenes
         // Create terrain of given size
         public TerrainChannel(int pX, int pY)
         {
-            m_terrainData = new HeightmapTerrainData(pX, pY, (int)Constants.RegionHeight);
+            m_terrainData = new HeightMapTerrainData(pX, pY, (int)Constants.RegionHeight);
         }
 
         // Create terrain of specified size and initialize with specified terrain.
         // TODO: join this with the terrain initializers.
         public TerrainChannel(String type, int pX, int pY, int pZ)
         {
-            m_terrainData = new HeightmapTerrainData(pX, pY, pZ);
+            m_terrainData = new HeightMapTerrainData(pX, pY, pZ);
             if (type.Equals("flat"))
                 FlatLand();
             else
@@ -84,17 +84,17 @@ namespace OpenSim.Region.Framework.Scenes
             int hmSizeX = pM.GetLength(0);
             int hmSizeY = pM.GetLength(1);
 
-            m_terrainData = new HeightmapTerrainData(pSizeX, pSizeY, pAltitude);
+            m_terrainData = new HeightMapTerrainData(pSizeX, pSizeY, pAltitude);
 
             for (int xx = 0; xx < pSizeX; xx++)
                 for (int yy = 0; yy < pSizeY; yy++)
                     if (xx > hmSizeX || yy > hmSizeY)
-                        m_terrainData[xx, yy] = TerrainData.DefaultTerrainHeight;
+                        m_terrainData[xx, yy] = HeightMapTerrainData.DefaultTerrainHeight;
                     else
                         m_terrainData[xx, yy] = (float)pM[xx, yy];
         }
 
-        public TerrainChannel(TerrainData pTerrData)
+        public TerrainChannel(HeightMapTerrainData pTerrData)
         {
             m_terrainData = pTerrData;
         }
@@ -108,7 +108,7 @@ namespace OpenSim.Region.Framework.Scenes
         }
 
         // ITerrainChannel.GetTerrainData()
-        public TerrainData GetTerrainData()
+        public HeightMapTerrainData GetTerrainData()
         {
             return m_terrainData;
         }
@@ -337,7 +337,7 @@ namespace OpenSim.Region.Framework.Scenes
             byte[] dataArray = (byte[])serializer.Deserialize(xmlReader);
             int index = 0;
 
-            m_terrainData = new HeightmapTerrainData(Height, Width, (int)Constants.RegionHeight);
+            m_terrainData = new HeightMapTerrainData(Height, Width, (int)Constants.RegionHeight);
             
             for (int y = 0; y < Height; y++)
             {
@@ -384,7 +384,7 @@ namespace OpenSim.Region.Framework.Scenes
         {
             XmlSerializer serializer = new XmlSerializer(typeof(TerrainChannelXMLPackage));
             TerrainChannelXMLPackage package = (TerrainChannelXMLPackage)serializer.Deserialize(xmlReader);
-            m_terrainData = new HeightmapTerrainData(package.Map, package.CompressionFactor, package.SizeX, package.SizeY, package.SizeZ);
+            m_terrainData = new HeightMapTerrainData(package.Map, package.CompressionFactor, package.SizeX, package.SizeY, package.SizeZ);
         }
 
         // Fill the heightmap with the center bump terrain

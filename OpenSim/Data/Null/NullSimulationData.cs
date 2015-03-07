@@ -125,8 +125,8 @@ namespace OpenSim.Data.Null
             return new List<SceneObjectGroup>();
         }
 
-        ThreadedClasses.RwLockedDictionary<UUID, TerrainData> m_terrains = new ThreadedClasses.RwLockedDictionary<UUID, TerrainData>();
-        public void StoreTerrain(TerrainData ter, UUID regionID)
+        ThreadedClasses.RwLockedDictionary<UUID, HeightMapTerrainData> m_terrains = new ThreadedClasses.RwLockedDictionary<UUID, HeightMapTerrainData>();
+        public void StoreTerrain(HeightMapTerrainData ter, UUID regionID)
         {
             m_terrains[regionID] = ter;
         }
@@ -134,7 +134,7 @@ namespace OpenSim.Data.Null
         // Legacy. Just don't do this.
         public void StoreTerrain(double[,] ter, UUID regionID)
         {
-            TerrainData terrData = new HeightmapTerrainData(ter);
+            HeightMapTerrainData terrData = new HeightMapTerrainData(ter);
             StoreTerrain(terrData, regionID);
         }
 
@@ -142,7 +142,7 @@ namespace OpenSim.Data.Null
         // Returns 'null' if region not found
         public double[,] LoadTerrain(UUID regionID)
         {
-            TerrainData data;
+            HeightMapTerrainData data;
             if (m_terrains.TryGetValue(regionID, out data))
             {
                 return data.GetDoubles();
@@ -150,9 +150,9 @@ namespace OpenSim.Data.Null
             return null;
         }
 
-        public TerrainData LoadTerrain(UUID regionID, int pSizeX, int pSizeY, int pSizeZ)
+        public HeightMapTerrainData LoadTerrain(UUID regionID, int pSizeX, int pSizeY, int pSizeZ)
         {
-            TerrainData val;
+            HeightMapTerrainData val;
             if (m_terrains.TryGetValue(regionID, out val))
             {
                 return val;

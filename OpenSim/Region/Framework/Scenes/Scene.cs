@@ -1831,7 +1831,7 @@ namespace OpenSim.Region.Framework.Scenes
         {
             try
             {
-                TerrainData map = SimulationDataService.LoadTerrain(RegionInfo.RegionID, (int)RegionInfo.RegionSizeX, (int)RegionInfo.RegionSizeY, (int)RegionInfo.RegionSizeZ);
+                HeightMapTerrainData map = SimulationDataService.LoadTerrain(RegionInfo.RegionID, (int)RegionInfo.RegionSizeX, (int)RegionInfo.RegionSizeY, (int)RegionInfo.RegionSizeZ);
                 if (map == null)
                 {
                     // This should be in the Terrain module, but it isn't because

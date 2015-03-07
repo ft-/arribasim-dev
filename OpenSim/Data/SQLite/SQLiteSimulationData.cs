@@ -806,7 +806,7 @@ namespace OpenSim.Data.SQLite
         // Legacy entry point for when terrain was always a 256x256 hieghtmap
         public void StoreTerrain(double[,] ter, UUID regionID)
         {
-            StoreTerrain(new HeightmapTerrainData(ter), regionID);
+            StoreTerrain(new HeightMapTerrainData(ter), regionID);
         }
 
         /// <summary>
@@ -814,7 +814,7 @@ namespace OpenSim.Data.SQLite
         /// </summary>
         /// <param name="ter">terrain heightfield</param>
         /// <param name="regionID">region UUID</param>
-        public void StoreTerrain(TerrainData terrData, UUID regionID)
+        public void StoreTerrain(HeightMapTerrainData terrData, UUID regionID)
         {
             lock (this)
             {
@@ -854,16 +854,16 @@ namespace OpenSim.Data.SQLite
         public double[,] LoadTerrain(UUID regionID)
         {
             double[,] ret = null;
-            TerrainData terrData = LoadTerrain(regionID, (int)Constants.RegionSize, (int)Constants.RegionSize, (int)Constants.RegionHeight);
+            HeightMapTerrainData terrData = LoadTerrain(regionID, (int)Constants.RegionSize, (int)Constants.RegionSize, (int)Constants.RegionHeight);
             if (terrData != null)
                 ret = terrData.GetDoubles();
             return ret;
         }
 
         // Returns 'null' if region not found
-        public TerrainData LoadTerrain(UUID regionID, int pSizeX, int pSizeY, int pSizeZ)
+        public HeightMapTerrainData LoadTerrain(UUID regionID, int pSizeX, int pSizeY, int pSizeZ)
         {
-            TerrainData terrData = null;
+            HeightMapTerrainData terrData = null;
 
             String sql = "select RegionUUID, Revision, Heightfield from terrain" +
                             " where RegionUUID=:RegionUUID order by Revision desc";
@@ -879,7 +879,7 @@ namespace OpenSim.Data.SQLite
                     {
                         rev = Convert.ToInt32(row["Revision"]);
                         byte[] blob = (byte[])row["Heightfield"];
-                        terrData = TerrainData.CreateFromDatabaseBlobFactory(pSizeX, pSizeY, pSizeZ, rev, blob);
+                        terrData = HeightMapTerrainData.CreateFromDatabaseBlobFactory(pSizeX, pSizeY, pSizeZ, rev, blob);
                     }
                     else
                     {

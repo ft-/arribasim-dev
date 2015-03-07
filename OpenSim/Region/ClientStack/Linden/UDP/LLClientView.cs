@@ -1104,7 +1104,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         /// <param name="o"></param>
         private void DoSendLayerData(object o)
         {
-            TerrainData map = (TerrainData)o;
+            HeightMapTerrainData map = (HeightMapTerrainData)o;
 
             try
             {
@@ -1126,7 +1126,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             }
         }
 
-        private void SendLayerTopRight(TerrainData map, int x1, int y1, int x2, int y2)
+        private void SendLayerTopRight(HeightMapTerrainData map, int x1, int y1, int x2, int y2)
         {
             // Row
             for (int i = x1; i <= x2; i++)
@@ -1140,7 +1140,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                 SendLayerBottomLeft(map, x1, y1 + 1, x2 - 1, y2);
         }
 
-        void SendLayerBottomLeft(TerrainData map, int x1, int y1, int x2, int y2)
+        void SendLayerBottomLeft(HeightMapTerrainData map, int x1, int y1, int x2, int y2)
         {
             // Row in reverse
             for (int i = x2; i >= x1; i--)
@@ -1209,14 +1209,14 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         /// <param name="px">Patch coordinate (x) 0..15</param>
         /// <param name="py">Patch coordinate (y) 0..15</param>
         /// <param name="map">heightmap</param>
-        public void SendLayerData(int px, int py, TerrainData terrData)
+        public void SendLayerData(int px, int py, HeightMapTerrainData terrData)
         {
             int[] xPatches = new[] { px };
             int[] yPatches = new[] { py };
             SendLayerData(xPatches, yPatches, terrData);
         }
 
-        private void SendLayerData(int[] px, int[] py, TerrainData terrData)
+        private void SendLayerData(int[] px, int[] py, HeightMapTerrainData terrData)
         {
             try
             {

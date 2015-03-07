@@ -32,51 +32,6 @@ using System.Reflection;
 
 namespace OpenSim.Framework
 {
-    public abstract class TerrainData
-    {
-        // Terrain always is a square
-        public int SizeX { get; protected set; }
-        public int SizeY { get; protected set; }
-        public int SizeZ { get; protected set; }
-
-        // A height used when the user doesn't specify anything
-        public const float DefaultTerrainHeight = 21f;
-
-        public abstract float this[int x, int y] { get; set; }
-        // Someday terrain will have caves
-        public abstract float this[int x, int y, int z] { get; set; }
-
-        public abstract bool IsTaintedAt(int xx, int yy);
-        public abstract bool IsTaintedAt(int xx, int yy, bool clearOnTest);
-        public abstract void TaintAllTerrain();
-        public abstract void ClearTaint();
-
-        public abstract void ClearLand();
-        public abstract void ClearLand(float height);
-
-        // Return a representation of this terrain for storing as a blob in the database.
-        // Returns 'true' to say blob was stored in the 'out' locations.
-        public abstract bool GetDatabaseBlob(out int DBFormatRevisionCode, out Array blob);
-
-        // Given a revision code and a blob from the database, create and return the right type of TerrainData.
-        // The sizes passed are the expected size of the region. The database info will be used to
-        //     initialize the heightmap of that sized region with as much data is in the blob.
-        // Return created TerrainData or 'null' if unsuccessful.
-        public static TerrainData CreateFromDatabaseBlobFactory(int pSizeX, int pSizeY, int pSizeZ, int pFormatCode, byte[] pBlob)
-        {
-            // For the moment, there is only one implementation class
-            return new HeightmapTerrainData(pSizeX, pSizeY, pSizeZ, pFormatCode, pBlob);
-        }
-
-        // return a special compressed representation of the heightmap in ints
-        public abstract int[] GetCompressedMap();
-        public abstract float CompressionFactor { get; }
-
-        public abstract float[] GetFloatsSerialized();
-        public abstract double[,] GetDoubles();
-        public abstract TerrainData Clone();
-    }
-
     // The terrain is stored in the database as a blob with a 'revision' field.
     // Some implementations of terrain storage would fill the revision field with
     //    the time the terrain was stored. When real revisions were added and this
@@ -107,13 +62,30 @@ namespace OpenSim.Framework
     //    of 'patches' which are 16x16 terrain areas which can be sent separately to the viewer.
     // The heighmap is kept as an array of integers. The integer values are converted to
     //    and from floats by TerrainCompressionFactor.
-    public class HeightmapTerrainData : TerrainData
+    public class HeightMapTerrainData
     {
+        public int SizeX { get; protected set; }
+        public int SizeY { get; protected set; }
+        public int SizeZ { get; protected set; }
+
+        // A height used when the user doesn't specify anything
+        public const float DefaultTerrainHeight = 21f;
+
+        // Given a revision code and a blob from the database, create and return the right type of TerrainData.
+        // The sizes passed are the expected size of the region. The database info will be used to
+        //     initialize the heightmap of that sized region with as much data is in the blob.
+        // Return created TerrainData or 'null' if unsuccessful.
+        public static HeightMapTerrainData CreateFromDatabaseBlobFactory(int pSizeX, int pSizeY, int pSizeZ, int pFormatCode, byte[] pBlob)
+        {
+            // For the moment, there is only one implementation class
+            return new HeightMapTerrainData(pSizeX, pSizeY, pSizeZ, pFormatCode, pBlob);
+        }
+
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
         private static string LogHeader = "[HEIGHTMAP TERRAIN DATA]";
 
         // TerrainData.this[x, y]
-        public override float this[int x, int y]
+        public float this[int x, int y]
         {
             get { return FromCompressedHeight(m_heightmap[x, y]); }
             set {
@@ -127,20 +99,20 @@ namespace OpenSim.Framework
         }
 
         // TerrainData.this[x, y, z]
-        public override float this[int x, int y, int z]
+        public float this[int x, int y, int z]
         {
             get { return this[x, y]; }
             set { this[x, y] = value; }
         }
 
         // TerrainData.ClearTaint
-        public override void ClearTaint()
+        public void ClearTaint()
         {
             SetAllTaint(false);
         }
 
         // TerrainData.TaintAllTerrain
-        public override void TaintAllTerrain()
+        public void TaintAllTerrain()
         {
             SetAllTaint(true);
         }
@@ -153,12 +125,12 @@ namespace OpenSim.Framework
         }
 
         // TerrainData.ClearLand
-        public override void ClearLand()
+        public void ClearLand()
         {
             ClearLand(DefaultTerrainHeight);
         }
         // TerrainData.ClearLand(float)
-        public override void ClearLand(float pHeight)
+        public void ClearLand(float pHeight)
         {
             int flatHeight = ToCompressedHeight(pHeight);
             for (int xx = 0; xx < SizeX; xx++)
@@ -169,7 +141,7 @@ namespace OpenSim.Framework
         // Return 'true' of the patch that contains these region coordinates has been modified.
         // Note that checking the taint clears it.
         // There is existing code that relies on this feature.
-        public override bool IsTaintedAt(int xx, int yy, bool clearOnTest)
+        public bool IsTaintedAt(int xx, int yy, bool clearOnTest)
         {
             int tx = xx / Constants.TerrainPatchSize;
             int ty = yy / Constants.TerrainPatchSize;
@@ -180,14 +152,14 @@ namespace OpenSim.Framework
         }
 
         // Old form that clears the taint flag when we check it.
-        public override bool IsTaintedAt(int xx, int yy)
+        public bool IsTaintedAt(int xx, int yy)
         {
             return IsTaintedAt(xx, yy, true /* clearOnTest */);
         }
 
         // TerrainData.GetDatabaseBlob
         // The user wants something to store in the database.
-        public override bool GetDatabaseBlob(out int DBRevisionCode, out Array blob)
+        public bool GetDatabaseBlob(out int DBRevisionCode, out Array blob)
         {
             bool ret = false;
             if (SizeX == Constants.RegionSize && SizeY == Constants.RegionSize)
@@ -207,10 +179,10 @@ namespace OpenSim.Framework
 
         // TerrainData.CompressionFactor
         private float m_compressionFactor = 100.0f;
-        public override float CompressionFactor { get { return m_compressionFactor; } }
+        public float CompressionFactor { get { return m_compressionFactor; } }
 
         // TerrainData.GetCompressedMap
-        public override int[] GetCompressedMap()
+        public int[] GetCompressedMap()
         {
             int[] newMap = new int[SizeX * SizeY];
 
@@ -223,9 +195,9 @@ namespace OpenSim.Framework
 
         }
         // TerrainData.Clone
-        public override TerrainData Clone()
+        public HeightMapTerrainData Clone()
         {
-            HeightmapTerrainData ret = new HeightmapTerrainData(SizeX, SizeY, SizeZ);
+            HeightMapTerrainData ret = new HeightMapTerrainData(SizeX, SizeY, SizeZ);
             ret.m_heightmap = (int[,])this.m_heightmap.Clone();
             return ret;
         }
@@ -234,7 +206,7 @@ namespace OpenSim.Framework
         // This one dimensional version is ordered so height = map[y*sizeX+x];
         // DEPRECATED: don't use this function as it does not retain the dimensions of the terrain
         //     and the caller will probably do the wrong thing if the terrain is not the legacy 256x256.
-        public override float[] GetFloatsSerialized()
+        public float[] GetFloatsSerialized()
         {
             int points = SizeX * SizeY;
             float[] heights = new float[points];
@@ -250,7 +222,7 @@ namespace OpenSim.Framework
         }
 
         // TerrainData.GetDoubles
-        public override double[,] GetDoubles()
+        public double[,] GetDoubles()
         {
             double[,] ret = new double[SizeX, SizeY];
             for (int xx = 0; xx < SizeX; xx++)
@@ -282,7 +254,7 @@ namespace OpenSim.Framework
 
         // To keep with the legacy theme, create an instance of this class based on the
         //     way terrain used to be passed around.
-        public HeightmapTerrainData(double[,] pTerrain)
+        public HeightMapTerrainData(double[,] pTerrain)
         {
             SizeX = pTerrain.GetLength(0);
             SizeY = pTerrain.GetLength(1);
@@ -305,7 +277,7 @@ namespace OpenSim.Framework
         }
 
         // Create underlying structures but don't initialize the heightmap assuming the caller will immediately do that
-        public HeightmapTerrainData(int pX, int pY, int pZ)
+        public HeightMapTerrainData(int pX, int pY, int pZ)
         {
             SizeX = pX;
             SizeY = pY;
@@ -318,7 +290,7 @@ namespace OpenSim.Framework
             ClearLand(0f);
         }
 
-        public HeightmapTerrainData(int[] cmap, float pCompressionFactor, int pX, int pY, int pZ) : this(pX, pY, pZ)
+        public HeightMapTerrainData(int[] cmap, float pCompressionFactor, int pX, int pY, int pZ) : this(pX, pY, pZ)
         {
             m_compressionFactor = pCompressionFactor;
             int ind = 0;
@@ -329,7 +301,7 @@ namespace OpenSim.Framework
         }
 
         // Create a heighmap from a database blob
-        public HeightmapTerrainData(int pSizeX, int pSizeY, int pSizeZ, int pFormatCode, byte[] pBlob) : this(pSizeX, pSizeY, pSizeZ)
+        public HeightMapTerrainData(int pSizeX, int pSizeY, int pSizeZ, int pFormatCode, byte[] pBlob) : this(pSizeX, pSizeY, pSizeZ)
         {
             switch ((DBTerrainRevision)pFormatCode)
             {

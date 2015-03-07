@@ -548,10 +548,10 @@ namespace OpenSim.Data.MySQL
         // Legacy entry point for when terrain was always a 256x256 hieghtmap
         public void StoreTerrain(double[,] ter, UUID regionID)
         {
-            StoreTerrain(new HeightmapTerrainData(ter), regionID);
+            StoreTerrain(new HeightMapTerrainData(ter), regionID);
         }
 
-        public void StoreTerrain(TerrainData terrData, UUID regionID)
+        public void StoreTerrain(HeightMapTerrainData terrData, UUID regionID)
         {
             using (MySqlConnection dbcon = new MySqlConnection(m_connectionString))
             {
@@ -586,16 +586,16 @@ namespace OpenSim.Data.MySQL
         public double[,] LoadTerrain(UUID regionID)
         {
             double[,] ret = null;
-            TerrainData terrData = LoadTerrain(regionID, (int)Constants.RegionSize, (int)Constants.RegionSize, (int)Constants.RegionHeight);
+            HeightMapTerrainData terrData = LoadTerrain(regionID, (int)Constants.RegionSize, (int)Constants.RegionSize, (int)Constants.RegionHeight);
             if (terrData != null)
                 ret = terrData.GetDoubles();
             return ret;
         }
 
         // Returns 'null' if region not found
-        public TerrainData LoadTerrain(UUID regionID, int pSizeX, int pSizeY, int pSizeZ)
+        public HeightMapTerrainData LoadTerrain(UUID regionID, int pSizeX, int pSizeY, int pSizeZ)
         {
-            TerrainData terrData = null;
+            HeightMapTerrainData terrData = null;
 
             using (MySqlConnection dbcon = new MySqlConnection(m_connectionString))
             {
@@ -614,7 +614,7 @@ namespace OpenSim.Data.MySQL
                         {
                             int rev = Convert.ToInt32(reader["Revision"]);
                             byte[] blob = (byte[])reader["Heightfield"];
-                            terrData = TerrainData.CreateFromDatabaseBlobFactory(pSizeX, pSizeY, pSizeZ, rev, blob);
+                            terrData = HeightMapTerrainData.CreateFromDatabaseBlobFactory(pSizeX, pSizeY, pSizeZ, rev, blob);
                         }
                     }
                 }

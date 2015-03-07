@@ -41,7 +41,7 @@ namespace OpenSim.Region.Framework.Interfaces
         float GetHeightAtXYZ(float x, float y, float z);
 
         // Return the packaged terrain data for passing into lower levels of communication
-        TerrainData GetTerrainData();
+        HeightMapTerrainData GetTerrainData();
 
         /// <summary>
         /// Squash the entire heightmap into a single dimensioned array

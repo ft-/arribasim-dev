@@ -106,7 +106,7 @@ namespace OpenSim.Region.CoreModules.World.Terrain
             private bool[,] updated;    // for each patch, whether it needs to be sent to this client
             private int updateCount;    // number of patches that need to be sent
             public ScenePresence Presence;   // a reference to the client to send to
-            public PatchUpdates(TerrainData terrData, ScenePresence pPresence)
+            public PatchUpdates(HeightMapTerrainData terrData, ScenePresence pPresence)
             {
                 updated = new bool[terrData.SizeX / Constants.TerrainPatchSize, terrData.SizeY / Constants.TerrainPatchSize];
                 updateCount = 0;
@@ -146,7 +146,7 @@ namespace OpenSim.Region.CoreModules.World.Terrain
                     updateCount = updated.GetLength(0) * updated.GetLength(1);
             }
             // Logically OR's the terrain data's patch taint map into this client's update map.
-            public void SetAll(TerrainData terrData)
+            public void SetAll(HeightMapTerrainData terrData)
             {
                 if (updated.GetLength(0) != (terrData.SizeX / Constants.TerrainPatchSize)
                     || updated.GetLength(1) != (terrData.SizeY / Constants.TerrainPatchSize))
@@ -770,7 +770,7 @@ namespace OpenSim.Region.CoreModules.World.Terrain
         /// </summary>
         private void EventManager_OnFrame()
         {
-            TerrainData terrData = m_channel.GetTerrainData();
+            HeightMapTerrainData terrData = m_channel.GetTerrainData();
 
             bool shouldTaint = false;
             for (int x = 0; x < terrData.SizeX; x += Constants.TerrainPatchSize)
@@ -895,7 +895,7 @@ namespace OpenSim.Region.CoreModules.World.Terrain
         /// </summary>
         private bool EnforceEstateLimits()
         {
-            TerrainData terrData = m_channel.GetTerrainData();
+            HeightMapTerrainData terrData = m_channel.GetTerrainData();
 
             bool wasLimited = false;
             for (int x = 0; x < terrData.SizeX; x += Constants.TerrainPatchSize)
@@ -919,7 +919,7 @@ namespace OpenSim.Region.CoreModules.World.Terrain
         /// are all within the current estate limits
         /// <returns>true if changes were limited, false otherwise</returns>
         /// </summary>
-        private bool LimitChannelChanges(TerrainData terrData, int xStart, int yStart)
+        private bool LimitChannelChanges(HeightMapTerrainData terrData, int xStart, int yStart)
         {
             bool changesLimited = false;
             float minDelta = (float)m_scene.RegionInfo.RegionSettings.TerrainLowerLimit;
@@ -970,7 +970,7 @@ namespace OpenSim.Region.CoreModules.World.Terrain
         /// <param name="serialised">A copy of the terrain as a 1D float array of size w*h</param>
         /// <param name="x">The patch corner to send</param>
         /// <param name="y">The patch corner to send</param>
-        private void SendToClients(TerrainData terrData, int x, int y)
+        private void SendToClients(HeightMapTerrainData terrData, int x, int y)
         {
             if (m_sendTerrainUpdatesByViewDistance)
             {

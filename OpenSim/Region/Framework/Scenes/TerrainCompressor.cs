@@ -107,7 +107,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         }
 
         // Create a land packet for a single patch.
-        public static LayerDataPacket CreateLandPacket(TerrainData terrData, int patchX, int patchY)
+        public static LayerDataPacket CreateLandPacket(HeightMapTerrainData terrData, int patchX, int patchY)
         {
             int[] xPieces = new int[1];
             int[] yPieces = new int[1];
@@ -117,7 +117,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             return CreateLandPacket(terrData, xPieces, yPieces);
         }
 
-        public static LayerDataPacket CreateLandPacket(TerrainData terrData, int[] xPieces, int[] yPieces)
+        public static LayerDataPacket CreateLandPacket(HeightMapTerrainData terrData, int[] xPieces, int[] yPieces)
         {
             byte landPacketType = (byte)TerrainPatch.LayerType.Land;
             if (terrData.SizeX > Constants.RegionSize || terrData.SizeY > Constants.RegionSize)
@@ -149,7 +149,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         /// </param>
         /// <param name="type"></param>
         /// <returns></returns>
-        public static LayerDataPacket CreateLandPacket(TerrainData terrData, int[] x, int[] y, byte type)
+        public static LayerDataPacket CreateLandPacket(HeightMapTerrainData terrData, int[] x, int[] y, byte type)
         {
             LayerDataPacket layer = new LayerDataPacket {LayerID = {Type = type}};
 
@@ -212,7 +212,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         /// </param>
         /// <param name="pRegionSizeX"></param>
         /// <param name="pRegionSizeY"></param>
-        public static void CreatePatchFromHeightmap(BitPack output, TerrainData terrData, int patchX, int patchY)
+        public static void CreatePatchFromHeightmap(BitPack output, HeightMapTerrainData terrData, int patchX, int patchY)
         {
             TerrainPatch.Header header = PrescanPatch(terrData, patchX, patchY);
             header.QuantWBits = 136;
@@ -259,7 +259,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         }
 
         // Scan the height info we're returning and return a patch packet header for this patch.
-        private static TerrainPatch.Header PrescanPatch(TerrainData terrData, int patchX, int patchY)
+        private static TerrainPatch.Header PrescanPatch(HeightMapTerrainData terrData, int patchX, int patchY)
         {
             TerrainPatch.Header header = new TerrainPatch.Header();
             float zmax = -99999999.0f;
@@ -805,7 +805,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             return itemp;
         }
 
-        private static int[] CompressPatch(TerrainData terrData, int patchX, int patchY, TerrainPatch.Header header,
+        private static int[] CompressPatch(HeightMapTerrainData terrData, int patchX, int patchY, TerrainPatch.Header header,
                                                                int prequant, out int wbits)
         {
             float[] block = new float[Constants.TerrainPatchSize*Constants.TerrainPatchSize];
