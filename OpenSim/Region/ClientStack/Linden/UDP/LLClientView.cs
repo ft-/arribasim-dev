@@ -1277,7 +1277,6 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                     packFrame.Clear();
                     while(pstart < pcnt)
                     {
-                        m_log.InfoFormat("[CLIENT]: Packing terrain {0},{1}", patches[pstart].X, patches[pstart].Y);
                         packFrame.Add(patches[pstart++]);
                     }
 

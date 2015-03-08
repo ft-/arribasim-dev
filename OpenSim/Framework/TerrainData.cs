@@ -503,19 +503,16 @@ namespace OpenSim.Framework
                     /* signal no change via null */
                     serialNo = lastSerialNo;
                     bitlength = 0;
-                    m_log.InfoFormat("{0} returning existing packed terrain {1},{2} matches expected serial {3}", LogHeader, patchx, patchy, lastSerialNo);
                     return null;
                 }
 
                 if(m_PackedTerrainPatches[patchx, patchy].Serial != m_TerrainPatchSerial[patchx, patchy])
                 {
-                    m_log.InfoFormat("{0} building new packed terrain {1},{2} new serial {3}", LogHeader, patchx, patchy, m_TerrainPatchSerial[patchx, patchy]);
 
                     m_PackedTerrainPatches[patchx, patchy].Serial = m_TerrainPatchSerial[patchx, patchy];
                     m_PackedTerrainPatches[patchx, patchy].CompressedPatch = new byte[647]; /* maximum length of a single compressed patch */
                     BitPack bitpack = new BitPack(m_PackedTerrainPatches[patchx, patchy].CompressedPatch, 0);
                     OpenSimTerrainCompressor.CreatePatchFromHeightmap(bitpack, this, patchx, patchy);
-                    m_log.InfoFormat("{0} building new packed terrain {1},{2} new serial {3} => {4} {5}", LogHeader, patchx, patchy, m_TerrainPatchSerial[patchx, patchy], bitpack.BytePos, bitpack.BitPos);
                     m_PackedTerrainPatches[patchx, patchy].BitLength = 8 * bitpack.BytePos + bitpack.BitPos;
                     if(0 == bitpack.BitPos)
                     {
@@ -528,7 +525,6 @@ namespace OpenSim.Framework
                 Buffer.BlockCopy(m_PackedTerrainPatches[patchx, patchy].CompressedPatch, 0, copy, 0, copy.Length);
                 serialNo = m_PackedTerrainPatches[patchx, patchy].Serial;
 
-                m_log.InfoFormat("{0} returning existing packed terrain {1},{2} does not match expected serial {3}", LogHeader, patchx, patchy, lastSerialNo);
                 return copy;
             }
 
