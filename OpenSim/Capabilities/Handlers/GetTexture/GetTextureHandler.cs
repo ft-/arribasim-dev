@@ -230,6 +230,7 @@ namespace OpenSim.Capabilities.Handlers
 //                        response.AddHeader("Content-Range", String.Format("bytes */{0}", texture.Data.Length));
 //                        response.StatusCode = (int)System.Net.HttpStatusCode.OK;
                         response.StatusCode = (int)System.Net.HttpStatusCode.PartialContent;
+                        response.AddHeader("Content-Range", String.Format("bytes */{0}", texture.Data.Length));
                         response.ContentType = texture.Metadata.ContentType;
                     }
                     else
