@@ -72,8 +72,8 @@ namespace OpenSim.Region.Physics.BulletSPlugin
         private Vector3 m_linearMotorOffset = Vector3.Zero;             // the point of force can be offset from the center
         private Vector3 m_linearMotorDirectionLASTSET = Vector3.Zero;   // velocity requested by LSL
         private Vector3 m_linearFrictionTimescale = Vector3.Zero;
-        private float m_linearMotorDecayTimescale = 0;
-        private float m_linearMotorTimescale = 0;
+        private float m_linearMotorDecayTimescale = 1;
+        private float m_linearMotorTimescale = 1;
         private Vector3 m_lastLinearVelocityVector = Vector3.Zero;
         private Vector3 m_lastPositionVector = Vector3.Zero;
         // private bool m_LinearMotorSetLastFrame = false;
@@ -84,8 +84,8 @@ namespace OpenSim.Region.Physics.BulletSPlugin
         private Vector3 m_angularMotorDirection = Vector3.Zero;         // angular velocity requested by LSL motor
         // private int m_angularMotorApply = 0;                            // application frame counter
         private Vector3 m_angularMotorVelocity = Vector3.Zero;          // current angular motor velocity
-        private float m_angularMotorTimescale = 0;                      // motor angular velocity ramp up rate
-        private float m_angularMotorDecayTimescale = 0;                 // motor angular velocity decay rate
+        private float m_angularMotorTimescale = 1;                      // motor angular velocity ramp up rate
+        private float m_angularMotorDecayTimescale = 1;                 // motor angular velocity decay rate
         private Vector3 m_angularFrictionTimescale = Vector3.Zero;      // body angular velocity  decay rate
         private Vector3 m_lastAngularVelocity = Vector3.Zero;
         private Vector3 m_lastVertAttractor = Vector3.Zero;             // what VA was last applied to body
@@ -93,14 +93,14 @@ namespace OpenSim.Region.Physics.BulletSPlugin
         //Deflection properties
         private BSVMotor m_angularDeflectionMotor = new BSVMotor("AngularDeflection");
         private float m_angularDeflectionEfficiency = 0;
-        private float m_angularDeflectionTimescale = 0;
+        private float m_angularDeflectionTimescale = 1;
         private float m_linearDeflectionEfficiency = 0;
-        private float m_linearDeflectionTimescale = 0;
+        private float m_linearDeflectionTimescale = 1;
 
         //Banking properties
         private float m_bankingEfficiency = 0;
         private float m_bankingMix = 0;
-        private float m_bankingTimescale = 0;
+        private float m_bankingTimescale = 1;
 
         //Hover and Buoyancy properties
         private BSVMotor m_hoverMotor = new BSVMotor("Hover");
@@ -154,6 +154,7 @@ namespace OpenSim.Region.Physics.BulletSPlugin
         #region Vehicle parameter setting
         public void ProcessFloatVehicleParam(Vehicle pParam, float pValue)
         {
+            float clampTemp;
             VDetailLog("{0},ProcessFloatVehicleParam,param={1},val={2}", ControllingPrim.LocalID, pParam, pValue);
             switch (pParam)
             {
@@ -227,7 +228,8 @@ namespace OpenSim.Region.Physics.BulletSPlugin
                     m_angularMotor.SetTarget(m_angularMotorDirection);
                     break;
                 case Vehicle.LINEAR_FRICTION_TIMESCALE:
-                    m_linearFrictionTimescale = new Vector3(pValue, pValue, pValue);
+                    clampTemp = Math.Max(pValue, 0.01f);
+                    m_linearFrictionTimescale = new Vector3(clampTemp, clampTemp, clampTemp);
                     break;
                 case Vehicle.LINEAR_MOTOR_DIRECTION:
                     m_linearMotorDirection = new Vector3(pValue, pValue, pValue);
@@ -247,6 +249,9 @@ namespace OpenSim.Region.Physics.BulletSPlugin
             switch (pParam)
             {
                 case Vehicle.ANGULAR_FRICTION_TIMESCALE:
+                    pValue.X = Math.Max(pValue.X, 0.01f);
+                    pValue.Y = Math.Max(pValue.Y, 0.01f);
+                    pValue.Z = Math.Max(pValue.Z, 0.01f);
                     m_angularFrictionTimescale = new Vector3(pValue.X, pValue.Y, pValue.Z);
                     break;
                 case Vehicle.ANGULAR_MOTOR_DIRECTION:
@@ -259,6 +264,9 @@ namespace OpenSim.Region.Physics.BulletSPlugin
                     m_angularMotor.SetTarget(m_angularMotorDirection);
                     break;
                 case Vehicle.LINEAR_FRICTION_TIMESCALE:
+                    pValue.X = Math.Max(pValue.X, 0.01f);
+                    pValue.Y = Math.Max(pValue.Y, 0.01f);
+                    pValue.Z = Math.Max(pValue.Z, 0.01f);
                     m_linearFrictionTimescale = new Vector3(pValue.X, pValue.Y, pValue.Z);
                     break;
                 case Vehicle.LINEAR_MOTOR_DIRECTION:
