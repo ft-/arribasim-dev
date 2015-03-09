@@ -510,7 +510,7 @@ namespace OpenSim.Framework
                 {
 
                     m_PackedTerrainPatches[patchx, patchy].Serial = m_TerrainPatchSerial[patchx, patchy];
-                    m_PackedTerrainPatches[patchx, patchy].CompressedPatch = new byte[647]; /* maximum length of a single compressed patch */
+                    m_PackedTerrainPatches[patchx, patchy].CompressedPatch = new byte[651]; /* maximum length of a single compressed patch */
                     BitPack bitpack = new BitPack(m_PackedTerrainPatches[patchx, patchy].CompressedPatch, 0);
                     OpenSimTerrainCompressor.CreatePatchFromHeightmap(bitpack, this, patchx, patchy);
                     m_PackedTerrainPatches[patchx, patchy].BitLength = 8 * bitpack.BytePos + bitpack.BitPos;

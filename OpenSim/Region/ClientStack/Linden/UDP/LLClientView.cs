@@ -1268,7 +1268,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                 while(pcnt < patches.Count)
                 {
                     int pstart = pcnt;
-                    int remainingbits = 1300 * 8;
+                    int remainingbits = 1302 * 8;
                     while(pcnt < patches.Count && remainingbits >= patches[pcnt].BitLength)
                     {
                         remainingbits -= patches[pcnt].BitLength;
