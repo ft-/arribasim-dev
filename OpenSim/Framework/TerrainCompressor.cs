@@ -41,7 +41,7 @@ namespace OpenSim.Framework
 {
     public static class OpenSimTerrainCompressor
     {
-        private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+        // private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
 #pragma warning disable 414
         private static string LogHeader = "[TERRAIN COMPRESSOR]";
