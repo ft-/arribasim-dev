@@ -275,7 +275,7 @@ namespace OpenSim.Region.Framework.Scenes
 
         #endregion
 
-        public TerrainChannel Copy()
+        private TerrainChannel Copy()
         {
             TerrainChannel copy = new TerrainChannel();
             copy.m_terrainData = m_terrainData.Clone();

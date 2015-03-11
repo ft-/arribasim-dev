@@ -1309,7 +1309,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         {
             if (m_justEditedTerrain)
             {
-                layerpack.Header.Reliable = false;
+                layerpack.Header.Reliable = true;
                 OutPacket(layerpack, ThrottleOutPacketType.Unknown);
             }
             else

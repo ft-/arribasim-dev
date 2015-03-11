@@ -498,6 +498,7 @@ namespace OpenSim.Framework
         {
             lock(m_PackedSerialLock)
             {
+#if UPDATE_TERRAIN_ONLY_WHEN_NECESSARY
                 if(m_PackedTerrainPatches[patchx, patchy].Serial == lastSerialNo && 0 != lastSerialNo)
                 {
                     /* signal no change via null */
@@ -507,6 +508,7 @@ namespace OpenSim.Framework
                 }
 
                 if(m_PackedTerrainPatches[patchx, patchy].Serial != m_TerrainPatchSerial[patchx, patchy])
+#endif
                 {
 
                     m_PackedTerrainPatches[patchx, patchy].Serial = m_TerrainPatchSerial[patchx, patchy];
