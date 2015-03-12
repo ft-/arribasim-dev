@@ -13450,8 +13450,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         public LSL_Integer llSetMemoryLimit(LSL_Integer limit)
         {
             m_host.AddScriptLPS(1);
-            // Treat as an LSO script
-            return ScriptBaseClass.TRUE;
+            return ScriptBaseClass.FALSE;
         }
 
         public LSL_Integer llGetSPMaxMemory()
