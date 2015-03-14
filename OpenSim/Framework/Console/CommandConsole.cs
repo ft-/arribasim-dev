@@ -414,8 +414,9 @@ namespace OpenSim.Framework.Console
                     {
                         found.Clear();
                         found.Add(opt);
+                        break;
                     }
-                    else if (opt.StartsWith(s))
+                    if (opt.StartsWith(s))
                     {
                         found.Add(opt);
                     }
