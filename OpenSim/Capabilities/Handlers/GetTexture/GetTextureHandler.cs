@@ -245,8 +245,11 @@ namespace OpenSim.Capabilities.Handlers
 //                        response.StatusCode = (int)System.Net.HttpStatusCode.RequestedRangeNotSatisfiable;
 //                        response.AddHeader("Content-Range", String.Format("bytes */{0}", texture.Data.Length));
 //                        response.StatusCode = (int)System.Net.HttpStatusCode.OK;
-                        response.StatusCode = (int)System.Net.HttpStatusCode.PartialContent;
+                        response.StatusCode = (int)System.Net.HttpStatusCode.OK;
+                        response.ContentLength = texture.Data.Length;
                         response.ContentType = texture.Metadata.ContentType;
+                        response.Body.Write(texture.Data, 0, texture.Data.Length);
+
                     }
                     else
                     {
