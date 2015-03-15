@@ -64,10 +64,11 @@ namespace OpenSim.Framework
         private byte[] _bitmap = new byte[512];
         private string _description = String.Empty;
 
+        /* FT: changed to safer defaults */
         private uint _flags = (uint)ParcelFlags.AllowFly | (uint)ParcelFlags.AllowLandmark |
-                                (uint)ParcelFlags.AllowAPrimitiveEntry |
-                                (uint)ParcelFlags.AllowDeedToGroup | (uint)ParcelFlags.AllowTerraform |
-                                (uint)ParcelFlags.CreateObjects | (uint)ParcelFlags.AllowOtherScripts |
+                                /*(uint)ParcelFlags.AllowAPrimitiveEntry |*/
+                                (uint)ParcelFlags.AllowDeedToGroup | /*(uint)ParcelFlags.AllowTerraform | */
+                                (uint)ParcelFlags.CreateGroupObjects | (uint)ParcelFlags.AllowOtherScripts |
                                 (uint)ParcelFlags.SoundLocal | (uint)ParcelFlags.AllowVoiceChat;
 
         private byte _landingType = 0;
