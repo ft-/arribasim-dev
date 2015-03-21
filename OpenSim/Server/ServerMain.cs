@@ -35,7 +35,6 @@ using OpenSim.Framework.Servers.HttpServer;
 using OpenSim.Server.Base;
 using OpenSim.Server.Handlers.Base;
 using Mono.Addins;
-using System.Net;
 
 namespace OpenSim.Server
 {
@@ -55,11 +54,7 @@ namespace OpenSim.Server
         public static int Main(string[] args)
         {
             m_Server = new HttpServerBase("R.O.B.U.S.T.", args);
-
-
-            /* disable Mono/.NET caching of DNS entries */
-            ServicePointManager.DnsRefreshTimeout = 0;
-
+            
             string registryLocation;
 
             IConfig serverConfig = m_Server.Config.Configs["Startup"];
