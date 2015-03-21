@@ -334,9 +334,10 @@ namespace OpenSim.Framework.Communications
         /// </summary>
         public Stream Request(IServiceAuth auth)
         {
+            ServicePointManagerTimeoutSupport.ResetHosts();
             lock (_lock)
             {
-                _request = (HttpWebRequest) WebRequest.Create(buildUri());
+                _request = (HttpWebRequest)WebRequest.Create(buildUri());
                 _request.KeepAlive = false;
                 _request.ContentType = "application/xml";
                 _request.Timeout = 200000;
@@ -400,7 +401,8 @@ namespace OpenSim.Framework.Communications
 
         public Stream Request(Stream src, IServiceAuth auth)
         {
-            _request = (HttpWebRequest) WebRequest.Create(buildUri());
+            ServicePointManagerTimeoutSupport.ResetHosts();
+            _request = (HttpWebRequest)WebRequest.Create(buildUri());
             _request.KeepAlive = false;
             _request.ContentType = "application/xml";
             _request.Timeout = 900000;

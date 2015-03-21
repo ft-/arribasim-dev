@@ -6,6 +6,7 @@
 
 using log4net;
 using Nwc.XmlRpc;
+using OpenSim.Framework;
 using System;
 using System.Collections;
 using System.IO;
@@ -45,7 +46,8 @@ namespace NSL.Network.XmlRpc
 	  	{
 			m_log.InfoFormat("[MONEY NSL RPC]: XmlRpcResponse certSend: connect to {0}", url);
 
-			HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+            ServicePointManagerTimeoutSupport.ResetHosts();
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
 			if (request==null)
 			{
 				throw new XmlRpcException(XmlRpcErrorCodes.TRANSPORT_ERROR, XmlRpcErrorCodes.TRANSPORT_ERROR_MSG +": Could not create request with " + url);

@@ -30,6 +30,7 @@ using Mono.Addins;
 using Nini.Config;
 using OpenMetaverse;
 using OpenMetaverse.Imaging;
+using OpenSim.Framework;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
 using System;
@@ -158,6 +159,7 @@ namespace OpenSim.Region.CoreModules.Scripting.LoadImageURL
 
         private void MakeHttpRequest(string url, UUID requestID)
         {
+            ServicePointManagerTimeoutSupport.ResetHosts();
             WebRequest request = HttpWebRequest.Create(url);
             
             if (!string.IsNullOrEmpty(m_proxyurl)) 

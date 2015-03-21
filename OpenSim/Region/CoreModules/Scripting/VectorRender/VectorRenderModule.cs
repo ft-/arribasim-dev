@@ -30,6 +30,7 @@ using Mono.Addins;
 using Nini.Config;
 using OpenMetaverse;
 using OpenMetaverse.Imaging;
+using OpenSim.Framework;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
 using System;
@@ -836,6 +837,7 @@ namespace OpenSim.Region.CoreModules.Scripting.VectorRender
         {
             try
             {
+                ServicePointManagerTimeoutSupport.ResetHosts();
                 WebRequest request = HttpWebRequest.Create(url);
 
                 using (HttpWebResponse response = (HttpWebResponse)(request).GetResponse())

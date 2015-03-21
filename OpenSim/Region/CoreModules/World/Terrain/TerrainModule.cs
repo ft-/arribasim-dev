@@ -441,6 +441,7 @@ namespace OpenSim.Region.CoreModules.World.Terrain
 
         private static Stream URIFetch(Uri uri)
         {
+            ServicePointManagerTimeoutSupport.ResetHosts();
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(uri);
 
             // request.Credentials = credentials;

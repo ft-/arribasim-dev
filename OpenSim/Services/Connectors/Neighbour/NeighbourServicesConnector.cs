@@ -86,6 +86,7 @@ namespace OpenSim.Services.Connectors
 
             try
             {
+                ServicePointManagerTimeoutSupport.ResetHosts();
                 helloNeighbourRequest = WebRequest.Create(uri);
             }
             catch (Exception e)

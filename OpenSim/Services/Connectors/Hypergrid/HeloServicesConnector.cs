@@ -26,6 +26,7 @@
  */
 
 using log4net;
+using OpenSim.Framework;
 using System;
 using System.Net;
 using System.Reflection;
@@ -89,6 +90,7 @@ namespace OpenSim.Services.Connectors
 
             try
             {
+                ServicePointManagerTimeoutSupport.ResetHosts();
                 HttpWebRequest req = (HttpWebRequest)HttpWebRequest.Create(m_ServerURI);
                 // Eventually we need to switch to HEAD
                 /* req.Method = "HEAD"; */

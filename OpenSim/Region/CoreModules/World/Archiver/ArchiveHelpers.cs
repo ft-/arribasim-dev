@@ -25,6 +25,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using OpenSim.Framework;
 using OpenSim.Framework.Serialization;
 using OpenSim.Region.Framework.Scenes;
 using System;
@@ -103,7 +104,8 @@ namespace OpenSim.Region.CoreModules.World.Archiver
 
         public static Stream URIFetch(Uri uri)
         {
-            HttpWebRequest request  = (HttpWebRequest)WebRequest.Create(uri);
+            ServicePointManagerTimeoutSupport.ResetHosts();
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(uri);
 
             // request.Credentials = credentials;
 

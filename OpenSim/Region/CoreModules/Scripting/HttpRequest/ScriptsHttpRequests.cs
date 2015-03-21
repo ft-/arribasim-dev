@@ -415,6 +415,7 @@ namespace OpenSim.Region.CoreModules.Scripting.HttpRequest
         {
             try
             {
+                ServicePointManagerTimeoutSupport.ResetHosts();
                 Request = WebRequest.Create(Url);
                 Request.Method = HttpMethod;
                 Request.ContentType = HttpMIMEType;

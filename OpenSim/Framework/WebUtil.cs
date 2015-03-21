@@ -235,6 +235,7 @@ namespace OpenSim.Framework
 
             try
             {
+                ServicePointManagerTimeoutSupport.ResetHosts();
                 HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
                 request.Method = method;
                 request.Timeout = timeout;
@@ -421,6 +422,7 @@ namespace OpenSim.Framework
 
             try
             {
+                ServicePointManagerTimeoutSupport.ResetHosts();
                 HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(url);
                 request.Method = "POST";
                 request.Timeout = timeout;
@@ -792,6 +794,7 @@ namespace OpenSim.Framework
 
             Type type = typeof(TRequest);
 
+            ServicePointManagerTimeoutSupport.ResetHosts();
             WebRequest request = WebRequest.Create(requestUrl);
             HttpWebRequest ht = (HttpWebRequest)request;
 
@@ -992,6 +995,7 @@ namespace OpenSim.Framework
             int tickstart = Environment.TickCount;
             int tickdata = 0;
 
+            ServicePointManagerTimeoutSupport.ResetHosts();
             WebRequest request = WebRequest.Create(requestUrl);
             request.Method = verb;
             if (timeoutsecs > 0)
@@ -1193,6 +1197,7 @@ namespace OpenSim.Framework
             Type type = typeof(TRequest);
             TResponse deserial = default(TResponse);
 
+            ServicePointManagerTimeoutSupport.ResetHosts();
             WebRequest request = WebRequest.Create(requestUrl);
             HttpWebRequest ht = (HttpWebRequest)request;
 
