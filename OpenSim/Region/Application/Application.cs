@@ -75,6 +75,9 @@ namespace OpenSim
 
             ServicePointManager.DefaultConnectionLimit = 12;
 
+            /* disable Mono/.NET caching of DNS entries */
+            ServicePointManager.DnsRefreshTimeout = 0;
+
             // Add the arguments supplied when running the application to the configuration
             ArgvConfigSource configSource = new ArgvConfigSource(args);
 
