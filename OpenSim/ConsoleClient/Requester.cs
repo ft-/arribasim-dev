@@ -25,6 +25,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using OpenSim.Framework;
 using System;
 using System.IO;
 using System.Net;
@@ -39,6 +40,7 @@ namespace OpenSim.ConsoleClient
         public static void MakeRequest(string requestUrl, string data,
                 ReplyDelegate action)
         {
+            ServicePointManagerTimeoutSupport.ResetHosts();
             WebRequest request = WebRequest.Create(requestUrl);
 
             request.Method = "POST";

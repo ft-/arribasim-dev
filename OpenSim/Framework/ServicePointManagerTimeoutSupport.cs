@@ -25,6 +25,7 @@ namespace OpenSim.Framework
                 {
                     isMono = Type.GetType("Mono.Runtime") != null;
                     isMonoCached = true;
+                    m_log.Info("[MONO]: Mono Workaround for ServicePoint caching enabled");
                 }
                 return isMono;
             }
@@ -68,7 +69,7 @@ namespace OpenSim.Framework
             catch(Exception e)
             {
                 /* be neutral outside */
-                m_log.DebugFormat("ServicePoints clearing threw exception: {0}", e.GetType().FullName);
+                m_log.DebugFormat("[MONO]: ServicePoints clearing threw exception: {0}", e.GetType().FullName);
             }
         }
     }
