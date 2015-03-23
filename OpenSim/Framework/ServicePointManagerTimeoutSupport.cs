@@ -48,10 +48,9 @@ namespace OpenSim.Framework
                     var toRemove =
                         servicePoints
                         .Cast<DictionaryEntry>()
-                        .Where(de => ((ServicePoint)de.Value).CurrentConnections == 0)
-                        .Select(de => de.Value)
                         .ToList();
 
+                    int cnt = 0;
                     foreach (var removing in toRemove)
                     {
                         var hostLock = typeof(ServicePoint).GetField("hostE",
@@ -63,7 +62,9 @@ namespace OpenSim.Framework
                             typeof(ServicePoint).GetField("host", BindingFlags.NonPublic |
                                 BindingFlags.SetField | BindingFlags.Instance).SetValue(removing, null);
                         }
+                        ++cnt;
                     }
+                    m_log.InfoFormat("[MONO]: cleared {0} servicepoint entries", cnt);
                 }
             }
             catch(Exception e)
