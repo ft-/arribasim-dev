@@ -39,19 +39,13 @@ namespace OpenSim.Framework
                 {
                     return;
                 }
-                var servicePoints = (IDictionary)(typeof(ServicePointManager).GetField("servicePoints",
+                IDictionary servicePoints = (IDictionary)(typeof(ServicePointManager).GetField("servicePoints",
                     BindingFlags.Static | BindingFlags.NonPublic |
                     BindingFlags.GetField).GetValue(null));
 
                 lock (servicePoints)
                 {
-                    var toRemove =
-                        servicePoints
-                        .Cast<DictionaryEntry>()
-                        .ToList();
-
-                    int cnt = 0;
-                    foreach (var removing in toRemove)
+                    foreach (ServicePoint removing in servicePoints.Values)
                     {
                         var hostLock = typeof(ServicePoint).GetField("hostE",
                             BindingFlags.NonPublic | BindingFlags.GetField |
@@ -62,9 +56,7 @@ namespace OpenSim.Framework
                             typeof(ServicePoint).GetField("host", BindingFlags.NonPublic |
                                 BindingFlags.SetField | BindingFlags.Instance).SetValue(removing, null);
                         }
-                        ++cnt;
                     }
-                    m_log.InfoFormat("[MONO]: cleared {0} servicepoint entries", cnt);
                 }
             }
             catch(Exception e)
