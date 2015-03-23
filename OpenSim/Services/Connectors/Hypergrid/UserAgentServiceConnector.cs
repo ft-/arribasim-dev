@@ -165,6 +165,7 @@ namespace OpenSim.Services.Connectors.Hypergrid
             IList paramList = new ArrayList();
             paramList.Add(hash);
 
+            ServicePointManagerTimeoutSupport.ResetHosts(); 
             XmlRpcRequest request = new XmlRpcRequest(methodName, paramList);
 
             // Send and get reply
