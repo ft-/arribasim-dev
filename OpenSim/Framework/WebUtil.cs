@@ -229,13 +229,13 @@ namespace OpenSim.Framework
                     reqnum, method, url);
 
             string errorMessage = "unknown error";
+            ServicePointManagerTimeoutSupport.ResetHosts();
             int tickstart = Environment.TickCount;
             int tickdata = 0;
             string strBuffer = null;
 
             try
             {
-                ServicePointManagerTimeoutSupport.ResetHosts();
                 HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
                 request.Method = method;
                 request.Timeout = timeout;
@@ -416,13 +416,13 @@ namespace OpenSim.Framework
                     reqnum, method, url);
             
             string errorMessage = "unknown error";
+            ServicePointManagerTimeoutSupport.ResetHosts();
             int tickstart = Environment.TickCount;
             int tickdata = 0;
             string queryString = null;
 
             try
             {
-                ServicePointManagerTimeoutSupport.ResetHosts();
                 HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(url);
                 request.Method = "POST";
                 request.Timeout = timeout;
@@ -789,12 +789,12 @@ namespace OpenSim.Framework
                 m_log.DebugFormat("[LOGHTTP]: HTTP OUT {0} AsynchronousRequestObject {1} to {2}",
                     reqnum, verb, requestUrl);
 
+            ServicePointManagerTimeoutSupport.ResetHosts();
             int tickstart = Environment.TickCount;
             int tickdata = 0;
 
             Type type = typeof(TRequest);
 
-            ServicePointManagerTimeoutSupport.ResetHosts();
             WebRequest request = WebRequest.Create(requestUrl);
             HttpWebRequest ht = (HttpWebRequest)request;
 
@@ -992,10 +992,10 @@ namespace OpenSim.Framework
                 m_log.DebugFormat("[LOGHTTP]: HTTP OUT {0} SynchronousRestForms {1} to {2}",
                     reqnum, verb, requestUrl);
 
+            ServicePointManagerTimeoutSupport.ResetHosts();
             int tickstart = Environment.TickCount;
             int tickdata = 0;
 
-            ServicePointManagerTimeoutSupport.ResetHosts();
             WebRequest request = WebRequest.Create(requestUrl);
             request.Method = verb;
             if (timeoutsecs > 0)
@@ -1191,13 +1191,13 @@ namespace OpenSim.Framework
                 m_log.DebugFormat("[LOGHTTP]: HTTP OUT {0} SynchronousRestObject {1} to {2}",
                     reqnum, verb, requestUrl);
 
+            ServicePointManagerTimeoutSupport.ResetHosts();
             int tickstart = Environment.TickCount;
             int tickdata = 0;
 
             Type type = typeof(TRequest);
             TResponse deserial = default(TResponse);
 
-            ServicePointManagerTimeoutSupport.ResetHosts();
             WebRequest request = WebRequest.Create(requestUrl);
             HttpWebRequest ht = (HttpWebRequest)request;
 
