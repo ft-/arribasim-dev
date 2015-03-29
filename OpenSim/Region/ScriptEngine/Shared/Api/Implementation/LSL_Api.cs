@@ -4079,22 +4079,6 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             }
             else
             {
-                ScenePresence presence = World.GetScenePresence(destId);
-
-                if (presence == null)
-                {
-                    UserAccount account =
-                            World.UserAccountService.GetUserAccount(
-                            World.RegionInfo.ScopeID,
-                            destId);
-
-                    if (account == null)
-                    {
-                        Error("llGiveInventory", "Can't find destination '" + destId.ToString() + "'");
-                        return;
-                    }
-                }
-                // destination is an avatar
                 string message;
                 InventoryItemBase agentItem = World.MoveTaskInventoryItem(destId, UUID.Zero, m_host, objId, out message);
 
