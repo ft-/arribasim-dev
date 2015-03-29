@@ -1,20 +1,43 @@
-﻿using log4net;
+﻿/*
+ * Copyright (c) Contributors, http://opensimulator.org/
+ * See CONTRIBUTORS.TXT for a full list of copyright holders.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the distribution.
+ *     * Neither the name of the OpenSimulator Project nor the
+ *       names of its contributors may be used to endorse or promote products
+ *       derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE DEVELOPERS ``AS IS'' AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE CONTRIBUTORS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 using Nini.Config;
 using System;
 using System.Collections.Specialized;
-using System.Reflection;
-using System.Text;
+using System.Net;
 
 namespace OpenSim.Framework.ServiceAuth
 {
     public class BasicHttpAuthentication : IServiceAuth
     {
-        private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+        public string Name { get { return "BasicHttp"; } }
 
         private string m_Username, m_Password;
         private string m_CredentialsB64;
-
-        private string remove_me;
 
         public string Credentials
         {
@@ -23,14 +46,12 @@ namespace OpenSim.Framework.ServiceAuth
 
         public BasicHttpAuthentication(IConfigSource config, string section)
         {
-            remove_me = section;
             m_Username = Util.GetConfigVarFromSections<string>(config, "HttpAuthUsername", new string[] { "Network", section }, string.Empty);
             m_Password = Util.GetConfigVarFromSections<string>(config, "HttpAuthPassword", new string[] { "Network", section }, string.Empty); 
             string str = m_Username + ":" + m_Password;
-            byte[] encData_byte = Util.UTF8.GetBytes(str);
+            byte[] encData_byte = Util.UTF8NoBomEncoding.GetBytes(str);
 
             m_CredentialsB64 = Convert.ToBase64String(encData_byte);
-            m_log.DebugFormat("[HTTP BASIC AUTH]: {0} {1} [{2}]", m_Username, m_Password, section);
         }
 
         public void AddAuthorization(NameValueCollection headers)
@@ -42,7 +63,7 @@ namespace OpenSim.Framework.ServiceAuth
         public bool Authenticate(string data)
         {
             byte[] b = Convert.FromBase64String(data);
-            string recovered = Encoding.UTF8.GetString(b);
+            string recovered = Util.UTF8NoBomEncoding.GetString(b);
 
             if (!String.IsNullOrEmpty(recovered))
             {
@@ -56,24 +77,28 @@ namespace OpenSim.Framework.ServiceAuth
             return false;
         }
 
-        public bool Authenticate(NameValueCollection requestHeaders, AddHeaderDelegate d)
+        public bool Authenticate(NameValueCollection requestHeaders, AddHeaderDelegate d, out HttpStatusCode statusCode)
         {
-            //m_log.DebugFormat("[HTTP BASIC AUTH]: Authenticate in {0}", remove_me);
-            if (requestHeaders != null)
+//            m_log.DebugFormat("[HTTP BASIC AUTH]: Authenticate in {0}", "BasicHttpAuthentication");
+
+            string value = requestHeaders.Get("Authorization");
+            if (value != null)
             {
-                string value = requestHeaders.Get("Authorization");
-                if (value != null)
+                value = value.Trim();
+                if (value.StartsWith("Basic "))
                 {
-                    value = value.Trim();
-                    if (value.StartsWith("Basic "))
+                    value = value.Replace("Basic ", string.Empty);
+                    if (Authenticate(value))
                     {
-                        value = value.Replace("Basic ", string.Empty);
-                        if (Authenticate(value))
-                            return true;
+                        statusCode = HttpStatusCode.OK;
+                        return true;
                     }
                 }
             }
-            d("WWW-Authenticate", "Basic realm = \"Asset Server\"");
+
+            d("WWW-Authenticate", "Basic realm = \"OpenSim Server\"");
+
+            statusCode = HttpStatusCode.Unauthorized;
             return false;
         }
     }

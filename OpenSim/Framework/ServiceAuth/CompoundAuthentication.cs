@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) Contributors, http://opensimulator.org/
  * See CONTRIBUTORS.TXT for a full list of copyright holders.
  *
@@ -25,22 +25,56 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Net;
 
 namespace OpenSim.Framework.ServiceAuth
 {
-    public delegate void AddHeaderDelegate(string key, string value);
-
-    public interface IServiceAuth
+    public class CompoundAuthentication : IServiceAuth
     {
-        /// <summary>
-        /// Name of this authenticator.
-        /// </summary>
-        string Name { get; }
+        public string Name { get { return "Compound"; } }
 
-        bool Authenticate(string data);
-        bool Authenticate(NameValueCollection headers, AddHeaderDelegate d, out HttpStatusCode statusCode);
-        void AddAuthorization(NameValueCollection headers);
+        private List<IServiceAuth> m_authentications = new List<IServiceAuth>();
+
+        public int Count { get { return m_authentications.Count; } }
+
+        public List<IServiceAuth> GetAuthentors()
+        {
+            return new List<IServiceAuth>(m_authentications);
+        }
+
+        public void AddAuthenticator(IServiceAuth auth)
+        {
+            m_authentications.Add(auth);
+        }
+
+        public void RemoveAuthenticator(IServiceAuth auth)
+        {
+            m_authentications.Remove(auth);
+        }
+
+        public void AddAuthorization(NameValueCollection headers) 
+        {
+            foreach (IServiceAuth auth in m_authentications)
+                auth.AddAuthorization(headers);
+        }
+
+        public bool Authenticate(string data)
+        {
+            return m_authentications.TrueForAll(a => a.Authenticate(data));
+        }
+
+        public bool Authenticate(NameValueCollection requestHeaders, AddHeaderDelegate d, out HttpStatusCode statusCode)
+        {
+            foreach (IServiceAuth auth in m_authentications)
+            {
+                if (!auth.Authenticate(requestHeaders, d, out statusCode))
+                    return false;
+            }
+
+            statusCode = HttpStatusCode.OK;
+            return true;
+        }
     }
 }

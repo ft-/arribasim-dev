@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) Contributors, http://opensimulator.org/
  * See CONTRIBUTORS.TXT for a full list of copyright holders.
  *
@@ -30,17 +30,27 @@ using System.Net;
 
 namespace OpenSim.Framework.ServiceAuth
 {
-    public delegate void AddHeaderDelegate(string key, string value);
-
-    public interface IServiceAuth
+    public class DisallowLlHttpRequest : IServiceAuth
     {
-        /// <summary>
-        /// Name of this authenticator.
-        /// </summary>
-        string Name { get; }
+        public string Name { get { return "DisallowllHTTPRequest"; } }
 
-        bool Authenticate(string data);
-        bool Authenticate(NameValueCollection headers, AddHeaderDelegate d, out HttpStatusCode statusCode);
-        void AddAuthorization(NameValueCollection headers);
+        public void AddAuthorization(NameValueCollection headers) {}
+
+        public bool Authenticate(string data)
+        {
+            return false;
+        }
+
+        public bool Authenticate(NameValueCollection requestHeaders, AddHeaderDelegate d, out HttpStatusCode statusCode)
+        {
+            if (requestHeaders["X-SecondLife-Shard"] != null)
+            {
+                statusCode = HttpStatusCode.Forbidden;
+                return false;
+            }
+
+            statusCode = HttpStatusCode.OK;
+            return true;
+        }
     }
 }
