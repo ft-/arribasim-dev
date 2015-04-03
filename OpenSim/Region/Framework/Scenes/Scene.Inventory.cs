@@ -2024,6 +2024,7 @@ namespace OpenSim.Region.Framework.Scenes
             destTaskItem.Name = srcTaskItem.Name;
             destTaskItem.InvType = srcTaskItem.InvType;
             destTaskItem.Type = srcTaskItem.Type;
+            destTaskItem.ScriptRunning = running != 0;
 
             destPart.Inventory.AddInventoryItemExclusive(destTaskItem, false);
 
