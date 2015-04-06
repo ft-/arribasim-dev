@@ -923,7 +923,7 @@ namespace OpenSim.Region.Physics.BulletSPlugin
         {
             get
             {
-                return VehicleVelocity * Quaternion.Inverse(Quaternion.Normalize(VehicleOrientation));
+                return VehicleVelocity * Quaternion.Inverse(Quaternion.Normalize(VehicleFrameOrientation));
             }
         }
 
@@ -932,6 +932,14 @@ namespace OpenSim.Region.Physics.BulletSPlugin
             get
             {
                 return VehicleForwardVelocity.X;
+            }
+        }
+
+        private Quaternion VehicleFrameOrientation
+        {
+            get
+            {
+                return VehicleOrientation * m_referenceFrame;
             }
         }
 
@@ -1043,7 +1051,7 @@ namespace OpenSim.Region.Physics.BulletSPlugin
             linearMotorCorrectionV -= (currentVelV * frictionFactorV);
 
             // Motor is vehicle coordinates. Rotate it to world coordinates
-            Vector3 linearMotorVelocityW = linearMotorCorrectionV * VehicleOrientation;
+            Vector3 linearMotorVelocityW = linearMotorCorrectionV * VehicleFrameOrientation;
 
             // If we're a ground vehicle, don't add any upward Z movement
             if ((m_flags & VehicleFlag.LIMIT_MOTOR_UP) != 0)
@@ -1085,7 +1093,7 @@ namespace OpenSim.Region.Physics.BulletSPlugin
                 linearDeflectionV *= new Vector3(1, -1, -1);
 
                 // Correction is vehicle relative. Convert to world coordinates.
-                Vector3 linearDeflectionW = linearDeflectionV * VehicleOrientation;
+                Vector3 linearDeflectionW = linearDeflectionV * VehicleFrameOrientation;
 
                 // Optionally, if not colliding, don't effect world downward velocity. Let falling things fall.
                 if (BSParam.VehicleLinearDeflectionNotCollidingNoZ && !m_controllingPrim.HasSomeCollision)
@@ -1282,14 +1290,14 @@ namespace OpenSim.Region.Physics.BulletSPlugin
 
                     /*
                     // If we're pointed up into the air, we should nose down
-                    Vector3 pointingDirection = Vector3.UnitX * VehicleOrientation;
+                    Vector3 pointingDirection = Vector3.UnitX * VehicleFrameOrientation;
                     // The rotation around the Y axis is pitch up or down
                     if (pointingDirection.Y > 0.01f)
                     {
                         float angularCorrectionForce = -(float)Math.Asin(pointingDirection.Y);
                         Vector3 angularCorrectionVector = new Vector3(0f, angularCorrectionForce, 0f);
                         // Rotate into world coordinates and apply to vehicle
-                        angularCorrectionVector *= VehicleOrientation;
+                        angularCorrectionVector *= VehicleFrameOrientation;
                         VehicleAddAngularForce(angularCorrectionVector);
                         VDetailLog("{0},  MoveLinear,limitMotorUp,newVel={1},pntDir={2},corrFrc={3},aCorr={4}",
                                     Prim.LocalID, VehicleVelocity, pointingDirection, angularCorrectionForce, angularCorrectionVector);
@@ -1381,7 +1389,7 @@ namespace OpenSim.Region.Physics.BulletSPlugin
         {
             // The user wants this many radians per second angular change?
             Vector3 origVehicleRotationalVelocity = VehicleRotationalVelocity;      // DEBUG DEBUG
-            Vector3 currentAngularV = VehicleRotationalVelocity * Quaternion.Inverse(VehicleOrientation);
+            Vector3 currentAngularV = VehicleRotationalVelocity * Quaternion.Inverse(VehicleFrameOrientation);
             Vector3 angularMotorContributionV = m_angularMotor.Step(pTimestep, currentAngularV);
 
             // ==================================================================
@@ -1402,7 +1410,7 @@ namespace OpenSim.Region.Physics.BulletSPlugin
             Vector3 frictionFactorW = ComputeFrictionFactor(m_angularFrictionTimescale, pTimestep);
             angularMotorContributionV -= (currentAngularV * frictionFactorW);
 
-            Vector3 angularMotorContributionW = angularMotorContributionV * VehicleOrientation;
+            Vector3 angularMotorContributionW = angularMotorContributionV * VehicleFrameOrientation;
             VehicleRotationalVelocity += angularMotorContributionW;
 
             VDetailLog("{0},  MoveAngular,angularTurning,curAngVelV={1},origVehRotVel={2},vehRotVel={3},frictFact={4}, angContribV={5},angContribW={6}",
@@ -1423,7 +1431,7 @@ namespace OpenSim.Region.Physics.BulletSPlugin
             // If vertical attaction timescale is reasonable
             if (BSParam.VehicleEnableAngularVerticalAttraction && m_verticalAttractionTimescale < m_verticalAttractionCutoff)
             {
-                Vector3 vehicleUpAxis = Vector3.UnitZ * VehicleOrientation;
+                Vector3 vehicleUpAxis = Vector3.UnitZ * VehicleFrameOrientation;
                 switch (BSParam.VehicleAngularVerticalAttractionAlgorithm)
                 {
                     case 0:
@@ -1444,7 +1452,7 @@ namespace OpenSim.Region.Physics.BulletSPlugin
 
                             if ((m_flags & VehicleFlag.LIMIT_ROLL_ONLY) != 0)
                             {
-                                Vector3 vehicleForwardAxis = Vector3.UnitX * VehicleOrientation;
+                                Vector3 vehicleForwardAxis = Vector3.UnitX * VehicleFrameOrientation;
                                 torqueVector = ProjectVector(torqueVector, vehicleForwardAxis);
                             }
 
@@ -1469,13 +1477,13 @@ namespace OpenSim.Region.Physics.BulletSPlugin
 
                             // Create a rotation that is only the vehicle's rotation around Z
                             Vector3 currentEulerW = Vector3.Zero;
-                            VehicleOrientation.GetEulerAngles(out currentEulerW.X, out currentEulerW.Y, out currentEulerW.Z);
+                            VehicleFrameOrientation.GetEulerAngles(out currentEulerW.X, out currentEulerW.Y, out currentEulerW.Z);
                             Quaternion justZOrientation = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, currentEulerW.Z);
 
                             // Create the axis that is perpendicular to the up vector and the rotated up vector.
-                            Vector3 differenceAxisW = Vector3.Cross(Vector3.UnitZ * justZOrientation, Vector3.UnitZ * VehicleOrientation);
+                            Vector3 differenceAxisW = Vector3.Cross(Vector3.UnitZ * justZOrientation, Vector3.UnitZ * VehicleFrameOrientation);
                             // Compute the angle between those to vectors.
-                            double differenceAngle = Math.Acos((double)Vector3.Dot(Vector3.UnitZ, Vector3.Normalize(Vector3.UnitZ * VehicleOrientation)));
+                            double differenceAngle = Math.Acos((double)Vector3.Dot(Vector3.UnitZ, Vector3.Normalize(Vector3.UnitZ * VehicleFrameOrientation)));
                             // 'differenceAngle' is the angle to rotate and 'differenceAxis' is the plane to rotate in to get the vehicle vertical
 
                             // Reduce the change by the time period it is to change in. Timestep is handled when velocity is applied.
@@ -1508,7 +1516,7 @@ namespace OpenSim.Region.Physics.BulletSPlugin
                             Vector3 origRotVelW = VehicleRotationalVelocity;        // DEBUG DEBUG
 
                             // Take a vector pointing up and convert it from world to vehicle relative coords.
-                            Vector3 verticalError = Vector3.Normalize(Vector3.UnitZ * VehicleOrientation);
+                            Vector3 verticalError = Vector3.Normalize(Vector3.UnitZ * VehicleFrameOrientation);
 
                             // If vertical attraction correction is needed, the vector that was pointing up (UnitZ)
                             //    is now:
@@ -1539,7 +1547,7 @@ namespace OpenSim.Region.Physics.BulletSPlugin
                             vertContributionV /= m_verticalAttractionTimescale;
 
                             // Rotate the vehicle rotation to the world coordinates.
-                            VehicleRotationalVelocity += (vertContributionV * VehicleOrientation);
+                            VehicleRotationalVelocity += (vertContributionV * VehicleFrameOrientation);
 
                             VDetailLog("{0},  MoveAngular,verticalAttraction,,upAxis={1},origRotVW={2},vertError={3},unscaledV={4},eff={5},ts={6},vertContribV={7}",
                                             ControllingPrim.LocalID,
@@ -1580,7 +1588,7 @@ namespace OpenSim.Region.Physics.BulletSPlugin
                 movingDirection *= Math.Sign(VehicleForwardSpeed);
 
                 // The direction the vehicle is pointing
-                Vector3 pointingDirection = Vector3.UnitX * VehicleOrientation;
+                Vector3 pointingDirection = Vector3.UnitX * VehicleFrameOrientation;
                 //Predict where the Vehicle will be pointing after AngularVelocity change is applied. This will keep
                 //   from overshooting and allow this correction to merge with the Vertical Attraction peacefully.
                 Vector3 predictedPointingDirection = pointingDirection * Quaternion.CreateFromAxisAngle(VehicleRotationalVelocity, 0f);
@@ -1605,7 +1613,7 @@ namespace OpenSim.Region.Physics.BulletSPlugin
                 deflectContributionV = (-deflectionError) * ClampInRange(0, m_angularDeflectionEfficiency/m_angularDeflectionTimescale,1f);
                 //deflectContributionV /= m_angularDeflectionTimescale;
 
-               // VehicleRotationalVelocity += deflectContributionV * VehicleOrientation;
+                // VehicleRotationalVelocity += deflectContributionV * VehicleFrameOrientation;
                 VehicleRotationalVelocity += deflectContributionV;
                 VDetailLog("{0},  MoveAngular,Deflection,movingDir={1},pointingDir={2},deflectError={3},ret={4}",
                     ControllingPrim.LocalID, movingDirection, pointingDirection, deflectionError, deflectContributionV);
@@ -1654,7 +1662,7 @@ namespace OpenSim.Region.Physics.BulletSPlugin
                 // Rotate a UnitZ vector (pointing up) to how the vehicle is oriented.
                 // As the vehicle rolls to the right or left, the Y value will increase from
                 //     zero (straight up) to 1 or -1 (full tilt right  or left)
-                Vector3 rollComponents = Vector3.UnitZ * VehicleOrientation;
+                Vector3 rollComponents = Vector3.UnitZ * VehicleFrameOrientation;
 
                 // Figure out the yaw value for this much roll.
                 float yawAngle = m_angularMotorDirection.X * m_bankingEfficiency;
@@ -1671,7 +1679,7 @@ namespace OpenSim.Region.Physics.BulletSPlugin
                 // Don't do it all at once. Fudge because 1 second is too fast with most user defined roll as PI*4.
                 bankingContributionV /= m_bankingTimescale * BSParam.VehicleAngularBankingTimescaleFudge;
 
-                //VehicleRotationalVelocity += bankingContributionV * VehicleOrientation;
+                //VehicleRotationalVelocity += bankingContributionV * VehicleFrameOrientation;
                 VehicleRotationalVelocity += bankingContributionV;
 
 
