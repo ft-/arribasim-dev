@@ -29,7 +29,7 @@ using System.Runtime.InteropServices;
 //      Build Number
 //      Revision
 //
-[assembly: AssemblyVersion("0.8.0.*")]
+[assembly: AssemblyVersion("0.47.11.*")]
 
 
 [assembly: Addin("OpenSim.Region.CoreModules", "0.1")]
