@@ -1,4 +1,4 @@
 #!/bin/sh
 
-git log -1 "--pretty=format:(Codename: That is Not True) %ci / %H" >OpenSim/Framework/Servers/versioninfo.txt
-git log -1 "--pretty=format:%ci / %H" >bin/.version
+git log -1 "--pretty=format:0.47.11 (Codename: That is Not True) %ci / %H" >OpenSim/Framework/Servers/versioninfo.txt
+git log -1 "--pretty=format:0.47.11 %ci / %H" >bin/.version
