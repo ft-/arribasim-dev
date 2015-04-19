@@ -5234,6 +5234,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             {
                 rot.X = 0;
                 rot.Y = 0;
+                rot.Normalize();
             }
 
             rot.ToBytes(objectData, 52);
