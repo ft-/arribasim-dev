@@ -11,8 +11,9 @@ namespace OpenSim.Framework
 {
     public static class ServicePointManagerTimeoutSupport
     {
-        static bool isMonoCached = false;
-        static bool isMono = true; /* be safe initially */
+        /* disabled workaround code, unclear whether it triggers the recent issues */
+        static bool isMonoCached = true;
+        static bool isMono = false; /* be safe initially */
         static readonly ILog m_log =
                 LogManager.GetLogger(
                 MethodBase.GetCurrentMethod().DeclaringType);
