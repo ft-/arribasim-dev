@@ -712,12 +712,13 @@ namespace OpenSim.Framework
         public static bool IsOutsideView(float drawdist, uint oldx, uint newx, uint oldy, uint newy)
         {
             int dd = (int)((drawdist + Constants.RegionSize - 1) / Constants.RegionSize);
+            int ddne = (int)((drawdist + Constants.RegionSize - 1) / Constants.RegionSize) + (int)Constants.RegionSize;
 
             int startX = (int)oldx - dd;
             int startY = (int)oldy - dd;
 
-            int endX = (int)oldx + dd;
-            int endY = (int)oldy + dd;
+            int endX = (int)oldx + ddne;
+            int endY = (int)oldy + ddne;
 
             return (newx < startX || endX < newx || newy < startY || endY < newy);
         }
