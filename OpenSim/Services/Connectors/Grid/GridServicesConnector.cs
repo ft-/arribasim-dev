@@ -216,11 +216,18 @@ namespace OpenSim.Services.Connectors
                     if (r is Dictionary<string, object>)
                     {
                         GridRegion rinfo = new GridRegion((Dictionary<string, object>)r);
-                        if (Uri.IsWellFormedUriString(rinfo.ServerURI, UriKind.Absolute) && 
-                            rinfo.ExternalEndPoint.Port != 0 &&
-                            rinfo.HttpPort != 0)
+                        try
                         {
-                            rinfos.Add(rinfo);
+                            if (Uri.IsWellFormedUriString(rinfo.ServerURI, UriKind.Absolute) &&
+                                rinfo.ExternalEndPoint.Port != 0 &&
+                                rinfo.HttpPort != 0)
+                            {
+                                rinfos.Add(rinfo);
+                            }
+                        }
+                        catch
+                        {
+
                         }
                     }
                 }
@@ -275,10 +282,17 @@ namespace OpenSim.Services.Connectors
                 m_log.DebugFormat("[GRID CONNECTOR]: GetRegionByUUID received null reply");
 
             if(rinfo != null)
-            { 
-                if (!Uri.IsWellFormedUriString(rinfo.ServerURI, UriKind.Absolute) ||
-                    rinfo.ExternalEndPoint.Port == 0 ||
-                    rinfo.HttpPort == 0)
+            {
+                try
+                {
+                    if (!Uri.IsWellFormedUriString(rinfo.ServerURI, UriKind.Absolute) ||
+                        rinfo.ExternalEndPoint.Port == 0 ||
+                        rinfo.HttpPort == 0)
+                    {
+                        return null;
+                    }
+                }
+                catch
                 {
                     return null;
                 }
@@ -332,9 +346,16 @@ namespace OpenSim.Services.Connectors
 
             if (rinfo != null)
             {
-                if (!Uri.IsWellFormedUriString(rinfo.ServerURI, UriKind.Absolute) ||
-                    rinfo.ExternalEndPoint.Port == 0 ||
-                    rinfo.HttpPort == 0)
+                try
+                {
+                    if (!Uri.IsWellFormedUriString(rinfo.ServerURI, UriKind.Absolute) ||
+                        rinfo.ExternalEndPoint.Port == 0 ||
+                        rinfo.HttpPort == 0)
+                    {
+                        return null;
+                    }
+                }
+                catch
                 {
                     return null;
                 }
@@ -384,9 +405,16 @@ namespace OpenSim.Services.Connectors
 
             if (rinfo != null)
             {
-                if (!Uri.IsWellFormedUriString(rinfo.ServerURI, UriKind.Absolute) ||
-                    rinfo.ExternalEndPoint.Port == 0 ||
-                    rinfo.HttpPort == 0)
+                try
+                {
+                    if (!Uri.IsWellFormedUriString(rinfo.ServerURI, UriKind.Absolute) ||
+                        rinfo.ExternalEndPoint.Port == 0 ||
+                        rinfo.HttpPort == 0)
+                    {
+                        return null;
+                    }
+                }
+                catch
                 {
                     return null;
                 }
@@ -431,11 +459,18 @@ namespace OpenSim.Services.Connectors
                         if (r is Dictionary<string, object>)
                         {
                             GridRegion rinfo = new GridRegion((Dictionary<string, object>)r);
-                            if (Uri.IsWellFormedUriString(rinfo.ServerURI, UriKind.Absolute) &&
-                                rinfo.ExternalEndPoint.Port != 0 &&
-                                rinfo.HttpPort != 0)
+                            try
                             {
-                                rinfos.Add(rinfo);
+                                if (Uri.IsWellFormedUriString(rinfo.ServerURI, UriKind.Absolute) &&
+                                    rinfo.ExternalEndPoint.Port != 0 &&
+                                    rinfo.HttpPort != 0)
+                                {
+                                    rinfos.Add(rinfo);
+                                }
+                            }
+                            catch
+                            {
+
                             }
                         }
                     }
@@ -492,11 +527,18 @@ namespace OpenSim.Services.Connectors
                         if (r is Dictionary<string, object>)
                         {
                             GridRegion rinfo = new GridRegion((Dictionary<string, object>)r);
-                            if (Uri.IsWellFormedUriString(rinfo.ServerURI, UriKind.Absolute) &&
-                                rinfo.ExternalEndPoint.Port != 0 &&
-                                rinfo.HttpPort != 0)
+                            try
                             {
-                                rinfos.Add(rinfo);
+                                if (Uri.IsWellFormedUriString(rinfo.ServerURI, UriKind.Absolute) &&
+                                    rinfo.ExternalEndPoint.Port != 0 &&
+                                    rinfo.HttpPort != 0)
+                                {
+                                    rinfos.Add(rinfo);
+                                }
+                            }
+                            catch
+                            {
+
                             }
                         }
                     }
@@ -548,11 +590,18 @@ namespace OpenSim.Services.Connectors
                         if (r is Dictionary<string, object>)
                         {
                             GridRegion rinfo = new GridRegion((Dictionary<string, object>)r);
-                            if (Uri.IsWellFormedUriString(rinfo.ServerURI, UriKind.Absolute) &&
-                                rinfo.ExternalEndPoint.Port != 0 &&
-                                rinfo.HttpPort != 0)
+                            try
                             {
-                                rinfos.Add(rinfo);
+                                if (Uri.IsWellFormedUriString(rinfo.ServerURI, UriKind.Absolute) &&
+                                    rinfo.ExternalEndPoint.Port != 0 &&
+                                    rinfo.HttpPort != 0)
+                                {
+                                    rinfos.Add(rinfo);
+                                }
+                            }
+                            catch
+                            {
+
                             }
                         }
                     }
@@ -604,11 +653,18 @@ namespace OpenSim.Services.Connectors
                         if (r is Dictionary<string, object>)
                         {
                             GridRegion rinfo = new GridRegion((Dictionary<string, object>)r);
-                            if (Uri.IsWellFormedUriString(rinfo.ServerURI, UriKind.Absolute) &&
-                                rinfo.ExternalEndPoint.Port != 0 &&
-                                rinfo.HttpPort != 0)
+                            try
                             {
-                                rinfos.Add(rinfo);
+                                if (Uri.IsWellFormedUriString(rinfo.ServerURI, UriKind.Absolute) &&
+                                    rinfo.ExternalEndPoint.Port != 0 &&
+                                    rinfo.HttpPort != 0)
+                                {
+                                    rinfos.Add(rinfo);
+                                }
+                            }
+                            catch
+                            {
+
                             }
                         }
                     }
@@ -662,11 +718,18 @@ namespace OpenSim.Services.Connectors
                         if (r is Dictionary<string, object>)
                         {
                             GridRegion rinfo = new GridRegion((Dictionary<string, object>)r);
-                            if (Uri.IsWellFormedUriString(rinfo.ServerURI, UriKind.Absolute) &&
-                                rinfo.ExternalEndPoint.Port != 0 &&
-                                rinfo.HttpPort != 0)
+                            try
                             {
-                                rinfos.Add(rinfo);
+                                if (Uri.IsWellFormedUriString(rinfo.ServerURI, UriKind.Absolute) &&
+                                    rinfo.ExternalEndPoint.Port != 0 &&
+                                    rinfo.HttpPort != 0)
+                                {
+                                    rinfos.Add(rinfo);
+                                }
+                            }
+                            catch
+                            {
+
                             }
                         }
                     }
@@ -718,11 +781,18 @@ namespace OpenSim.Services.Connectors
                         if (r is Dictionary<string, object>)
                         {
                             GridRegion rinfo = new GridRegion((Dictionary<string, object>)r);
-                            if (Uri.IsWellFormedUriString(rinfo.ServerURI, UriKind.Absolute) &&
-                                rinfo.ExternalEndPoint.Port != 0 &&
-                                rinfo.HttpPort != 0)
+                            try
                             {
-                                rinfos.Add(rinfo);
+                                if (Uri.IsWellFormedUriString(rinfo.ServerURI, UriKind.Absolute) &&
+                                    rinfo.ExternalEndPoint.Port != 0 &&
+                                    rinfo.HttpPort != 0)
+                                {
+                                    rinfos.Add(rinfo);
+                                }
+                            }
+                            catch
+                            {
+
                             }
                         }
                     }
