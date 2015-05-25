@@ -2208,7 +2208,8 @@ namespace OpenSim.Region.Framework.Scenes
             veclist = new List<Vector3>();
 
             XmlDocument doc = new XmlDocument();
-            string xmlData = Utils.BytesToString(assetData);
+            /* this one is for OpenSim brain-deadness */
+            string xmlData = Utils.BytesToString(assetData).Replace("<SceneObjectPart xmlns:xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\">", "<SceneObjectPart xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\">");
             doc.LoadXml(xmlData);
             XmlElement e = (XmlElement)doc.SelectSingleNode("/CoalescedObject");
 
