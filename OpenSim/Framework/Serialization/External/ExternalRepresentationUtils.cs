@@ -131,7 +131,7 @@ namespace OpenSim.Framework.Serialization.External
                 return xml;
 
             XmlDocument doc = new XmlDocument();
-            doc.LoadXml(xml);
+            doc.LoadXml(xml.Replace("<SceneObjectPart xmlns:xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\">", "<SceneObjectPart xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\">"));
             XmlNodeList sops = doc.GetElementsByTagName("SceneObjectPart");
 
             foreach (XmlNode sop in sops)
