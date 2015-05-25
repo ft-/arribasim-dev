@@ -1280,8 +1280,6 @@ namespace OpenSim.Region.Framework.Scenes.Serialization
         public static void SOPToXml2(XmlTextWriter writer, SceneObjectPart sop, Dictionary<string, object> options)
         {
             writer.WriteStartElement("SceneObjectPart");
-            writer.WriteAttributeString("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
-            writer.WriteAttributeString("xmlns:xsd", "http://www.w3.org/2001/XMLSchema");
 
             writer.WriteElementString("AllowedDrop", sop.AllowedDrop.ToString().ToLower());
 
