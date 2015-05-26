@@ -7480,9 +7480,9 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             {
                 dimple.y = 1f;
             }
-            if (dimple.y - cut.x < 0.02f)
+            if (dimple.y - dimple.x < 0.02f)
             {
-                dimple.x = cut.y - 0.02f;
+                dimple.x = dimple.y - 0.02f;
                 if (dimple.x < 0.0f)
                 {
                     dimple.x = 0.0f;
