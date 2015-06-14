@@ -326,6 +326,10 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
 
                 double dis = Util.GetDistanceTo(sPart.AbsolutePosition,
                         position);
+                if (channel == DEBUG_CHANNEL)
+                {
+                    msg = "At region " + m_scene.Name + ":\n" + msg;
+                }
                 switch (type)
                 {
                     case ChatTypeEnum.Whisper:
@@ -412,6 +416,10 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
                             continue;
                         }
 
+                        if (channel == DEBUG_CHANNEL)
+                        {
+                            msg = "At region " + m_scene.Name + ":\n" + msg;
+                        }
                         if (targets.Contains(li.GetHostID()))
                             QueueMessage(new ListenerInfo(li, name, id, msg));
                     }
