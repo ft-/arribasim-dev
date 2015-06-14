@@ -279,10 +279,6 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
                 position = CenterOfRegion;
             else
                 return;
-            if(channel == DEBUG_CHANNEL)
-            {
-                msg = "At region " + m_scene.Name + ":\n" + msg;
-            }
 
             DeliverMessage(type, channel, name, id, msg, position);
         }
