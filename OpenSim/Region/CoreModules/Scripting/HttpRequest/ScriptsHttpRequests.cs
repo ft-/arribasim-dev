@@ -415,7 +415,7 @@ namespace OpenSim.Region.CoreModules.Scripting.HttpRequest
         {
             try
             {
-                Request = WebRequest.Create(UrlWorkaround.ResolveDns(Url));
+                Request = WebRequest.Create(Url);
                 Request.Method = HttpMethod;
                 Request.ContentType = HttpMIMEType;
 
