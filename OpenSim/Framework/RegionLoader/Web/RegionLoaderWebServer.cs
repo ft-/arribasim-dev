@@ -68,8 +68,7 @@ namespace OpenSim.Framework.RegionLoader.Web
                 {
                     RegionInfo[] regionInfos = new RegionInfo[] {};
                     int regionCount = 0;
-                    ServicePointManagerTimeoutSupport.ResetHosts();
-                    HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(url);
+                    HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(UrlWorkaround.ResolveDns(url));
                     webRequest.Timeout = 30000; //30 Second Timeout
                     m_log.DebugFormat("[WEBLOADER]: Sending download request to {0}", url);
 

@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) Contributors, http://opensimulator.org/
  * See CONTRIBUTORS.TXT for a full list of copyright holders.
  *
@@ -25,58 +25,36 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using OpenSim.Framework;
 using System;
-using System.IO;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Text;
 
-namespace OpenSim.ConsoleClient
+namespace OpenSim.Framework
 {
-    public delegate void ReplyDelegate(string requestUrl, string requestData, string replyData);
-
-    public class Requester
+    public static class UrlWorkaround
     {
-        public static void MakeRequest(string requestUrl, string data,
-                ReplyDelegate action)
+        /* Mono-workaround */
+        public static string ResolveDns(Uri url_)
         {
-            WebRequest request = WebRequest.Create(UrlWorkaround.ResolveDns(requestUrl));
+            return ResolveDns(url_.ToString());
+        }
 
-            request.Method = "POST";
-
-            request.ContentType = "application/x-www-form-urlencoded";
-
-            byte[] buffer = Encoding.ASCII.GetBytes(data);
-            int length = (int) buffer.Length;
-            request.ContentLength = length;
-
-            request.BeginGetRequestStream(delegate(IAsyncResult res)
+        public static string ResolveDns(string url)
+        {
+            // Doing this here, because XML-RPC or mono have some strong ideas about
+            // caching DNS translations.
+            try
             {
-                Stream requestStream = request.EndGetRequestStream(res);
-
-                requestStream.Write(buffer, 0, length);
-
-                request.BeginGetResponse(delegate(IAsyncResult ar)
-                {
-                    string reply = String.Empty;
-
-                    using (WebResponse response = request.EndGetResponse(ar))
-                    {
-                        try
-                        {
-                            using (Stream s = response.GetResponseStream())
-                                using (StreamReader r = new StreamReader(s))
-                                    reply = r.ReadToEnd();
-
-                        }
-                        catch (System.InvalidOperationException)
-                        {
-                        }
-                    }
-
-                    action(requestUrl, data, reply);
-                }, null);
-            }, null);
+                Uri m_Uri = new Uri(url);
+                IPAddress ip = Util.GetHostFromDNS(m_Uri.Host);
+                url = url.Replace("://" + m_Uri.Host, "://" + ip.ToString());
+            }
+            catch (Exception e)
+            {
+            }
+            return url;
         }
     }
 }

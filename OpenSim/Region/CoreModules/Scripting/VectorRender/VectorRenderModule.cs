@@ -837,8 +837,7 @@ namespace OpenSim.Region.CoreModules.Scripting.VectorRender
         {
             try
             {
-                ServicePointManagerTimeoutSupport.ResetHosts();
-                WebRequest request = HttpWebRequest.Create(url);
+                WebRequest request = HttpWebRequest.Create(UrlWorkaround.ResolveDns(url));
 
                 using (HttpWebResponse response = (HttpWebResponse)(request).GetResponse())
                 {

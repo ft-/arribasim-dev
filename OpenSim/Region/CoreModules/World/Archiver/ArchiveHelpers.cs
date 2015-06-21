@@ -104,8 +104,7 @@ namespace OpenSim.Region.CoreModules.World.Archiver
 
         public static Stream URIFetch(Uri uri)
         {
-            ServicePointManagerTimeoutSupport.ResetHosts();
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(uri);
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(UrlWorkaround.ResolveDns(uri));
 
             // request.Credentials = credentials;
 

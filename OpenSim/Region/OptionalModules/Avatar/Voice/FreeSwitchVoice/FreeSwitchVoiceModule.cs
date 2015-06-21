@@ -513,8 +513,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.FreeSwitchVoice
             int fwdresponsecode = 200;
             string fwdresponsecontenttype = "text/xml";
 
-            ServicePointManagerTimeoutSupport.ResetHosts();
-            HttpWebRequest forwardreq = (HttpWebRequest)WebRequest.Create(forwardaddress);
+            HttpWebRequest forwardreq = (HttpWebRequest)WebRequest.Create(UrlWorkaround.ResolveDns(forwardaddress));
             forwardreq.Method = method;
             forwardreq.ContentType = contenttype;
             forwardreq.KeepAlive = false;

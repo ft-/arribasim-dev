@@ -208,8 +208,7 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
                         UUID id; string u = string.Empty, first = string.Empty, last = string.Empty, secret = string.Empty;
                         if (Util.ParseUniversalUserIdentifier(recipientUUI, out id, out u, out first, out last, out secret))
                         {
-                            ServicePointManagerTimeoutSupport.ResetHosts();
-                            success = m_IMService.OutgoingInstantMessage(im, u, true);
+                            success = m_IMService.OutgoingInstantMessage(im, UrlWorkaround.ResolveDns(u), true);
                             if (success)
                                 UserManagementModule.AddUser(toAgentID, u + ";" + first + " " + last);
                         }
@@ -217,8 +216,7 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
                 }
                 else
                 {
-                    ServicePointManagerTimeoutSupport.ResetHosts();
-                    success = m_IMService.OutgoingInstantMessage(im, url, foreigner);
+                    success = m_IMService.OutgoingInstantMessage(im, UrlWorkaround.ResolveDns(url), foreigner);
                 }
 
                 if (!success && !foreigner)

@@ -52,33 +52,9 @@ namespace OpenSim.Services.Connectors.Hypergrid
         private string m_ServerURL;
         private GridRegion m_Gatekeeper;
 
-        public UserAgentServiceConnector(string url) : this(url, true)
+        public UserAgentServiceConnector(string url)
         {
-        }
-
-        public UserAgentServiceConnector(string url, bool dnsLookup)
-        {
-            m_ServerURL = m_ServerURLHost = url;
-
-            if (dnsLookup)
-            {
-                // Doing this here, because XML-RPC or mono have some strong ideas about
-                // caching DNS translations.
-                try
-                {
-                    Uri m_Uri = new Uri(m_ServerURL);
-                    IPAddress ip = Util.GetHostFromDNS(m_Uri.Host);
-                    m_ServerURL = m_ServerURL.Replace(m_Uri.Host, ip.ToString());
-                    if (!m_ServerURL.EndsWith("/"))
-                        m_ServerURL += "/";
-                }
-                catch (Exception e)
-                {
-                    m_log.DebugFormat("[USER AGENT CONNECTOR]: Malformed Uri {0}: {1}", url, e.Message);
-                }
-            }
-
-            //m_log.DebugFormat("[USER AGENT CONNECTOR]: new connector to {0} ({1})", url, m_ServerURL);
+            m_ServerURL = UrlWorkaround.ResolveDns(m_ServerURLHost = url);
         }
 
         public UserAgentServiceConnector(IConfigSource config)
@@ -165,7 +141,6 @@ namespace OpenSim.Services.Connectors.Hypergrid
             IList paramList = new ArrayList();
             paramList.Add(hash);
 
-            ServicePointManagerTimeoutSupport.ResetHosts(); 
             XmlRpcRequest request = new XmlRpcRequest(methodName, paramList);
 
             // Send and get reply

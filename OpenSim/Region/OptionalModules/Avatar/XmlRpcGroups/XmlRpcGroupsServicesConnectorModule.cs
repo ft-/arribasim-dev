@@ -1120,8 +1120,7 @@ namespace Nwc.XmlRpc
         /// <returns><c>XmlRpcResponse</c> The response generated.</returns>
         public XmlRpcResponse Send(String url)
         {
-            ServicePointManagerTimeoutSupport.ResetHosts();
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(UrlWorkaround.ResolveDns(url));
             if (request == null)
                 throw new XmlRpcException(XmlRpcErrorCodes.TRANSPORT_ERROR,
                               XmlRpcErrorCodes.TRANSPORT_ERROR_MSG + ": Could not create request with " + url);

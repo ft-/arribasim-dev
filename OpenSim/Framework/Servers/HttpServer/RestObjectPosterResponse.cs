@@ -55,8 +55,7 @@ namespace OpenSim.Framework.Servers.HttpServer
         {
             Type type = typeof (TRequest);
 
-            ServicePointManagerTimeoutSupport.ResetHosts();
-            WebRequest request = WebRequest.Create(requestUrl);
+            WebRequest request = WebRequest.Create(UrlWorkaround.ResolveDns(requestUrl));
             request.Method = verb;
             request.ContentType = "text/xml";
             request.Timeout = 10000;

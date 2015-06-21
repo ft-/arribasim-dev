@@ -90,8 +90,7 @@ namespace OpenSim.Services.Connectors
 
             try
             {
-                ServicePointManagerTimeoutSupport.ResetHosts();
-                HttpWebRequest req = (HttpWebRequest)HttpWebRequest.Create(m_ServerURI);
+                HttpWebRequest req = (HttpWebRequest)HttpWebRequest.Create(UrlWorkaround.ResolveDns(m_ServerURI));
                 // Eventually we need to switch to HEAD
                 /* req.Method = "HEAD"; */
 

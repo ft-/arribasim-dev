@@ -84,13 +84,12 @@ namespace OpenSim.Services.Connectors.Hypergrid
             IList paramList = new ArrayList();
             paramList.Add(hash);
 
-            ServicePointManagerTimeoutSupport.ResetHosts();
             XmlRpcRequest request = new XmlRpcRequest("link_region", paramList);
             m_log.Debug("[GATEKEEPER SERVICE CONNECTOR]: Linking to " + info.ServerURI);
             XmlRpcResponse response = null;
             try
             {
-                response = request.Send(info.ServerURI, 10000);
+                response = request.Send(UrlWorkaround.ResolveDns(info.ServerURI), 10000);
             }
             catch (Exception e)
             {
@@ -214,13 +213,12 @@ namespace OpenSim.Services.Connectors.Hypergrid
             IList paramList = new ArrayList();
             paramList.Add(hash);
 
-            ServicePointManagerTimeoutSupport.ResetHosts();
             XmlRpcRequest request = new XmlRpcRequest("get_region", paramList);
             m_log.Debug("[GATEKEEPER SERVICE CONNECTOR]: contacting " + gatekeeper.ServerURI);
             XmlRpcResponse response = null;
             try
             {
-                response = request.Send(gatekeeper.ServerURI, 10000);
+                response = request.Send(UrlWorkaround.ResolveDns(gatekeeper.ServerURI), 10000);
             }
             catch (Exception e)
             {

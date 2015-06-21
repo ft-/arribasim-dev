@@ -775,7 +775,6 @@ namespace OpenSim.Framework
             {
                 string newIP;
                 string strNewValue;
-                ServicePointManagerTimeoutSupport.ResetHosts();
                 HttpWebRequest req = (HttpWebRequest)WebRequest.Create("http://hypergrid.org/my_external_ip.php");
                 req.Method = "POST";
                 req.ContentType = "application/x-www-form-urlencoded";
