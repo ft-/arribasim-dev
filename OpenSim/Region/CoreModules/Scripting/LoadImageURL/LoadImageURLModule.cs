@@ -159,7 +159,7 @@ namespace OpenSim.Region.CoreModules.Scripting.LoadImageURL
 
         private void MakeHttpRequest(string url, UUID requestID)
         {
-            WebRequest request = HttpWebRequest.Create(UrlWorkaround.ResolveDns(url));
+            WebRequest request = HttpWebRequest.Create(url);
             
             if (!string.IsNullOrEmpty(m_proxyurl)) 
             {

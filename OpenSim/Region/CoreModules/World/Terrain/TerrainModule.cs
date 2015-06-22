@@ -441,7 +441,7 @@ namespace OpenSim.Region.CoreModules.World.Terrain
 
         private static Stream URIFetch(Uri uri)
         {
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(UrlWorkaround.ResolveDns(uri));
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(uri);
 
             // request.Credentials = credentials;
 
