@@ -837,7 +837,7 @@ namespace OpenSim.Region.CoreModules.Scripting.VectorRender
         {
             try
             {
-                WebRequest request = HttpWebRequest.Create(UrlWorkaround.ResolveDns(url));
+                WebRequest request = HttpWebRequest.Create(url);
 
                 using (HttpWebResponse response = (HttpWebResponse)(request).GetResponse())
                 {
