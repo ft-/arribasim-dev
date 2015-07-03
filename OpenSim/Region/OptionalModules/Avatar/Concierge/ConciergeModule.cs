@@ -367,7 +367,8 @@ namespace OpenSim.Region.OptionalModules.Avatar.Concierge
             string payload = list.ToString();
 
             // post via REST to broker
-            HttpWebRequest updatePost = WebRequest.Create(UrlWorkaround.ResolveDns(uri)) as HttpWebRequest;
+            ServicePointManagerTimeoutSupport.ResetHosts();
+            HttpWebRequest updatePost = WebRequest.Create(uri) as HttpWebRequest;
             updatePost.Method = "POST";
             updatePost.ContentType = "text/xml";
             updatePost.ContentLength = payload.Length;

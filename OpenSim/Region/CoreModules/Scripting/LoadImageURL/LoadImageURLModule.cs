@@ -159,6 +159,7 @@ namespace OpenSim.Region.CoreModules.Scripting.LoadImageURL
 
         private void MakeHttpRequest(string url, UUID requestID)
         {
+            ServicePointManagerTimeoutSupport.ResetHosts();
             WebRequest request = HttpWebRequest.Create(url);
             
             if (!string.IsNullOrEmpty(m_proxyurl)) 

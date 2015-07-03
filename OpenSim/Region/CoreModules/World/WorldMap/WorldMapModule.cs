@@ -836,7 +836,8 @@ namespace OpenSim.Region.CoreModules.World.WorldMap
             WebRequest mapitemsrequest = null;
             try
             {
-                mapitemsrequest = WebRequest.Create(UrlWorkaround.ResolveDns(httpserver));
+                ServicePointManagerTimeoutSupport.ResetHosts();
+                mapitemsrequest = WebRequest.Create(httpserver);
             }
             catch (Exception e)
             {

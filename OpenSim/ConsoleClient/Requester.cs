@@ -40,7 +40,8 @@ namespace OpenSim.ConsoleClient
         public static void MakeRequest(string requestUrl, string data,
                 ReplyDelegate action)
         {
-            WebRequest request = WebRequest.Create(UrlWorkaround.ResolveDns(requestUrl));
+            ServicePointManagerTimeoutSupport.ResetHosts();
+            WebRequest request = WebRequest.Create(requestUrl);
 
             request.Method = "POST";
 

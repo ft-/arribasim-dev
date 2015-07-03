@@ -286,7 +286,8 @@ namespace OpenSim.Region.OptionalModules.Scripting.RegionReady
                 m_log.WarnFormat("[RegionReady]: Exception thrown on alert: {0}", e.Message);
             }
 
-            WebRequest request = WebRequest.Create(UrlWorkaround.ResolveDns(m_uri));
+            ServicePointManagerTimeoutSupport.ResetHosts();
+            WebRequest request = WebRequest.Create(m_uri);
             request.Method = request_method;
             request.ContentType = content_type;
 

@@ -1124,7 +1124,8 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                     // Otherwise prepare the request
                     m_log.DebugFormat("[VivoxVoice] Sending request <{0}>", requrl);
 
-                    HttpWebRequest req = (HttpWebRequest)WebRequest.Create(UrlWorkaround.ResolveDns(requrl));
+                    ServicePointManagerTimeoutSupport.ResetHosts();
+                    HttpWebRequest req = (HttpWebRequest)WebRequest.Create(requrl);
 
                     // We are sending just parameters, no content
                     req.ContentLength = 0;
