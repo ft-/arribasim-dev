@@ -47,10 +47,10 @@ namespace OpenSim.Server.Base
         
         // The range of acceptable servers for client-side connectors
         public readonly static int ClientProtocolVersionMin = 0;
-        public readonly static int ClientProtocolVersionMax = 0;
+        public readonly static int ClientProtocolVersionMax = 1;
 
         // The range of acceptable clients in server-side handlers
         public readonly static int ServerProtocolVersionMin = 0;
-        public readonly static int ServerProtocolVersionMax = 0;
+        public readonly static int ServerProtocolVersionMax = 1;
     }
 }
