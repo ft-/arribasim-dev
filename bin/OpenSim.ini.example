@@ -264,6 +264,11 @@
     ; TelehubAllowLandmark = false
 
 
+    ; If you have problems with map teleports resulting in massive ack timeout blasts
+    ; uncomment the following line
+    
+    ; DisableMapItemsRequest = false
+    
 [AccessControl]
     ;# {AllowedClients} {} {Bar (|) separated list of allowed clients} {}
     ;; Bar (|) separated list of viewers which may gain access to the regions.
