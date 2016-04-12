@@ -43,7 +43,7 @@
     ;; runs the UserAgentsService.
     ;; For example http://myworld.com:9000 or http://myworld.com:8002
     ;; This is a default that can be overwritten in some sections.
-    ; HomeURI = "http://127.0.0.1:9000"
+    ; HomeURI = "http://127.0.0.1:9000/"
 
     ;# {GatekeeperURI} {Hypergrid} {The URL of the gatekeeper of this world} {}
     ;; If this is a standalone world, this is the address of this instance.
@@ -51,7 +51,7 @@
     ;; that runs the Gatekeeper service.
     ;; For example http://myworld.com:9000 or http://myworld.com:8002
     ;; This is a default that can be overwritten in some sections.
-    ; GatekeeperURI = "http://127.0.0.1:9000"
+    ; GatekeeperURI = "http://127.0.0.1:9000/"
 
 [Modules]
     ;; Choose one cache module and the corresponding config file, if it exists.
@@ -107,7 +107,7 @@
 
     ; === HG ONLY ===
     ;; If you have this set under [Hypergrid], no need to set it here, leave it commented
-    ; GatekeeperURI="http://127.0.0.1:9000"
+    ; GatekeeperURI="http://127.0.0.1:9000/"
 
 [LibraryModule]
     ; Set this if you want to change the name of the OpenSim Library
@@ -116,7 +116,7 @@
 [LoginService]
     WelcomeMessage = "Welcome, Avatar!"
     ;; If you have Gatekeeper set under [Hypergrid], no need to set it here, leave it commented
-    ; GatekeeperURI = "http://127.0.0.1:9000"
+    ; GatekeeperURI = "http://127.0.0.1:9000/"
 
     SRV_HomeURI = "http://127.0.0.1:9000"    
     SRV_InventoryServerURI = "http://127.0.0.1:9000"
@@ -339,11 +339,11 @@
 
 [HGInventoryService]
     ;; If you have this set under [Hypergrid], no need to set it here, leave it commented
-    ; HomeURI = "http://127.0.0.1:9000"
+    ; HomeURI = "http://127.0.0.1:9000/"
 
 [HGAssetService]
     ;; If you have this set under [Hypergrid], no need to set it here, leave it commented
-    ; HomeURI = "http://127.0.0.1:9000"
+    ; HomeURI = "http://127.0.0.1:9000/"
 
     ;; The asset types that this grid can export to / import from other grids.
     ;; Comma separated.
@@ -360,8 +360,8 @@
 
 [HGInventoryAccessModule]
     ;; If you have these set under [Hypergrid], no need to set it here, leave it commented
-    ; HomeURI = "http://127.0.0.1:9000"
-    ; GatekeeperURI = "http://127.0.0.1:9000"
+    ; HomeURI = "http://127.0.0.1:9000/"
+    ; GatekeeperURI = "http://127.0.0.1:9000/"
 
     ;; If you want to protect your assets from being copied by foreign visitors
     ;; uncomment the next line. You may want to do this on sims that have licensed content.
@@ -379,7 +379,7 @@
 [Messaging]
     ; === HG ONLY ===
     ;; If you have this set under [Hypergrid], no need to set it here, leave it commented
-    ; GatekeeperURI = "http://127.0.0.1:9000"
+    ; GatekeeperURI = "http://127.0.0.1:9000/"
 
 
 [EntityTransfer]

@@ -42,7 +42,7 @@
     ;; runs the UserAgentsService.
     ;; For example http://myworld.com:9000 or http://myworld.com:8002
     ;; This is a default that can be overwritten in some sections.
-    ; HomeURI = "${Const|BaseURL}:${Const|PublicPort}"
+    ; HomeURI = "${Const|BaseURL}:${Const|PublicPort}/"
 
     ;# {GatekeeperURI} {Hypergrid} {The URL of the gatekeeper of this world} {}
     ;; If this is a standalone world, this is the address of this instance.
@@ -50,7 +50,7 @@
     ;; that runs the Gatekeeper service.
     ;; For example http://myworld.com:9000 or http://myworld.com:8002
     ;; This is a default that can be overwritten in some sections.
-    ; GatekeeperURI = "${Const|BaseURL}:${Const|PublicPort}"
+    ; GatekeeperURI = "${Const|BaseURL}:${Const|PublicPort}/"
 
 [Modules]
     ;; Choose one cache module and the corresponding config file, if it exists.
@@ -109,7 +109,7 @@
     ;; Change this to the address of your Gatekeeper service
     ;; (usually bundled with the rest of the services in one 
     ;; Robust server in port ${Const|PublicPort}, but not always)
-    Gatekeeper = "${Const|BaseURL}:${Const|PublicPort}"
+    Gatekeeper = "${Const|BaseURL}:${Const|PublicPort}/"
 
 [AvatarService]
     ;
@@ -153,8 +153,8 @@
     ; Change this to your server 
     ; accessible from other grids
     ;
-    HomeURI = "${Const|BaseURL}:${Const|PublicPort}"
-    Gatekeeper = "${Const|BaseURL}:${Const|PublicPort}"
+    HomeURI = "${Const|BaseURL}:${Const|PublicPort}/"
+    Gatekeeper = "${Const|BaseURL}:${Const|PublicPort}/"
     ;; If you want to protect your assets from being copied by foreign visitors
     ;; set this to false. You may want to do this on sims that have licensed content.
     ;; Default is true.
