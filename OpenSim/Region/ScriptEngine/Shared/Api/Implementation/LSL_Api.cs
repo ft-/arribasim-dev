@@ -7653,7 +7653,8 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             if (type != (ScriptBaseClass.PRIM_SCULPT_TYPE_CYLINDER | flag) &&
                 type != (ScriptBaseClass.PRIM_SCULPT_TYPE_PLANE | flag) &&
                 type != (ScriptBaseClass.PRIM_SCULPT_TYPE_SPHERE | flag) &&
-                type != (ScriptBaseClass.PRIM_SCULPT_TYPE_TORUS | flag))
+                type != (ScriptBaseClass.PRIM_SCULPT_TYPE_TORUS | flag) &&
+                type != (ScriptBaseClass.PRIM_SCULPT_TYPE_MESH | flag))
             {
                 // default
                 type = (int)ScriptBaseClass.PRIM_SCULPT_TYPE_SPHERE;
