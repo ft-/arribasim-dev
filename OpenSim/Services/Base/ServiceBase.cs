@@ -78,7 +78,7 @@ namespace OpenSim.Services.Base
                             continue;
 
                         Type typeInterface =
-                                pluginType.GetInterface(interfaceName, true);
+                                pluginType.GetInterface(interfaceName);
                         if (typeInterface != null)
                         {
                             T plug = (T)Activator.CreateInstance(pluginType,
