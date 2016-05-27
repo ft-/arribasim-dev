@@ -88,6 +88,10 @@ namespace OpenSim.Region.ClientStack.Linden
                 m_ExportSupported = config.GetBoolean("ExportSupported", m_ExportSupported);
                 m_GridURL = Util.GetConfigVarFromSections<string>(source, "GatekeeperURI",
                         new string[] { "Startup", "Hypergrid", "SimulatorFeatures" }, String.Empty);
+                if(!string.IsNullOrEmpty(m_GridURL) && !m_GridURL.EndsWith("/"))
+                {
+                    m_GridURL += "/";
+                }
                 m_GridName = config.GetString("GridName", string.Empty);
                 if (m_GridName == string.Empty)
                     m_GridName = Util.GetConfigVarFromSections<string>(source, "gridname",

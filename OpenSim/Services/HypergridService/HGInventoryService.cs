@@ -82,6 +82,10 @@ namespace OpenSim.Services.HypergridService
 
                 m_HomeURL = Util.GetConfigVarFromSections<string>(config, "HomeURI",
                     new string[] { "Startup", "Hypergrid", m_ConfigName }, String.Empty); 
+                if(!string.IsNullOrEmpty(m_HomeURL) && !m_HomeURL.EndsWith("/"))
+                {
+                    m_HomeURL += "/";
+                }
 
                 m_Cache = UserAccountCache.CreateUserAccountCache(m_UserAccountService);
             }

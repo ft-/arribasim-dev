@@ -98,6 +98,10 @@ namespace OpenSim.Region.CoreModules.Framework.InventoryAccess
                     new string[] { "Startup", "Hypergrid", "HGInventoryAccessModule" }, String.Empty);
                 // Legacy. Remove soon!
                 m_ThisGatekeeper = hgModuleConfig.GetString("Gatekeeper", m_ThisGatekeeper);
+                if(!string.IsNullOrEmpty(m_ThisGatekeeper) && !m_ThisGatekeeper.EndsWith("/"))
+                {
+                    m_ThisGatekeeper += "/";
+                }
             }
         }
         

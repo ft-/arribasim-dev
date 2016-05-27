@@ -120,7 +120,13 @@ namespace OpenSim.Region.DataSnapshot
                             gatekeeper = conf.GetString("Gatekeeper", gatekeeper);
                     }
                     if (!string.IsNullOrEmpty(gatekeeper))
+                    {
+                        if(!gatekeeper.EndsWith("/"))
+                        {
+                            gatekeeper += "/";
+                        }
                         m_gridinfo.Add("gatekeeperURL", gatekeeper);
+                    }
 
                     m_gridinfo.Add(
                         "name", config.Configs["DataSnapshot"].GetString("gridname", "the lost continent of hippo"));

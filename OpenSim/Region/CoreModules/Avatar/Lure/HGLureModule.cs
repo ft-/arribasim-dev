@@ -67,6 +67,10 @@ namespace OpenSim.Region.CoreModules.Avatar.Lure
                         new string[] { "Startup", "Hypergrid", "Messaging" }, String.Empty);
                     // Legacy. Remove soon!
                     m_ThisGridURL = config.Configs["Messaging"].GetString("Gatekeeper", m_ThisGridURL);
+                    if(!string.IsNullOrEmpty(m_ThisGridURL) && !m_ThisGridURL.EndsWith("/"))
+                    {
+                        m_ThisGridURL += "/";
+                    }
                     m_log.DebugFormat("[LURE MODULE]: {0} enabled", Name);
                 }
             }

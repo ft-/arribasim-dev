@@ -125,6 +125,10 @@ namespace OpenSim.Services.GridService
                 new string[] { "Startup", "Hypergrid", "GridService" }, String.Empty);
             // Legacy. Remove soon!
             m_ThisGatekeeper = gridConfig.GetString("Gatekeeper", m_ThisGatekeeper);
+            if(!m_ThisGatekeeper.EndsWith("/"))
+            {
+                m_ThisGatekeeper += "/";
+            }
             try
             {
                 m_ThisGatekeeperURI = new Uri(m_ThisGatekeeper);

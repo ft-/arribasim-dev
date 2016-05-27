@@ -115,6 +115,10 @@ namespace OpenSim.Services.LLLoginService
             m_MinLoginLevel = m_LoginServerConfig.GetInt("MinLoginLevel", 0);
             m_GatekeeperURL = Util.GetConfigVarFromSections<string>(config, "GatekeeperURI",
                 new string[] { "Startup", "Hypergrid", "LoginService" }, String.Empty);
+            if(!string.IsNullOrEmpty(m_GatekeeperURL) && !m_GatekeeperURL.EndsWith("/"))
+            {
+                m_GatekeeperURL += "/";
+            }
             m_MapTileURL = m_LoginServerConfig.GetString("MapTileURL", string.Empty);
             m_ProfileURL = m_LoginServerConfig.GetString("ProfileServerURL", string.Empty);
             m_OpenIDURL = m_LoginServerConfig.GetString("OpenIDServerURL", String.Empty);

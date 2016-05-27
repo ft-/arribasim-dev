@@ -99,6 +99,14 @@ namespace OpenSim.Region.CoreModules.Framework.InventoryAccess
                             new string[] { "Startup", "Hypergrid", "HGInventoryAccessModule" }, String.Empty);
                         // Legacy. Renove soon!
                         m_ThisGatekeeper = thisModuleConfig.GetString("Gatekeeper", m_ThisGatekeeper);
+                        if(!m_HomeURI.EndsWith("/"))
+                        {
+                            m_HomeURI += "/";
+                        }
+                        if(!m_ThisGatekeeper.EndsWith("/"))
+                        {
+                            m_ThisGatekeeper += "/";
+                        }
 
                         m_OutboundPermission = thisModuleConfig.GetBoolean("OutboundPermission", true);
                         m_RestrictInventoryAccessAbroad = thisModuleConfig.GetBoolean("RestrictInventoryAccessAbroad", true);

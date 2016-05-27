@@ -2105,7 +2105,13 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                 new string[] { "Startup", "Hypergrid" }, String.Empty);
 
             if (!string.IsNullOrEmpty(HomeURI))
+            {
+                if(!HomeURI.EndsWith("/"))
+                {
+                    HomeURI += "/";
+                }
                 return HomeURI;
+            }
 
             // Legacy. Remove soon!
             if (config.Configs["LoginService"] != null)
@@ -2114,6 +2120,10 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             if (String.IsNullOrEmpty(HomeURI))
                 HomeURI = GridUserInfo(InfoType.Home);
 
+            if(!string.IsNullOrEmpty(HomeURI) && !HomeURI.EndsWith("/"))
+            {
+                HomeURI += "/";
+            }
             return HomeURI;
         }
 
@@ -2126,11 +2136,23 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                 new string[] { "Startup", "Hypergrid" }, String.Empty);
 
             if (!string.IsNullOrEmpty(gatekeeperURI))
+            {
+                if(!gatekeeperURI.EndsWith("/"))
+                {
+                    gatekeeperURI += "/";
+                }
                 return gatekeeperURI;
+            }
 
             // Legacy. Remove soon!
             if (config.Configs["GridService"] != null)
+            {
                 gatekeeperURI = config.Configs["GridService"].GetString("Gatekeeper", gatekeeperURI);
+                if(!string.IsNullOrEmpty(gatekeeperURI) && !gatekeeperURI.EndsWith("/"))
+                {
+                    gatekeeperURI += "/";
+                }
+            }
 
             return gatekeeperURI;
         }
@@ -2174,6 +2196,10 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                 if (!string.IsNullOrEmpty(returnValue))
                 {
+                    if(!returnValue.EndsWith("/"))
+                    {
+                        returnValue += "/";
+                    }
                     return returnValue;
                 }
 

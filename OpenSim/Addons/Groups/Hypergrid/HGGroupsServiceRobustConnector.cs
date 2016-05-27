@@ -66,6 +66,10 @@ namespace OpenSim.Groups
                 new string[] { "Startup", "Hypergrid", m_ConfigName}, string.Empty); 
             if (homeURI == string.Empty)
                 throw new Exception(String.Format("[Groups.RobustHGConnector]: please provide the HomeURI [Startup] or in section {0}", m_ConfigName));
+            if(!homeURI.EndsWith("/"))
+            {
+                homeURI += "/";
+            }
 
             IConfig cnf = config.Configs[m_ConfigName];
             if (cnf == null)

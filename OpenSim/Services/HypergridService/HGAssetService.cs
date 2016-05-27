@@ -75,6 +75,11 @@ namespace OpenSim.Services.HypergridService
             if (m_HomeURL == string.Empty)
                 throw new Exception("[HGAssetService] No HomeURI specified");
 
+            if(!m_HomeURL.EndsWith("/"))
+            {
+                m_HomeURL += "/";
+            }
+
             m_Cache = UserAccountCache.CreateUserAccountCache(m_UserAccountService);
 
             // Permissions

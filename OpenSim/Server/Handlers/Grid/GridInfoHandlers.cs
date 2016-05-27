@@ -180,13 +180,25 @@ namespace OpenSim.Server.Handlers.Grid
                 new string[] { "Startup", "Hypergrid" }, String.Empty);
 
             if (!String.IsNullOrEmpty(HomeURI))
-                map["home"] = OSD.FromString(HomeURI); 
+            {
+                if(!HomeURI.EndsWith("/"))
+                {
+                    HomeURI += "/";
+                }
+                map["home"] = OSD.FromString(HomeURI);
+            }
             else // Legacy. Remove soon!
             {
                 IConfig cfg = m_Config.Configs["LoginService"];
 
                 if (null != cfg)
+                {
                     HomeURI = cfg.GetString("SRV_HomeURI", HomeURI);
+                    if(!string.IsNullOrEmpty(HomeURI) && !HomeURI.EndsWith("/"))
+                    {
+                        HomeURI += "/";
+                    }
+                }
 
                 if (!String.IsNullOrEmpty(HomeURI))
                     map["home"] = OSD.FromString(HomeURI);
