@@ -1100,9 +1100,9 @@ namespace OpenSim.Region.CoreModules.Framework.EntityTransfer
             AgentCircuitData currentAgentCircuit = sp.Scene.AuthenticateHandler.GetAgentCircuitData(sp.ControllingClient.CircuitCode);
 
             IClientIPEndpoint ipepClient;
-            string capsPath = String.Empty;
-            float dist = (float)Math.Max(sp.Scene.DefaultDrawDistance,
-                (float)Math.Max(sp.Scene.RegionInfo.RegionSizeX, sp.Scene.RegionInfo.RegionSizeY));
+            string capsPath;
+            float dist = Math.Max(sp.Scene.DefaultDrawDistance,
+                Math.Max(sp.Scene.RegionInfo.RegionSizeX, sp.Scene.RegionInfo.RegionSizeY));
             if (NeedsNewAgent(dist, oldRegionX, newRegionX, oldRegionY, newRegionY))
             {
                 m_log.DebugFormat(
@@ -1121,7 +1121,7 @@ namespace OpenSim.Region.CoreModules.Framework.EntityTransfer
             }
             else
             {
-                agentCircuit.CapsPath = sp.Scene.CapsModule.GetChildSeed(sp.UUID, reg.RegionHandle);
+                agentCircuit.CapsPath = "" + sp.Scene.CapsModule.GetChildSeed(sp.UUID, reg.RegionHandle);
                 capsPath = finalDestination.ServerURI + CapsUtil.GetCapsSeedPath(agentCircuit.CapsPath);
             }
 
