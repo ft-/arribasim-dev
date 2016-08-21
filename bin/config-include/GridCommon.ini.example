@@ -101,7 +101,7 @@
     ;; Change this to the address of your Gatekeeper service
     ;; (usually bundled with the rest of the services in one 
     ;; Robust server in port ${Const|PublicPort}, but not always)
-    Gatekeeper="${Const|BaseURL}:${Const|PublicPort}"
+    Gatekeeper="${Const|BaseURL}:${Const|PublicPort}/"
 
 
 [Messaging]
@@ -178,7 +178,7 @@
     ; Change this to your server 
     ; accessible from other grids
     ;
-    HomeURI = "${Const|BaseURL}:${Const|PublicPort}"
+    HomeURI = "${Const|BaseURL}:${Const|PublicPort}/"
 
     ;; The asset types that this grid can export to / import from other grids.
     ;; Comma separated.
@@ -201,7 +201,7 @@
     ; === HG ONLY ===
     ; Change this to your user agent server (HG robust)
     ;
-    UserAgentServerURI = "${Const|BaseURL}:${Const|PublicPort}"
+    UserAgentServerURI = "${Const|BaseURL}:${Const|PublicPort}/"
 
 [MapImageService]
     MapImageServerURI = "${Const|BaseURL}:${Const|PrivatePort}"
@@ -210,7 +210,7 @@
   ;# {ProfileServiceURL} {} {Set url to UserProfilesService} {}
   ;; Set the value of the url to your UserProfilesService
   ;; If un-set / "" the module is disabled
-  ;; ProfileServiceURL = ${Const|BaseURL}:${Const|PublicPort}
+  ;; ProfileServiceURL = "${Const|BaseURL}:${Const|PublicPort}/"
 
 [XBakes]
   ;# {URL} {} {Set URL for Baked texture service} {}
