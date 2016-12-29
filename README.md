@@ -19,3 +19,11 @@ The libs required in that case are:
 * SmartThreadPool.dll
 * ThreadedClasses.dll
 * Warp3D.dll
+
+REMARKS ABOUT HAVING THE FORK ON MAINTENANCE MODE:
+
+Since the main interest is to keep it stable now:
+If no one comes up with relevant requests or other necessary requirements,
+it can happen that there is no commit for a while.
+
+Most time is now allocated to a rewrite instead of using eventually some decades to find all the mess left.
