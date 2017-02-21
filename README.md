@@ -32,4 +32,4 @@ Most time is now allocated to a rewrite instead of using eventually some decades
 CAUTION about databases:
 
 Do not switch forth and back between 0.9 and arriba fork.
-The databases are not 100% compatible.
+The databases are NOT 100% compatible.
