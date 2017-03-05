@@ -33,6 +33,7 @@ using OpenSim.Framework.Console;
 using OpenSim.Framework.Monitoring;
 using OpenSim.Framework.Servers;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Xml;
@@ -49,11 +50,7 @@ namespace OpenSim.Server.Base
         //
         protected string[] m_Arguments;
 
-        public string ConfigDirectory
-        {
-            get;
-            private set;
-        }
+        protected string m_configDirectory = ".";
 
         // Run flag
         //
@@ -95,25 +92,20 @@ namespace OpenSim.Server.Base
 
             // Find out of the file name is a URI and remote load it if possible.
             // Load it as a local file otherwise.
-            Uri configUri;
+            Config = ReadConfigSource(iniFile);
 
-            try
+            List<string> sources = new List<string>();
+            sources.Add(iniFile);
+            
+            int sourceIndex = 1;
+            
+            while (AddIncludes(Config, sources))
             {
-                if (Uri.TryCreate(iniFile, UriKind.Absolute, out configUri) &&
-                    configUri.Scheme == Uri.UriSchemeHttp)
+                for (; sourceIndex < sources.Count; ++sourceIndex)
                 {
-                    XmlReader r = XmlReader.Create(iniFile);
-                    Config = new XmlConfigSource(r);
+                    IConfigSource s = ReadConfigSource(sources[sourceIndex]);
+                    Config.Merge(s);
                 }
-                else
-                {
-                    Config = new IniConfigSource(iniFile);
-                }
-            }
-            catch (Exception e)
-            {
-                System.Console.WriteLine("Error reading from config source.  {0}", e.Message);
-                Environment.Exit(1);
             }
 
             // Merge OpSys env vars
@@ -131,9 +123,11 @@ namespace OpenSim.Server.Base
                 startupConfig = Config.Configs["Startup"];
             }
 
-            ConfigDirectory = startupConfig.GetString("ConfigDirectory", ".");
-
-            prompt = startupConfig.GetString("Prompt", prompt);
+            if(null != startupConfig)
+            {
+                m_configDirectory = startupConfig.GetString("ConfigDirectory", m_configDirectory);
+                prompt = startupConfig.GetString("Prompt", prompt);
+            }
 
             // Allow derived classes to load config before the console is opened.
             ReadConfig();
@@ -226,6 +220,116 @@ namespace OpenSim.Server.Base
 
         protected virtual void Initialise()
         {
+        }
+
+
+        /// <summary>
+        /// Adds the included files as ini configuration files
+        /// </summary>
+        /// <param name="sources">List of URL strings or filename strings</param>
+        private bool AddIncludes(IConfigSource configSource, List<string> sources)
+        {
+            bool sourcesAdded = false;
+
+            //loop over config sources
+            foreach (IConfig config in configSource.Configs)
+            {
+                // Look for Include-* in the key name
+                string[] keys = config.GetKeys();
+                foreach (string k in keys)
+                {
+                    if (k.StartsWith("Include-"))
+                    {
+                        // read the config file to be included.
+                        string file = config.GetString(k);
+                        if (IsUri(file))
+                        {
+                            if (!sources.Contains(file))
+                            {
+                                sourcesAdded = true;
+                                sources.Add(file);
+                            }
+                        }
+                        else
+                        {
+                            string basepath = Path.GetFullPath(m_configDirectory);
+                            // Resolve relative paths with wildcards
+                            string chunkWithoutWildcards = file;
+                            string chunkWithWildcards = string.Empty;
+                            int wildcardIndex = file.IndexOfAny(new char[] { '*', '?' });
+                            if (wildcardIndex != -1)
+                            {
+                                chunkWithoutWildcards = file.Substring(0, wildcardIndex);
+                                chunkWithWildcards = file.Substring(wildcardIndex);
+                            }
+                            string path = Path.Combine(basepath, chunkWithoutWildcards);
+                            path = Path.GetFullPath(path) + chunkWithWildcards;
+                            string[] paths = Util.Glob(path);
+
+                            // If the include path contains no wildcards, then warn the user that it wasn't found.
+                            if (wildcardIndex == -1 && paths.Length == 0)
+                            {
+                                Console.WriteLine("[CONFIG]: Could not find include file {0}", path);
+                            }
+                            else
+                            {
+                                foreach (string p in paths)
+                                {
+                                    if (!sources.Contains(p))
+                                    {
+                                        sourcesAdded = true;
+                                        sources.Add(p);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return sourcesAdded;
+        }
+
+        /// <summary>
+        /// Check if we can convert the string to a URI
+        /// </summary>
+        /// <param name="file">String uri to the remote resource</param>
+        /// <returns>true if we can convert the string to a Uri object</returns>
+        bool IsUri(string file)
+        {
+            Uri configUri;
+
+            return Uri.TryCreate(file, UriKind.Absolute,
+                    out configUri) && configUri.Scheme == Uri.UriSchemeHttp;
+        }
+
+        IConfigSource ReadConfigSource(string iniFile)
+        {
+            // Find out of the file name is a URI and remote load it if possible.
+            // Load it as a local file otherwise.
+            Uri configUri;
+            IConfigSource s = null;
+
+            try
+            {
+                if (Uri.TryCreate(iniFile, UriKind.Absolute, out configUri) &&
+                    configUri.Scheme == Uri.UriSchemeHttp)
+                {
+                    XmlReader r = XmlReader.Create(iniFile);
+                    s = new XmlConfigSource(r);
+                }
+                else
+                {
+                    s = new IniConfigSource(iniFile);
+                }
+            }
+            catch (Exception e)
+            {
+                System.Console.WriteLine("Error reading from config source.  {0}", e.Message);
+                Environment.Exit(1);
+            }
+
+            return s;
         }
     }
 }
