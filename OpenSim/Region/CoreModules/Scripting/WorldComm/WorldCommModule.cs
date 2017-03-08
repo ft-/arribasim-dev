@@ -594,11 +594,8 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
                             li.GetHandle().Equals(handle))
                     {
                         lis.Value.Remove(li);
-                        if (lis.Value.Count == 0)
-                        {
-                            m_listeners.Remove(lis.Key);
-                            Interlocked.Decrement(ref m_curlisteners);
-                        }
+                        Interlocked.Decrement(ref m_curlisteners);
+                        m_listeners.RemoveIf(lis.Key, delegate(ThreadedClasses.RwLockedList<ListenerInfo> list) { return list.Count == 0; });
                         // there should be only one, so we bail out early
                         return;
                     }
@@ -627,7 +624,7 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
                 foreach (ListenerInfo li in removedListeners)
                 {
                     lis.Value.Remove(li);
-                    m_curlisteners--;
+                    Interlocked.Decrement(ref m_curlisteners);
                 }
                 removedListeners.Clear();
                 if (lis.Value.Count == 0)
@@ -638,7 +635,7 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
             }
             foreach (int channel in emptyChannels)
             {
-                m_listeners.Remove(channel);
+                m_listeners.RemoveIf(channel, delegate(ThreadedClasses.RwLockedList<ListenerInfo> list) { return list.Count == 0; });
             }
         }
 
