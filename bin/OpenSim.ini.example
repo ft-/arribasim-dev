@@ -46,6 +46,9 @@
     ;# {BaseURL} {} {BaseURL} {"http://example.com","http://127.0.0.1"} "http://127.0.0.1"
     BaseURL = http://127.0.0.1
     
+    ;# {PrivateBaseURL} {} {BaseURL} normally the value as above but in special cases replace this with the PrivateBaseURL if necessary
+    PrivateBaseURL = ${Const|BaseURL}
+    
     ;# {PublicPort} {} {PublicPort} {8002} "8002"
     PublicPort = "8002"
 
@@ -602,7 +605,7 @@
     ;# {OfflineMessageURL} {OfflineMessageModule:OfflineMessageModule Offline Message Module V2:Offline Message Module V2} {URL of offline messaging service} {}
     ;; URL of web service for offline message storage. Leave it commented if your service is local to the sim.
     ; OfflineMessageURL = ${Const|BaseURL}/Offline.php
-    ; OfflineMessageURL = ${Const|BaseURL}:${Const|PrivatePort}
+    ; OfflineMessageURL = ${Const|PrivateBaseURL}:${Const|PrivatePort}
 
     ;# {StorageProvider} {Offline Message Module V2:Offline Message Module V2} {DLL that provides the storage interface} {OpenSim.Data.MySQL.dll}
     ;; For standalones, this is the storage dll.
@@ -1037,7 +1040,7 @@
     ;; URI for the groups services of this grid
     ;; e.g. http://yourxmlrpcserver.com/xmlrpc.php for Flotsam XmlRpc
     ;; or http://mygridserver.com:82/Grid/ for SimianGrid
-    ;; or http:://${Const|BaseURL}:${Const|PrivatePort} for robust, V2
+    ;; or http:://${Const|PrivateBaseURL}:${Const|PrivatePort} for robust, V2
     ;; Leave it commented for standalones, V2
     ; GroupsServerURI = ""
 

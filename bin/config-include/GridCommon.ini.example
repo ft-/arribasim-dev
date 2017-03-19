@@ -73,13 +73,13 @@
     ;
     ; Change this to your grid-wide asset server.  Do not add a slash to the end of any of these addresses.
     ;
-    AssetServerURI = "${Const|BaseURL}:${Const|PrivatePort}"
+    AssetServerURI = "${Const|PrivateBaseURL}:${Const|PrivatePort}"
 
 [InventoryService]
     ;
     ; Change this to your grid-wide inventory server
     ;
-    InventoryServerURI = "${Const|BaseURL}:${Const|PrivatePort}"
+    InventoryServerURI = "${Const|PrivateBaseURL}:${Const|PrivatePort}"
 
 [GridInfo]
     ;
@@ -91,7 +91,7 @@
     ;
     ; Change this to your grid-wide grid server
     ;
-    GridServerURI = "${Const|BaseURL}:${Const|PrivatePort}"
+    GridServerURI = "${Const|PrivateBaseURL}:${Const|PrivatePort}"
     ;AllowHypergridMapSearch = true
 
     ;; Directory for map tile images of linked regions
@@ -115,37 +115,37 @@
     ;
     ; Change this to your grid-wide grid server
     ;
-    AvatarServerURI = "${Const|BaseURL}:${Const|PrivatePort}"
+    AvatarServerURI = "${Const|PrivateBaseURL}:${Const|PrivatePort}"
 
 [PresenceService]
     ;
     ; Change this to your grid-wide presence server
     ;
-    PresenceServerURI = "${Const|BaseURL}:${Const|PrivatePort}"
+    PresenceServerURI = "${Const|PrivateBaseURL}:${Const|PrivatePort}"
 
 [UserAccountService]
     ;
     ; Change this to your grid-wide user accounts server
     ;
-    UserAccountServerURI = "${Const|BaseURL}:${Const|PrivatePort}"
+    UserAccountServerURI = "${Const|PrivateBaseURL}:${Const|PrivatePort}"
 
 [GridUserService]
     ;
     ; Change this to your grid-wide user accounts server
     ;
-    GridUserServerURI = "${Const|BaseURL}:${Const|PrivatePort}"
+    GridUserServerURI = "${Const|PrivateBaseURL}:${Const|PrivatePort}"
 
 [AuthenticationService]
     ;
     ; Change this to your grid-wide authentication server
     ;
-    AuthenticationServerURI = "${Const|BaseURL}:${Const|PrivatePort}"
+    AuthenticationServerURI = "${Const|PrivateBaseURL}:${Const|PrivatePort}"
 
 [FriendsService]
     ;
     ; Change this to your grid-wide friends server
     ;
-    FriendsServerURI = "${Const|BaseURL}:${Const|PrivatePort}"
+    FriendsServerURI = "${Const|PrivateBaseURL}:${Const|PrivatePort}"
 
 [HGInventoryAccessModule]
     ;
@@ -204,7 +204,7 @@
     UserAgentServerURI = "${Const|BaseURL}:${Const|PublicPort}/"
 
 [MapImageService]
-    MapImageServerURI = "${Const|BaseURL}:${Const|PrivatePort}"
+    MapImageServerURI = "${Const|PrivateBaseURL}:${Const|PrivatePort}"
 
 [UserProfiles]
   ;# {ProfileServiceURL} {} {Set url to UserProfilesService} {}
@@ -216,7 +216,7 @@
   ;# {URL} {} {Set URL for Baked texture service} {}
   ;; Sets the URL for the baked texture ROBUST service.
   ;; Disabled when unset.
-  ;; URL = ${Const|BaseURL}:${Const|PrivatePort}
+  ;; URL = ${Const|PrivateBaseURL}:${Const|PrivatePort}
 
 [AuthorizationService]
   ; If you have regions with access restrictions
