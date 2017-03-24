@@ -568,7 +568,7 @@
     ; meant to override the MapImage and search server url given at login, and varying 
     ; on a sim-basis.
     ; Viewers that don't understand it, will ignore it
-    ;MapImageServerURI = "http://127.0.0.1:9000/"
+    ;MapTileURL = "http://127.0.0.1:9000/"
     ;# {SearchServerURI} {} {URL of the search server} {}
     ;SearchServerURI = "http://127.0.0.1:9000/"
 
