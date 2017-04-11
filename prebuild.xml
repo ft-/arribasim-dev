@@ -2188,6 +2188,7 @@
       <Reference name="OpenMetaverse.StructuredData" path="../../../../../../bin/"/>
       <Reference name="OpenSim"/>
       <Reference name="OpenSim.Framework"/>
+      <Reference name="OpenSim.Services.Connectors"/>
       <Reference name="OpenSim.Framework.Communications"/>
       <Reference name="OpenSim.Framework.Console"/>
       <Reference name="OpenSim.Framework.Monitoring"/>
