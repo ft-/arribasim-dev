@@ -1648,6 +1648,15 @@ namespace OpenSim.Region.Framework.Scenes
                         // If we've found the item in the user's inventory or in the library
                         if (item != null)
                         {
+                            if ((item.AssetType == (int)AssetType.LSLText ||
+                                item.AssetType == (int)AssetType.LSLBytecode ||
+                                item.InvType == (int)InventoryType.LSL) &&
+                                !Permissions.CanEditObjectInventory(part.UUID, remoteClient.AgentId))
+                            {
+                                /* scripts for non-edit people should never work here */
+                                return;
+                            }
+
                             part.ParentGroup.AddInventoryItem(remoteClient.AgentId, primLocalID, item, copyID);
                             m_log.InfoFormat(
                                 "[PRIM INVENTORY]: Update with item {0} requested of prim {1} for {2}",
