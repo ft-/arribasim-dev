@@ -54,6 +54,9 @@
 
     ;# {PrivatePort} {} {PrivatePort} {8003} "8003"
     PrivatePort = "8003"
+    
+    ; following line is your host name IP address whatever for to be used
+    ExternalHostNameForLSL = 127.0.0.1
 
 
 [Startup]
@@ -477,7 +480,7 @@
     ;; Hostname to use in llRequestURL/llRequestSecureURL
     ;; if not defined - default machine name is being used
     ;; (on Windows this mean NETBIOS name - useably only inside local network)
-    ExternalHostNameForLSL = ${Const|BaseURL}
+    ExternalHostNameForLSL = ${Const|ExternalHostNameForLSL}
 
     ;# {shard} {} {Name to use for X-Secondlife-Shard header? (press enter if unsure)} {} OpenSim
     ;; What is reported as the "X-Secondlife-Shard"
