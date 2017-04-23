@@ -2153,7 +2153,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
             IConfigSource config = m_ScriptEngine.ConfigSource;
             string HomeURI = Util.GetConfigVarFromSections<string>(config, "HomeURI", 
-                new string[] { "Startup", "Hypergrid" }, String.Empty);
+                new string[] { "Startup", "Hypergrid" }, String.Empty).ToLowerInvariant();
 
             if (!string.IsNullOrEmpty(HomeURI))
             {
@@ -2184,7 +2184,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
             IConfigSource config = m_ScriptEngine.ConfigSource;
             string gatekeeperURI = Util.GetConfigVarFromSections<string>(config, "GatekeeperURI",
-                new string[] { "Startup", "Hypergrid" }, String.Empty);
+                new string[] { "Startup", "Hypergrid" }, String.Empty).ToLowerInvariant();
 
             if (!string.IsNullOrEmpty(gatekeeperURI))
             {
@@ -2198,7 +2198,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             // Legacy. Remove soon!
             if (config.Configs["GridService"] != null)
             {
-                gatekeeperURI = config.Configs["GridService"].GetString("Gatekeeper", gatekeeperURI);
+                gatekeeperURI = config.Configs["GridService"].GetString("Gatekeeper", gatekeeperURI).ToLowerInvariant();
                 if(!string.IsNullOrEmpty(gatekeeperURI) && !gatekeeperURI.EndsWith("/"))
                 {
                     gatekeeperURI += "/";
@@ -2243,7 +2243,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             {
                 IConfigSource config = m_ScriptEngine.ConfigSource;
                 returnValue = Util.GetConfigVarFromSections<string>(config, "HomeURI",
-                    new string[] { "Startup", "Hypergrid" }, String.Empty);
+                    new string[] { "Startup", "Hypergrid" }, String.Empty).ToLowerInvariant();
 
                 if (!string.IsNullOrEmpty(returnValue))
                 {
@@ -2257,7 +2257,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                 // Legacy. Remove soon!
                 if (config.Configs["LoginService"] != null)
                 {
-                    returnValue = config.Configs["LoginService"].GetString("SRV_HomeURI", returnValue);
+                    returnValue = config.Configs["LoginService"].GetString("SRV_HomeURI", returnValue).ToLowerInvariant();
                 }
 
                 if (string.IsNullOrEmpty(returnValue))

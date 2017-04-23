@@ -177,7 +177,7 @@ namespace OpenSim.Server.Handlers.Grid
             }
 
             string HomeURI = Util.GetConfigVarFromSections<string>(m_Config, "HomeURI",
-                new string[] { "Startup", "Hypergrid" }, String.Empty);
+                new string[] { "Startup", "Hypergrid" }, String.Empty).ToLowerInvariant();
 
             if (!String.IsNullOrEmpty(HomeURI))
             {
@@ -193,7 +193,7 @@ namespace OpenSim.Server.Handlers.Grid
 
                 if (null != cfg)
                 {
-                    HomeURI = cfg.GetString("SRV_HomeURI", HomeURI);
+                    HomeURI = cfg.GetString("SRV_HomeURI", HomeURI).ToLowerInvariant();
                     if(!string.IsNullOrEmpty(HomeURI) && !HomeURI.EndsWith("/"))
                     {
                         HomeURI += "/";

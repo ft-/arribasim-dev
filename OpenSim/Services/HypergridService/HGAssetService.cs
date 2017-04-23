@@ -71,7 +71,7 @@ namespace OpenSim.Services.HypergridService
                 throw new Exception(String.Format("Unable to create UserAccountService from {0}", userAccountsDll));
 
             m_HomeURL = Util.GetConfigVarFromSections<string>(config, "HomeURI",
-                new string[] { "Startup", "Hypergrid", configName }, string.Empty);
+                new string[] { "Startup", "Hypergrid", configName }, string.Empty).ToLowerInvariant();
             if (m_HomeURL == string.Empty)
                 throw new Exception("[HGAssetService] No HomeURI specified");
 

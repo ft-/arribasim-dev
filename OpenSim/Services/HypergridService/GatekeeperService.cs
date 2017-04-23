@@ -96,7 +96,7 @@ namespace OpenSim.Services.HypergridService
                 m_AllowTeleportsToAnyRegion = serverConfig.GetBoolean("AllowTeleportsToAnyRegion", true);
                 m_ExternalName = Util.GetConfigVarFromSections<string>(config, "GatekeeperURI",
                     new string[] { "Startup", "Hypergrid", "GatekeeperService" }, String.Empty);
-                m_ExternalName = serverConfig.GetString("ExternalName", m_ExternalName);
+                m_ExternalName = serverConfig.GetString("ExternalName", m_ExternalName).ToLowerInvariant();
                 if (m_ExternalName != string.Empty && !m_ExternalName.EndsWith("/"))
                     m_ExternalName = m_ExternalName + "/";
 
@@ -159,7 +159,7 @@ namespace OpenSim.Services.HypergridService
         {
             regionID = UUID.Zero;
             regionHandle = 0;
-            externalName = m_ExternalName + ((regionName != string.Empty) ? " " + regionName : "");
+            externalName = m_ExternalName.ToLowerInvariant() + ((regionName != string.Empty) ? " " + regionName : "");
             imageURL = string.Empty;
             reason = string.Empty;
             GridRegion region = null;
@@ -466,7 +466,7 @@ namespace OpenSim.Services.HypergridService
                 return false;
             }
 
-            if (userURL == m_ExternalName)
+            if (userURL.ToLowerInvariant() == m_ExternalName.ToLowerInvariant())
             {
                 return m_UserAgentService.VerifyAgent(aCircuit.SessionID, aCircuit.ServiceSessionID);
             }
@@ -496,7 +496,7 @@ namespace OpenSim.Services.HypergridService
                 return false;
 
             char[] trailing_slash = new char[] { '/' };
-            string addressee = parts[0].TrimEnd(trailing_slash);
+            string addressee = parts[0].TrimEnd(trailing_slash).ToLowerInvariant();
             string externalname = m_ExternalName.TrimEnd(trailing_slash);
             m_log.DebugFormat("[GATEKEEPER SERVICE]: Verifying {0} against {1}", addressee, externalname);
 

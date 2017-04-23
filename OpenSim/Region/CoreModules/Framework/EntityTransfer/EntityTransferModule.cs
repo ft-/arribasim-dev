@@ -209,11 +209,11 @@ namespace OpenSim.Region.CoreModules.Framework.EntityTransfer
             IConfig hypergridConfig = source.Configs["Hypergrid"];
             if (hypergridConfig != null)
             {
-                m_ThisHomeURI = hypergridConfig.GetString("HomeURI", string.Empty);
+                m_ThisHomeURI = hypergridConfig.GetString("HomeURI", string.Empty).ToLowerInvariant();
                 if (m_ThisHomeURI != string.Empty && !m_ThisHomeURI.EndsWith("/"))
                     m_ThisHomeURI += '/';
 
-                m_GatekeeperURI = hypergridConfig.GetString("GatekeeperURI", string.Empty);
+                m_GatekeeperURI = hypergridConfig.GetString("GatekeeperURI", string.Empty).ToLowerInvariant();
                 if (m_GatekeeperURI != string.Empty && !m_GatekeeperURI.EndsWith("/"))
                     m_GatekeeperURI += '/';
             }

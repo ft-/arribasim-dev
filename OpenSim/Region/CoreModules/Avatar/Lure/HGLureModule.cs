@@ -66,7 +66,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Lure
                     m_ThisGridURL = Util.GetConfigVarFromSections<string>(config, "GatekeeperURI", 
                         new string[] { "Startup", "Hypergrid", "Messaging" }, String.Empty);
                     // Legacy. Remove soon!
-                    m_ThisGridURL = config.Configs["Messaging"].GetString("Gatekeeper", m_ThisGridURL);
+                    m_ThisGridURL = config.Configs["Messaging"].GetString("Gatekeeper", m_ThisGridURL).ToLowerInvariant();
                     if(!string.IsNullOrEmpty(m_ThisGridURL) && !m_ThisGridURL.EndsWith("/"))
                     {
                         m_ThisGridURL += "/";

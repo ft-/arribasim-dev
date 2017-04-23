@@ -97,7 +97,7 @@ namespace OpenSim.Region.CoreModules.Framework.InventoryAccess
                 m_ThisGatekeeper = Util.GetConfigVarFromSections<string>(source, "GatekeeperURI",
                     new string[] { "Startup", "Hypergrid", "HGInventoryAccessModule" }, String.Empty);
                 // Legacy. Remove soon!
-                m_ThisGatekeeper = hgModuleConfig.GetString("Gatekeeper", m_ThisGatekeeper);
+                m_ThisGatekeeper = hgModuleConfig.GetString("Gatekeeper", m_ThisGatekeeper).ToLowerInvariant();
                 if(!string.IsNullOrEmpty(m_ThisGatekeeper) && !m_ThisGatekeeper.EndsWith("/"))
                 {
                     m_ThisGatekeeper += "/";
