@@ -411,17 +411,14 @@ namespace OpenSim.Region.CoreModules.Avatar.Inventory.Archiver
             {
 //                m_log.DebugFormat("[INVENTORY ARCHIVER]: Found creator {0} via OSPA resolution", ospResolvedId);
                 
-//                item.CreatorIdAsUuid = ospResolvedId;
-
                 // Don't preserve the OSPA in the creator id (which actually gets persisted to the
                 // database).  Instead, replace with the UUID that we found.
                 item.CreatorId = ospResolvedId.ToString();
                 item.CreatorData = string.Empty;
             }
-            else if (string.IsNullOrEmpty(item.CreatorData))
+            else if (string.IsNullOrEmpty(item.CreatorData) && (item.CreatorId.Equals(UUID.Zero.ToString()) || !UUID.TryParse(item.CreatorId, out ospResolvedId)))
             {
                 item.CreatorId = m_userInfo.PrincipalID.ToString();
-//                item.CreatorIdAsUuid = new UUID(item.CreatorId);
             }
 
             item.Owner = m_userInfo.PrincipalID;

@@ -591,16 +591,17 @@ namespace OpenSim.Region.CoreModules.World.Archiver
             {
                 if (string.IsNullOrEmpty(part.CreatorData))
                 {
-                    if (!ResolveUserUuid(scene, part.CreatorID))
+                    if (!ResolveUserUuid(scene, part.CreatorID) && part.CreatorID == UUID.Zero)
                         part.CreatorID = m_defaultUser;
                 }
+
                 if (UserManager != null)
                     UserManager.AddUser(part.CreatorID, part.CreatorData);
 
-                if (!ResolveUserUuid(scene, part.OwnerID))
+                if (!ResolveUserUuid(scene, part.OwnerID) && part.OwnerID == UUID.Zero)
                     part.OwnerID = m_defaultUser;
 
-                if (!ResolveUserUuid(scene, part.LastOwnerID))
+                if (!ResolveUserUuid(scene, part.LastOwnerID) && part.LastOwnerID == UUID.Zero)
                     part.LastOwnerID = m_defaultUser;
 
                 if (!ResolveGroupUuid(part.GroupID))
@@ -615,14 +616,14 @@ namespace OpenSim.Region.CoreModules.World.Archiver
                 // being no copy/no mod for everyone
                 part.TaskInventory.ForEach(delegate(KeyValuePair<UUID, TaskInventoryItem> kvp)
                 {
-                    if (!(ResolveUserUuid(scene, kvp.Value.OwnerID) || ResolveGroupUuid(kvp.Value.OwnerID)))
+                    if (!(ResolveUserUuid(scene, kvp.Value.OwnerID) || ResolveGroupUuid(kvp.Value.OwnerID)) && kvp.Value.OwnerID == UUID.Zero)
                     {
                         kvp.Value.OwnerID = m_defaultUser;
                     }
 
                     if (string.IsNullOrEmpty(kvp.Value.CreatorData))
                     {
-                        if (!ResolveUserUuid(scene, kvp.Value.CreatorID))
+                        if (!ResolveUserUuid(scene, kvp.Value.CreatorID) && kvp.Value.CreatorID == UUID.Zero)
                             kvp.Value.CreatorID = m_defaultUser;
                     }
 
