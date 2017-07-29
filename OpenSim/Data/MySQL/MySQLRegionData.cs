@@ -79,11 +79,11 @@ namespace OpenSim.Data.MySQL
 
         public RegionData Get(int posX, int posY, UUID scopeID)
         {
-            string command = "select * from `"+m_Realm+"` where locX = ?posX and locY = ?posY";
+            string command = "select * from `"+m_Realm+"` where locX <= ?posX and locY <= ?posY AND locX+sizeX>?posX AND locY+sizeY>?posY";
             if (scopeID != UUID.Zero)
                 command += " and ScopeID = ?scopeID";
 
-            using (MySqlCommand cmd = new MySqlCommand(command))
+            using (MySqlCommand cmd = new MySqlCommand(command + " LIMIT 1"))
             {
                 cmd.Parameters.AddWithValue("?posX", posX.ToString());
                 cmd.Parameters.AddWithValue("?posY", posY.ToString());
@@ -118,7 +118,7 @@ namespace OpenSim.Data.MySQL
 
         public List<RegionData> Get(int startX, int startY, int endX, int endY, UUID scopeID)
         {
-            string command = "select * from `"+m_Realm+"` where locX between ?startX and ?endX and locY between ?startY and ?endY";
+            string command = "select * from `"+m_Realm+"` where locX+sizeX > ?startx AND locX <= ?endX AND locY + sizeY > ?startY AND locY <= ?endY";
             if (scopeID != UUID.Zero)
                 command += " and ScopeID = ?scopeID";
 
