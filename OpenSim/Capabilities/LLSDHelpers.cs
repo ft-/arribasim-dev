@@ -160,7 +160,7 @@ namespace OpenSim.Framework.Capabilities
                                 else if (enumerator.Value is Boolean && field.FieldType == typeof(int))
                                 {
                                     int i = (bool)enumerator.Value ? 1 : 0;
-                                    field.SetValue(obj, (object)i);
+                                    field.SetValue(obj, i);
                                 }
                                 else
                                 {
