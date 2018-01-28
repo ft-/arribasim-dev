@@ -1552,7 +1552,7 @@ namespace OpenSim.Region.Framework.Scenes
                 {
                     client.SendInventoryFolderDetails(
                         fold.Owner, folder.ID, fold.RequestListOfItems(),
-                        fold.RequestListOfFolders(), fold.Version, fetchFolders, fetchItems);
+                        fold.RequestListOfFolders(), (int)fold.Version, fetchFolders, fetchItems);
                     return;
                 }
             }
@@ -1597,7 +1597,7 @@ namespace OpenSim.Region.Framework.Scenes
 
                 client.SendInventoryFolderDetails(
                     client.AgentId, folder.ID, contents.Items, contents.Folders,
-                    containingFolder.Version, fetchFolders, fetchItems);
+                    (int)containingFolder.Version, fetchFolders, fetchItems);
             }
         }
 

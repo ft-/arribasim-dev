@@ -409,7 +409,7 @@ namespace OpenSim.Services.InventoryService
             }
 
             if (xFolder.version < check.Version)
-                xFolder.version = check.Version;
+                xFolder.version = (int)check.Version;
 
             xFolder.folderID = check.ID;
 

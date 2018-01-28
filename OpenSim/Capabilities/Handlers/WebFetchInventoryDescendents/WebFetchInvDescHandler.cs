@@ -265,7 +265,7 @@ namespace OpenSim.Capabilities.Handlers
 //                        "[WEB FETCH INV DESC HANDLER]: Retrieved folder {0} {1} for agent id {2}",
 //                        containingFolder.Name, containingFolder.ID, agentID);
 
-                    version = containingFolder.Version;
+                    version = (int)containingFolder.Version;
 
                     if (fetchItems)
                     {

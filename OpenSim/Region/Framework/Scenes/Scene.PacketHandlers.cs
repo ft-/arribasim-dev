@@ -468,7 +468,7 @@ namespace OpenSim.Region.Framework.Scenes
                 {
                     remoteClient.SendInventoryFolderDetails(
                         fold.Owner, folderID, fold.RequestListOfItems(),
-                        fold.RequestListOfFolders(), fold.Version, fetchFolders, fetchItems);
+                        fold.RequestListOfFolders(), (int)fold.Version, fetchFolders, fetchItems);
                     return;
                 }
             }
