@@ -214,7 +214,16 @@ namespace OpenSim.Modules.Currency
 		public void Initialise(Scene scene, IConfigSource source)
 		{
 			Initialise(source);
-			AddRegion(scene);
+			if(source != null)
+			{
+				IConfig economyConfig = source.Configs["Economy"];
+
+				if (economyConfig == null || economyConfig.GetString("EconomyModule", string.Empty)!=Name)
+				{
+					return;
+				}
+				AddRegion(scene);
+			}
 		}
 
 
