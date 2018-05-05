@@ -1576,7 +1576,7 @@ namespace OpenSim.Region.Physics.BulletSPlugin
         public void ComputeAngularDeflection()
         {   
 
-            if (BSParam.VehicleEnableAngularDeflection && m_angularDeflectionEfficiency != 0 && VehicleForwardSpeed > 0.2)
+            if (BSParam.VehicleEnableAngularDeflection && m_angularDeflectionEfficiency != 0)
             {
                 Vector3 deflectContributionV = Vector3.Zero;
 
@@ -1674,7 +1674,7 @@ namespace OpenSim.Region.Physics.BulletSPlugin
                 mixedYawAngle = ClampInRange(-12, mixedYawAngle, 12);
 
                 // Build the force vector to change rotation from what it is to what it should be
-                bankingContributionV.Z = -mixedYawAngle;
+                bankingContributionV.X = -mixedYawAngle;
 
                 // Don't do it all at once. Fudge because 1 second is too fast with most user defined roll as PI*4.
                 bankingContributionV /= m_bankingTimescale * BSParam.VehicleAngularBankingTimescaleFudge;
