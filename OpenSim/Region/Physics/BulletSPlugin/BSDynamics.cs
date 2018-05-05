@@ -76,9 +76,9 @@ namespace OpenSim.Region.Physics.BulletSPlugin
         private float m_linearMotorTimescale = 1;
         private Vector3 m_lastLinearVelocityVector = Vector3.Zero;
         private Vector3 m_lastPositionVector = Vector3.Zero;
-        // private bool m_LinearMotorSetLastFrame = false;
-        // private Vector3 m_linearMotorOffset = Vector3.Zero;
 
+        //Angular properties
+        // private int m_angularMotorApply = 0;                            // application frame counter
         //Angular properties
         private BSVMotor m_angularMotor = new BSVMotor("AngularMotor");
         private Vector3 m_angularMotorDirection = Vector3.Zero;         // angular velocity requested by LSL motor
@@ -1050,10 +1050,10 @@ namespace OpenSim.Region.Physics.BulletSPlugin
             Vector3 frictionFactorV = ComputeFrictionFactor(m_linearFrictionTimescale, pTimestep);
             linearMotorCorrectionV -= (currentVelV * frictionFactorV);
 
-            // Motor is vehicle coordinates. Rotate it to world coordinates
+            // If we're a ground vehicle, don't add any upward Z movement on deflection
             Vector3 linearMotorVelocityW = linearMotorCorrectionV * VehicleFrameOrientation;
 
-            // If we're a ground vehicle, don't add any upward Z movement
+            // If we're a ground vehicle, don't add any upward Z movement on world coord
             if ((m_flags & VehicleFlag.LIMIT_MOTOR_UP) != 0)
             {
                 if (linearMotorVelocityW.Z > 0f)
@@ -1312,6 +1312,7 @@ namespace OpenSim.Region.Physics.BulletSPlugin
         private void ApplyGravity(float pTimeStep)
         {
             Vector3 appliedGravity = m_VehicleGravity * m_vehicleMass;
+            appliedGravity += appliedGravity * m_VehicleBuoyancy;
 
             // Hack to reduce downward force if the vehicle is probably sitting on the ground
             if (ControllingPrim.HasSomeCollision && IsGroundVehicle)
@@ -1338,8 +1339,8 @@ namespace OpenSim.Region.Physics.BulletSPlugin
 
             ComputeAngularDeflection();
 
-            ComputeAngularBanking();
-
+            ComputeAngularBanking(pTimestep);
+            // ==================================================================
             // ==================================================================
             if (VehicleRotationalVelocity.ApproxEquals(Vector3.Zero, 0.0001f))
             {
@@ -1392,7 +1393,7 @@ namespace OpenSim.Region.Physics.BulletSPlugin
             Vector3 currentAngularV = VehicleRotationalVelocity * Quaternion.Inverse(VehicleFrameOrientation);
             Vector3 angularMotorContributionV = m_angularMotor.Step(pTimestep, currentAngularV);
 
-            // ==================================================================
+            // Reduce any velocity by friction.
             // From http://wiki.secondlife.com/wiki/LlSetVehicleFlags :
             //    This flag prevents linear deflection parallel to world z-axis. This is useful
             //    for preventing ground vehicles with large linear deflection, like bumper cars,
@@ -1436,7 +1437,7 @@ namespace OpenSim.Region.Physics.BulletSPlugin
                 {
                     case 0:
                         {
-                            //Another formula to try got from :
+
                             //http://answers.unity3d.com/questions/10425/how-to-stabilize-angular-motion-alignment-of-hover.html
 
                             // Flipping what was originally a timescale into a speed variable and then multiplying it by 2
@@ -1653,19 +1654,14 @@ namespace OpenSim.Region.Physics.BulletSPlugin
         //      world z-axis is determined by the VEHICLE_BANKING_TIMESCALE. So if you want the vehicle to
         //      bank quickly then give it a banking timescale of about a second or less, otherwise you can
         //      make a sluggish vehicle by giving it a timescale of several seconds.
-        public void ComputeAngularBanking()
+        public void ComputeAngularBanking(float pTimestep)
         {
             if (BSParam.VehicleEnableAngularBanking && m_bankingEfficiency != 0 && m_verticalAttractionTimescale < m_verticalAttractionCutoff)
             {
                 Vector3 bankingContributionV = Vector3.Zero;
 
-                // Rotate a UnitZ vector (pointing up) to how the vehicle is oriented.
-                // As the vehicle rolls to the right or left, the Y value will increase from
-                //     zero (straight up) to 1 or -1 (full tilt right  or left)
-                Vector3 rollComponents = Vector3.UnitZ * VehicleFrameOrientation;
-
                 // Figure out the yaw value for this much roll.
-                float yawAngle = VehicleRotationalVelocity.Z * m_bankingEfficiency;
+                float yawAngle = (VehicleRotationalVelocity * Quaternion.Inverse(VehicleFrameOrientation)).Z * m_bankingEfficiency;
                 //        actual error  =       static turn error            +           dynamic turn error
                 float mixedYawAngle =(yawAngle * (1f - m_bankingMix)) + ((yawAngle * m_bankingMix) * VehicleForwardSpeed);
 
@@ -1676,15 +1672,9 @@ namespace OpenSim.Region.Physics.BulletSPlugin
                 // Build the force vector to change rotation from what it is to what it should be
                 bankingContributionV.X = -mixedYawAngle;
 
-                // Don't do it all at once. Fudge because 1 second is too fast with most user defined roll as PI*4.
                 bankingContributionV /= m_bankingTimescale * BSParam.VehicleAngularBankingTimescaleFudge;
 
-                //VehicleRotationalVelocity += bankingContributionV * VehicleFrameOrientation;
-                VehicleRotationalVelocity += bankingContributionV;
-
-
-                VDetailLog("{0},  MoveAngular,Banking,rollComp={1},speed={2},rollComp={3},yAng={4},mYAng={5},ret={6}",
-                            ControllingPrim.LocalID, rollComponents, VehicleForwardSpeed, rollComponents, yawAngle, mixedYawAngle, bankingContributionV);
+                VehicleRotationalVelocity += bankingContributionV * pTimestep * VehicleFrameOrientation;
             }
         }
 
