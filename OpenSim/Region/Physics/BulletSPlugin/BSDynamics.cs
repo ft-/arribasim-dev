@@ -1665,7 +1665,7 @@ namespace OpenSim.Region.Physics.BulletSPlugin
                 Vector3 rollComponents = Vector3.UnitZ * VehicleFrameOrientation;
 
                 // Figure out the yaw value for this much roll.
-                float yawAngle = m_angularMotorDirection.X * m_bankingEfficiency;
+                float yawAngle = VehicleRotationalVelocity.X * m_bankingEfficiency;
                 //        actual error  =       static turn error            +           dynamic turn error
                 float mixedYawAngle =(yawAngle * (1f - m_bankingMix)) + ((yawAngle * m_bankingMix) * VehicleForwardSpeed);
 

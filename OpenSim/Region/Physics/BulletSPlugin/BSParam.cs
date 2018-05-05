@@ -629,7 +629,7 @@ public static class BSParam
         new ParameterDefn<float>("VehicleGroundGravityFudge", "Factor to multiply gravity if a ground vehicle is probably on the ground (0.0 - 1.0)",
             0.2f ),
         new ParameterDefn<float>("VehicleAngularBankingTimescaleFudge", "Factor to multiple angular banking timescale. Tune to increase realism.",
-            60.0f ),
+            1.0f ),
         new ParameterDefn<bool>("VehicleEnableLinearDeflection", "Turn on/off vehicle linear deflection effect",
             true ),
         new ParameterDefn<bool>("VehicleLinearDeflectionNotCollidingNoZ", "Turn on/off linear deflection Z effect on non-colliding vehicles",
