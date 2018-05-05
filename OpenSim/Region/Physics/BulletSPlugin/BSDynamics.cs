@@ -1312,7 +1312,7 @@ namespace OpenSim.Region.Physics.BulletSPlugin
         private void ApplyGravity(float pTimeStep)
         {
             Vector3 appliedGravity = m_VehicleGravity * m_vehicleMass;
-            appliedGravity += appliedGravity * m_VehicleBuoyancy;
+            appliedGravity -= appliedGravity * m_VehicleBuoyancy;
 
             // Hack to reduce downward force if the vehicle is probably sitting on the ground
             if (ControllingPrim.HasSomeCollision && IsGroundVehicle)
