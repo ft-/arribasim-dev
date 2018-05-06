@@ -1176,7 +1176,7 @@ namespace OpenSim.Region.Physics.BulletSPlugin
                 {
                     // Error is positive if below the target and negative if above.
                     Vector3 hpos = VehiclePosition;
-                    float verticalError = m_VhoverTargetHeight - hpos.Z;
+                    float verticalError = m_VhoverTargetHeight + 0.21728f - hpos.Z;
                     float verticalCorrection = verticalError / m_VhoverTimescale;
                     verticalCorrection *= m_VhoverEfficiency;
 
