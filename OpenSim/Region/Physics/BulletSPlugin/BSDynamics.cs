@@ -1030,45 +1030,55 @@ namespace OpenSim.Region.Physics.BulletSPlugin
             VehicleVelocity += linearMotorVelocityW * VehicleFrameOrientation;
         }
 
+        public static Vector3 ToAtAxis(Quaternion rot)
+        {
+            Vector3 vec;
+            rot.Normalize(); // just in case
+            vec.X = 2 * (rot.X * rot.X + rot.W * rot.W) - 1;
+            vec.Y = 2 * (rot.X * rot.Y + rot.Z * rot.W);
+            vec.Z = 2 * (rot.X * rot.Z - rot.Y * rot.W);
+            return vec;
+        }
+
         //Given a Deflection Effiency and a Velocity, Returns a Velocity that is Partially Deflected onto the X Axis
         //Clamped so that a DeflectionTimescale of less then 1 does not increase force over original velocity
         private void ComputeLinearDeflection(float pTimestep)
         {
-            Vector3 linearDeflectionV = Vector3.Zero;
             Vector3 velocityV = VehicleForwardVelocity;
 
-            if (BSParam.VehicleEnableLinearDeflection)
+            if (BSParam.VehicleEnableLinearDeflection && velocityV.Length() > 0.01)
             {
                 // Velocity in Y and Z dimensions is movement to the side or turning.
 
-                linearDeflectionV.Y = SortedClampInRange(0, (velocityV.Y * m_linearDeflectionEfficiency) / m_linearDeflectionTimescale, velocityV.Y);
-                linearDeflectionV.Z = SortedClampInRange(0, (velocityV.Z * m_linearDeflectionEfficiency) / m_linearDeflectionTimescale, velocityV.Z);
+                Vector3 atAxis = ToAtAxis(VehicleOrientation * Quaternion.Inverse(VehicleFrameOrientation));
+                atAxis *= velocityV.Length();
 
-                // Velocity to the side and around is corrected and moved into the forward direction
-                linearDeflectionV.X += Math.Abs(linearDeflectionV.Y);
-                linearDeflectionV.X += Math.Abs(linearDeflectionV.Z);
+                Vector3 linearDeflectionV = -atAxis;
+                atAxis -= velocityV;
+                float len = atAxis.LengthSquared();
 
-                // Scale the deflection to the fractional simulation time
-                linearDeflectionV *= pTimestep;
+                linearDeflectionV -= velocityV;
+                float lens = linearDeflectionV.LengthSquared();
 
-                // Subtract the sideways and rotational velocity deflection factors while adding the correction forward
-                linearDeflectionV *= new Vector3(1, -1, -1);
-
-                if(linearDeflectionV.Z > 0 && (m_flags & VehicleFlag.NO_DEFLECTION_UP) != 0)
+                if(len > 0.01 || lens > 0.01)
                 {
-                    linearDeflectionV.Z = 0;
+                    if(len < lens)
+                    {
+                        linearDeflectionV = atAxis;
+                    }
+                    linearDeflectionV *= (m_linearDeflectionEfficiency * pTimestep / m_linearDeflectionTimescale);
+                    if(linearDeflectionV.Z > 0 && (m_flags & VehicleFlag.NO_DEFLECTION_UP) != 0)
+                    {
+                        linearDeflectionV.Z = 0;
+                    }
+                    Vector3 linearDeflectionW = linearDeflectionV * VehicleFrameOrientation;
+                    // Optionally, if not colliding, don't effect world downward velocity. Let falling things fall.
+                    if (BSParam.VehicleLinearDeflectionNotCollidingNoZ && !m_controllingPrim.HasSomeCollision)
+                    {
+                        linearDeflectionW.Z = 0f;
+                    }
+                    VehicleVelocity += linearDeflectionW;
                 }
-
-                // Correction is vehicle relative. Convert to world coordinates.
-                Vector3 linearDeflectionW = linearDeflectionV * VehicleFrameOrientation;
-
-                // Optionally, if not colliding, don't effect world downward velocity. Let falling things fall.
-                if (BSParam.VehicleLinearDeflectionNotCollidingNoZ && !m_controllingPrim.HasSomeCollision)
-                {
-                    linearDeflectionW.Z = 0f;
-                }
-
-                VehicleVelocity += linearDeflectionW;
             }
         }
 
