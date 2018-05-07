@@ -33,6 +33,7 @@ using OpenSim.Region.Framework.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Xml;
@@ -452,7 +453,14 @@ namespace OpenSim.Region.Framework.Scenes.Serialization
             m_SOPXmlProcessors.Add("Friction", ProcessFriction);
             m_SOPXmlProcessors.Add("Bounce", ProcessBounce);
             m_SOPXmlProcessors.Add("GravityModifier", ProcessGravityModifier);
+            m_SOPXmlProcessors.Add("CameraEyeOffset", ProcessCameraEyeOffset);
+            m_SOPXmlProcessors.Add("CameraAtOffset", ProcessCameraAtOffset);
 
+            m_SOPXmlProcessors.Add("SoundID", ProcessSoundID);
+            m_SOPXmlProcessors.Add("SoundGain", ProcessSoundGain);
+            m_SOPXmlProcessors.Add("SoundFlags", ProcessSoundFlags);
+            m_SOPXmlProcessors.Add("SoundRadius", ProcessSoundRadius);
+            m_SOPXmlProcessors.Add("SoundQueueing", ProcessSoundQueueing);
             #endregion
 
             #region TaskInventoryXmlProcessors initialization
@@ -704,6 +712,41 @@ namespace OpenSim.Region.Framework.Scenes.Serialization
         private static void ProcessGravityModifier(SceneObjectPart obj, XmlReader reader)
         {
             obj.GravityModifier = reader.ReadElementContentAsFloat("GravityModifier", String.Empty);
+        }
+
+        private static void ProcessCameraEyeOffset(SceneObjectPart obj, XmlReader reader)
+        {
+            obj.SetCameraEyeOffset(Util.ReadVector(reader, "CameraEyeOffset"));
+        }
+
+        private static void ProcessCameraAtOffset(SceneObjectPart obj, XmlReader reader)
+        {
+            obj.SetCameraAtOffset(Util.ReadVector(reader, "CameraAtOffset"));
+        }
+
+        private static void ProcessSoundID(SceneObjectPart obj, XmlReader reader)
+        {
+            obj.Sound = Util.ReadUUID(reader, "SoundID");
+        }
+
+        private static void ProcessSoundGain(SceneObjectPart obj, XmlReader reader)
+        {
+            obj.SoundGain = reader.ReadElementContentAsDouble("SoundGain", String.Empty);
+        }
+
+        private static void ProcessSoundFlags(SceneObjectPart obj, XmlReader reader)
+        {
+            obj.SoundFlags = (byte)reader.ReadElementContentAsInt("SoundFlags", String.Empty);
+        }
+
+        private static void ProcessSoundRadius(SceneObjectPart obj, XmlReader reader)
+        {
+            obj.SoundRadius = reader.ReadElementContentAsDouble("SoundRadius", String.Empty);
+        }
+
+        private static void ProcessSoundQueueing(SceneObjectPart obj, XmlReader reader)
+        {
+            obj.SoundQueueing = Util.ReadBoolean(reader);
         }
 
         private static void ProcessShape(SceneObjectPart obj, XmlReader reader)
@@ -1393,6 +1436,14 @@ namespace OpenSim.Region.Framework.Scenes.Serialization
                 writer.WriteElementString("Bounce", sop.Restitution.ToString().ToLower());
             if (sop.GravityModifier != 1.0f)
                 writer.WriteElementString("GravityModifier", sop.GravityModifier.ToString().ToLower());
+            WriteVector(writer, "CameraEyeOffset", sop.GetCameraEyeOffset());
+            WriteVector(writer, "CameraAtOffset", sop.GetCameraAtOffset());
+
+            WriteUUID(writer, "SoundID", sop.Sound, options);
+            writer.WriteElementString("SoundGain", sop.SoundGain.ToString(CultureInfo.InvariantCulture));
+            writer.WriteElementString("SoundFlags", sop.SoundFlags.ToString().ToLower());
+            writer.WriteElementString("SoundRadius", sop.SoundRadius.ToString(CultureInfo.InvariantCulture));
+            writer.WriteElementString("SoundQueueing", sop.SoundQueueing.ToString().ToLower());
 
             writer.WriteEndElement();
         }
