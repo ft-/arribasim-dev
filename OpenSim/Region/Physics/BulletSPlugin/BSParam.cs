@@ -158,9 +158,11 @@ public static class BSParam
     public static Vector3 VehicleAngularFactor { get; private set; }
     public static Vector3 VehicleInertiaFactor { get; private set; }
     public static float VehicleGroundGravityFudge { get; private set; }
+    public static float VehicleAngularBankingTimescaleFudge { get; private set; }
     public static bool VehicleEnableLinearDeflection { get; private set; }
     public static bool VehicleLinearDeflectionNotCollidingNoZ { get; private set; }
     public static bool VehicleEnableAngularVerticalAttraction { get; private set; }
+    public static int VehicleAngularVerticalAttractionAlgorithm { get; private set; }
     public static bool VehicleEnableAngularDeflection { get; private set; }
     public static bool VehicleEnableAngularBanking { get; private set; }
 
@@ -626,12 +628,16 @@ public static class BSParam
             0.0f ),
         new ParameterDefn<float>("VehicleGroundGravityFudge", "Factor to multiply gravity if a ground vehicle is probably on the ground (0.0 - 1.0)",
             0.2f ),
+        new ParameterDefn<float>("VehicleAngularBankingTimescaleFudge", "Factor to multiple angular banking timescale. Tune to increase realism.",
+            1.0f ),
         new ParameterDefn<bool>("VehicleEnableLinearDeflection", "Turn on/off vehicle linear deflection effect",
             true ),
         new ParameterDefn<bool>("VehicleLinearDeflectionNotCollidingNoZ", "Turn on/off linear deflection Z effect on non-colliding vehicles",
             true ),
         new ParameterDefn<bool>("VehicleEnableAngularVerticalAttraction", "Turn on/off vehicle angular vertical attraction effect",
             true ),
+        new ParameterDefn<int>("VehicleAngularVerticalAttractionAlgorithm", "Select vertical attraction algo. You need to look at the source.",
+            0 ),
         new ParameterDefn<bool>("VehicleEnableAngularDeflection", "Turn on/off vehicle angular deflection effect",
             true ),
         new ParameterDefn<bool>("VehicleEnableAngularBanking", "Turn on/off vehicle angular banking effect",
