@@ -153,7 +153,7 @@ public class BSVMotor : BSMotor
             float decayFactor = 0f;
             if (TargetValueDecayTimeScale != BSMotor.Infinite)
             {
-                decayFactor = (1.0f / TargetValueDecayTimeScale) * timeStep;
+                decayFactor = Math.Min((1.0f / TargetValueDecayTimeScale) * timeStep, 1);
                 TargetValue *= (1f - decayFactor);
             }
 
@@ -200,7 +200,7 @@ public class BSVMotor : BSMotor
             if (TimeScale == 0f || TimeScale == BSMotor.Infinite)
                 correctionAmount = error * timeStep;
             else
-                correctionAmount = error / TimeScale * timeStep;
+                correctionAmount = error * Math.Min(timeStep / TimeScale, 1);
 
             returnCorrection = correctionAmount;
             MDetailLog("{0},  BSVMotor.Step,nonZero,{1},timeStep={2},timeScale={3},err={4},corr={5}",
