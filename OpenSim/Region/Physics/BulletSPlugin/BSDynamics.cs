@@ -1075,6 +1075,11 @@ namespace OpenSim.Region.Physics.BulletSPlugin
             Vector3 linearDeflectionV = Vector3.Zero;
             Vector3 velocityV = VehicleForwardVelocity;
 
+            if((m_flags & VehicleFlag.NO_DEFLECTION_UP) != 0)
+            {
+                velocityV.Z = 0;
+            }
+
             if (BSParam.VehicleEnableLinearDeflection)
             {
                 // Velocity in Y and Z dimensions is movement to the side or turning.
