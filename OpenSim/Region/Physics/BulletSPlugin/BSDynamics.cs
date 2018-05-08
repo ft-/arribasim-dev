@@ -91,7 +91,6 @@ namespace OpenSim.Region.Physics.BulletSPlugin
         private Vector3 m_lastVertAttractor = Vector3.Zero;             // what VA was last applied to body
 
         //Deflection properties
-        private BSVMotor m_angularDeflectionMotor = new BSVMotor("AngularDeflection");
         private float m_angularDeflectionEfficiency = 0;
         private float m_angularDeflectionTimescale = 1;
         private float m_linearDeflectionEfficiency = 0;
@@ -103,7 +102,6 @@ namespace OpenSim.Region.Physics.BulletSPlugin
         private float m_bankingTimescale = 1;
 
         //Hover and Buoyancy properties
-        private BSVMotor m_hoverMotor = new BSVMotor("Hover");
         private float m_VhoverHeight = 0f;
         private float m_VhoverEfficiency = 0f;
         private float m_VhoverTimescale = 0f;
@@ -113,7 +111,6 @@ namespace OpenSim.Region.Physics.BulletSPlugin
         private Vector3 m_VehicleGravity = Vector3.Zero;    // Gravity computed when buoyancy set
 
         //Attractor properties
-        private BSVMotor m_verticalAttractionMotor = new BSVMotor("VerticalAttraction");
         private float m_verticalAttractionEfficiency = 1.0f; // damped
         private float m_verticalAttractionCutoff = 500f;     // per the documentation
         // Timescale > cutoff  means no vert attractor.
@@ -210,11 +207,9 @@ namespace OpenSim.Region.Physics.BulletSPlugin
                     break;
                 case Vehicle.VERTICAL_ATTRACTION_EFFICIENCY:
                     m_verticalAttractionEfficiency = ClampInRange(0.1f, pValue, 1f);
-                    m_verticalAttractionMotor.Efficiency = m_verticalAttractionEfficiency;
                     break;
                 case Vehicle.VERTICAL_ATTRACTION_TIMESCALE:
                     m_verticalAttractionTimescale = Math.Max(pValue, 0.01f);
-                    m_verticalAttractionMotor.TimeScale = m_verticalAttractionTimescale;
                     break;
 
                 // These are vector properties but the engine lets you use a single float value to
@@ -224,7 +219,6 @@ namespace OpenSim.Region.Physics.BulletSPlugin
                     break;
                 case Vehicle.ANGULAR_MOTOR_DIRECTION:
                     m_angularMotorDirection = new Vector3(pValue, pValue, pValue);
-                    m_angularMotor.Zero();
                     m_angularMotor.SetTarget(m_angularMotorDirection);
                     break;
                 case Vehicle.LINEAR_FRICTION_TIMESCALE:
@@ -233,7 +227,6 @@ namespace OpenSim.Region.Physics.BulletSPlugin
                     break;
                 case Vehicle.LINEAR_MOTOR_DIRECTION:
                     m_linearMotorDirection = new Vector3(pValue, pValue, pValue);
-                    m_linearMotorDirectionLASTSET = new Vector3(pValue, pValue, pValue);
                     m_linearMotor.SetTarget(m_linearMotorDirection);
                     break;
                 case Vehicle.LINEAR_MOTOR_OFFSET:
@@ -260,7 +253,6 @@ namespace OpenSim.Region.Physics.BulletSPlugin
                     pValue.Y = ClampInRange(-12.56f, pValue.Y, 12.56f);
                     pValue.Z = ClampInRange(-12.56f, pValue.Z, 12.56f);
                     m_angularMotorDirection = new Vector3(pValue.X, pValue.Y, pValue.Z);
-                    m_angularMotor.Zero();
                     m_angularMotor.SetTarget(m_angularMotorDirection);
                     break;
                 case Vehicle.LINEAR_FRICTION_TIMESCALE:
@@ -271,7 +263,6 @@ namespace OpenSim.Region.Physics.BulletSPlugin
                     break;
                 case Vehicle.LINEAR_MOTOR_DIRECTION:
                     m_linearMotorDirection = new Vector3(pValue.X, pValue.Y, pValue.Z);
-                    m_linearMotorDirectionLASTSET = new Vector3(pValue.X, pValue.Y, pValue.Z);
                     m_linearMotor.SetTarget(m_linearMotorDirection);
                     break;
                 case Vehicle.LINEAR_MOTOR_OFFSET:
@@ -553,14 +544,6 @@ namespace OpenSim.Region.Physics.BulletSPlugin
 
             m_angularMotor = new BSVMotor("AngularMotor", m_angularMotorTimescale, m_angularMotorDecayTimescale, 1f);
             // m_angularMotor.PhysicsScene = m_physicsScene;  // DEBUG DEBUG DEBUG (enables detail logging)
-
-            /*  Not implemented
-            m_verticalAttractionMotor = new BSVMotor("VerticalAttraction", m_verticalAttractionTimescale,
-                                BSMotor.Infinite, BSMotor.InfiniteVector,
-                                m_verticalAttractionEfficiency);
-            // Z goes away and we keep X and Y
-            m_verticalAttractionMotor.PhysicsScene = PhysicsScene;  // DEBUG DEBUG DEBUG (enables detail logging)
-             */
 
             if (this.Type == Vehicle.TYPE_NONE)
             {
@@ -1340,7 +1323,7 @@ namespace OpenSim.Region.Physics.BulletSPlugin
         {
             ComputeAngularTurning(pTimestep);
 
-            ComputeAngularVerticalAttraction();
+            ComputeAngularVerticalAttraction(pTimestep);
 
             ComputeAngularDeflection();
 
@@ -1431,146 +1414,22 @@ namespace OpenSim.Region.Physics.BulletSPlugin
         //      and then set the VEHICLE_VERTICAL_ATTRACTION_EFFICIENCY to control the damping. An
         //      efficiency of 0.0 will cause the spring to wobble around its equilibrium, while an
         //      efficiency of 1.0 will cause the spring to reach its equilibrium with exponential decay.
-        public void ComputeAngularVerticalAttraction()
+        public void ComputeAngularVerticalAttraction(float pTimestep)
         {
 
             // If vertical attaction timescale is reasonable
             if (BSParam.VehicleEnableAngularVerticalAttraction && m_verticalAttractionTimescale < m_verticalAttractionCutoff)
             {
-                Vector3 vehicleUpAxis = Vector3.UnitZ * VehicleFrameOrientation;
-                switch (BSParam.VehicleAngularVerticalAttractionAlgorithm)
+                Quaternion q = VehicleOrientation * Quaternion.Inverse(VehicleFrameOrientation);
+                Vector3 angularPos;
+                q.GetEulerAngles(out angularPos.X, out angularPos.Y, out angularPos.Z);
+                Vector3 vertAttractorTorque = angularPos * m_verticalAttractionEfficiency * pTimestep / m_verticalAttractionTimescale;
+                if((m_flags & VehicleFlag.LIMIT_ROLL_ONLY) != 0)
                 {
-                    case 0:
-                        {
-
-                            //http://answers.unity3d.com/questions/10425/how-to-stabilize-angular-motion-alignment-of-hover.html
-
-                            // Flipping what was originally a timescale into a speed variable and then multiplying it by 2
-                            //    since only computing half the distance between the angles.
-                            float verticalAttractionSpeed = (1 / m_verticalAttractionTimescale) * 2.0f;
-
-                            // Make a prediction of where the up axis will be when this is applied rather then where it is now as
-                            //     this makes for a smoother adjustment and less fighting between the various forces.
-                            Vector3 predictedUp = vehicleUpAxis * Quaternion.CreateFromAxisAngle(VehicleRotationalVelocity, 0f);
-
-                            // This is only half the distance to the target so it will take 2 seconds to complete the turn.
-                            Vector3 torqueVector = Vector3.Cross(predictedUp, Vector3.UnitZ);
-
-                            if ((m_flags & VehicleFlag.LIMIT_ROLL_ONLY) != 0)
-                            {
-                                Vector3 vehicleForwardAxis = Vector3.UnitX * VehicleFrameOrientation;
-                                torqueVector = ProjectVector(torqueVector, vehicleForwardAxis);
-                            }
-
-                            // Scale vector by our timescale since it is an acceleration it is r/s^2 or radians a timescale squared
-                            Vector3 vertContributionV = torqueVector * verticalAttractionSpeed * verticalAttractionSpeed;
-
-                            VehicleRotationalVelocity += vertContributionV;
-
-                            VDetailLog("{0},  MoveAngular,verticalAttraction,vertAttrSpeed={1},upAxis={2},PredictedUp={3},torqueVector={4},contrib={5}",
-                                            ControllingPrim.LocalID,
-                                            verticalAttractionSpeed,
-                                            vehicleUpAxis,
-                                            predictedUp,
-                                            torqueVector,
-                                            vertContributionV);
-                            break;
-                        }
-                    case 1:
-                        {
-                            // Possible solution derived from a discussion at:
-                            // http://stackoverflow.com/questions/14939657/computing-vector-from-quaternion-works-computing-quaternion-from-vector-does-no
-
-                            // Create a rotation that is only the vehicle's rotation around Z
-                            Vector3 currentEulerW = Vector3.Zero;
-                            VehicleFrameOrientation.GetEulerAngles(out currentEulerW.X, out currentEulerW.Y, out currentEulerW.Z);
-                            Quaternion justZOrientation = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, currentEulerW.Z);
-
-                            // Create the axis that is perpendicular to the up vector and the rotated up vector.
-                            Vector3 differenceAxisW = Vector3.Cross(Vector3.UnitZ * justZOrientation, Vector3.UnitZ * VehicleFrameOrientation);
-                            // Compute the angle between those to vectors.
-                            double differenceAngle = Math.Acos((double)Vector3.Dot(Vector3.UnitZ, Vector3.Normalize(Vector3.UnitZ * VehicleFrameOrientation)));
-                            // 'differenceAngle' is the angle to rotate and 'differenceAxis' is the plane to rotate in to get the vehicle vertical
-
-                            // Reduce the change by the time period it is to change in. Timestep is handled when velocity is applied.
-                            // TODO: add 'efficiency'.
-                            // differenceAngle /= m_verticalAttractionTimescale;
-
-                            // Create the quaterian representing the correction angle
-                            Quaternion correctionRotationW = Quaternion.CreateFromAxisAngle(differenceAxisW, (float)differenceAngle);
-
-                            // Turn that quaternion into Euler values to make it into velocities to apply.
-                            Vector3 vertContributionW = Vector3.Zero;
-                            correctionRotationW.GetEulerAngles(out vertContributionW.X, out vertContributionW.Y, out vertContributionW.Z);
-                            vertContributionW *= -1f;
-                            vertContributionW /= m_verticalAttractionTimescale;
-
-                            VehicleRotationalVelocity += vertContributionW;
-
-                            VDetailLog("{0},  MoveAngular,verticalAttraction,upAxis={1},diffAxis={2},diffAng={3},corrRot={4},contrib={5}",
-                                            ControllingPrim.LocalID,
-                                            vehicleUpAxis,
-                                            differenceAxisW,
-                                            differenceAngle,
-                                            correctionRotationW,
-                                            vertContributionW);
-                            break;
-                        }
-                    case 2:
-                        {
-                            Vector3 vertContributionV = Vector3.Zero;
-                            Vector3 origRotVelW = VehicleRotationalVelocity;        // DEBUG DEBUG
-
-                            // Take a vector pointing up and convert it from world to vehicle relative coords.
-                            Vector3 verticalError = Vector3.Normalize(Vector3.UnitZ * VehicleFrameOrientation);
-
-                            // If vertical attraction correction is needed, the vector that was pointing up (UnitZ)
-                            //    is now:
-                            //    leaning to one side: rotated around the X axis with the Y value going
-                            //        from zero (nearly straight up) to one (completely to the side)) or
-                            //    leaning front-to-back: rotated around the Y axis with the value of X being between
-                            //         zero and one.
-                            // The value of Z is how far the rotation is off with 1 meaning none and 0 being 90 degrees.
-
-                            // Y error means needed rotation around X axis and visa versa.
-                            // Since the error goes from zero to one, the asin is the corresponding angle.
-                            vertContributionV.X = (float)Math.Asin(verticalError.Y);
-                            // (Tilt forward (positive X) needs to tilt back (rotate negative) around Y axis.)
-                            vertContributionV.Y = -(float)Math.Asin(verticalError.X);
-
-                            // If verticalError.Z is negative, the vehicle is upside down. Add additional push.
-                            if (verticalError.Z < 0f)
-                            {
-                                vertContributionV.X += Math.Sign(vertContributionV.X) * PIOverFour;
-                                // vertContribution.Y -= PIOverFour;
-                            }
-
-                            // 'vertContrbution' is now the necessary angular correction to correct tilt in one second.
-                            //     Correction happens over a number of seconds.
-                            Vector3 unscaledContribVerticalErrorV = vertContributionV;     // DEBUG DEBUG
-
-                            // The correction happens over the user's time period
-                            vertContributionV /= m_verticalAttractionTimescale;
-
-                            // Rotate the vehicle rotation to the world coordinates.
-                            VehicleRotationalVelocity += (vertContributionV * VehicleFrameOrientation);
-
-                            VDetailLog("{0},  MoveAngular,verticalAttraction,,upAxis={1},origRotVW={2},vertError={3},unscaledV={4},eff={5},ts={6},vertContribV={7}",
-                                            ControllingPrim.LocalID,
-                                            vehicleUpAxis,
-                                            origRotVelW,
-                                            verticalError,
-                                            unscaledContribVerticalErrorV,
-                                            m_verticalAttractionEfficiency,
-                                            m_verticalAttractionTimescale,
-                                            vertContributionV);
-                            break;
-                        }
-                    default:
-                        {
-                            break;
-                        }
+                    vertAttractorTorque.Y = 0;
+                    vertAttractorTorque.Z = 0;
                 }
+                VehicleRotationalVelocity += vertAttractorTorque * VehicleFrameOrientation;
             }
         }
 
