@@ -1418,7 +1418,8 @@ namespace OpenSim.Region.Physics.BulletSPlugin
                     vertAttractorTorque.Y = 0;
                     vertAttractorTorque.Z = 0;
                 }
-                VehicleRotationalVelocity += vertAttractorTorque * VehicleFrameOrientation;
+                vertAttractorTorque = vertAttractorTorque * VehicleFrameOrientation;
+                VehicleRotationalVelocity += vertAttractorTorque;
             }
         }
 
