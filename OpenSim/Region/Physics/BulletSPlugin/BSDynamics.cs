@@ -1396,10 +1396,10 @@ namespace OpenSim.Region.Physics.BulletSPlugin
             // If vertical attaction timescale is reasonable
             if (BSParam.VehicleEnableAngularVerticalAttraction && m_verticalAttractionTimescale < m_verticalAttractionCutoff)
             {
-                Quaternion q = VehicleOrientation * Quaternion.Inverse(VehicleFrameOrientation);
+                Quaternion q = VehicleOrientation * Quaternion.Inverse(m_referenceFrame);
                 Vector3 angularPos;
                 q.GetEulerAngles(out angularPos.X, out angularPos.Y, out angularPos.Z);
-                Vector3 vertAttractorTorque = angularPos * m_verticalAttractionEfficiency * pTimestep / m_verticalAttractionTimescale;
+                Vector3 vertAttractorTorque = angularPos * Math.Min(1, m_verticalAttractionEfficiency * pTimestep / m_verticalAttractionTimescale);
                 float pi2 = (float)Math.PI * 2.0f;
                 if(vertAttractorTorque.X > Math.PI)
                 {
