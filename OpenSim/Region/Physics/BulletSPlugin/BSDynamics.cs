@@ -1301,7 +1301,7 @@ namespace OpenSim.Region.Physics.BulletSPlugin
 
             ComputeAngularVerticalAttraction(pTimestep);
 
-            ComputeAngularDeflection();
+            ComputeAngularDeflection(pTimestep);
 
             ComputeAngularBanking(pTimestep);
             // ==================================================================
@@ -1400,7 +1400,20 @@ namespace OpenSim.Region.Physics.BulletSPlugin
                 Vector3 angularPos;
                 q.GetEulerAngles(out angularPos.X, out angularPos.Y, out angularPos.Z);
                 Vector3 vertAttractorTorque = angularPos * m_verticalAttractionEfficiency * pTimestep / m_verticalAttractionTimescale;
-                if((m_flags & VehicleFlag.LIMIT_ROLL_ONLY) != 0)
+                float pi2 = (float)Math.PI * 2.0f;
+                if(vertAttractorTorque.X > Math.PI)
+                {
+                    vertAttractorTorque.X -= pi2;
+                }
+                if (vertAttractorTorque.Y > Math.PI)
+                {
+                    vertAttractorTorque.Y -= pi2;
+                }
+                if (vertAttractorTorque.Z > Math.PI)
+                {
+                    vertAttractorTorque.Z -= pi2;
+                }
+                if ((m_flags & VehicleFlag.LIMIT_ROLL_ONLY) != 0)
                 {
                     vertAttractorTorque.Y = 0;
                     vertAttractorTorque.Z = 0;
@@ -1414,7 +1427,7 @@ namespace OpenSim.Region.Physics.BulletSPlugin
         // The vehicle is moving in some direction and correct its orientation to it is pointing
         //     in that direction.
         // TODO: implement reference frame.
-        public void ComputeAngularDeflection()
+        public void ComputeAngularDeflection(float pTimestep)
         {   
 
             if (BSParam.VehicleEnableAngularDeflection && m_angularDeflectionEfficiency != 0)
@@ -1451,7 +1464,7 @@ namespace OpenSim.Region.Physics.BulletSPlugin
 
                 // Scale the correction by recovery timescale and efficiency
                 //    Not modeling a spring so clamp the scale to no more then the arc
-                deflectContributionV = (-deflectionError) * ClampInRange(0, m_angularDeflectionEfficiency/m_angularDeflectionTimescale,1f);
+                deflectContributionV = (-deflectionError) * Math.Min(1, pTimestep * m_angularDeflectionEfficiency/m_angularDeflectionTimescale);
                 //deflectContributionV /= m_angularDeflectionTimescale;
 
                 // VehicleRotationalVelocity += deflectContributionV * VehicleFrameOrientation;
