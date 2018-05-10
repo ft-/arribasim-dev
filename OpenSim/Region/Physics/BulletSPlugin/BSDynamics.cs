@@ -1624,7 +1624,7 @@ namespace OpenSim.Region.Physics.BulletSPlugin
                 Vector3 bankingContributionV = Vector3.Zero;
 
                 // Figure out the yaw value for this much roll.
-                float yawAngle = (VehicleRotationalVelocity * Quaternion.Inverse(VehicleFrameOrientation)).Z * m_bankingEfficiency;
+                float yawAngle = (VehicleRotationalVelocity * Quaternion.Inverse(m_referenceFrame)).Z * m_bankingEfficiency;
                 //        actual error  =       static turn error            +           dynamic turn error
                 float mixedYawAngle =(yawAngle * (1f - m_bankingMix)) + ((yawAngle * m_bankingMix) * VehicleForwardSpeed);
 
