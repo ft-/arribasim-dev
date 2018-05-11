@@ -1627,7 +1627,7 @@ namespace OpenSim.Region.Physics.BulletSPlugin
                 Vector3 bankingContributionV = Vector3.Zero;
                 Vector3 rollComponents = Vector3.UnitZ * VehicleFrameOrientation;
                 // Figure out the yaw value for this much roll.
-                float yawAngle = (float)Math.Asin(rollComponents.Y) * m_bankingEfficiency;
+                float yawAngle = (float)Math.Atan2(rollComponents.Y, rollComponents.X) * m_bankingEfficiency;
                 //        actual error  =       static turn error            +           dynamic turn error
                 float mixedYawAngle =(yawAngle * (1f - m_bankingMix)) + ((yawAngle * m_bankingMix) * VehicleForwardSpeed);
 
@@ -1636,7 +1636,7 @@ namespace OpenSim.Region.Physics.BulletSPlugin
                 mixedYawAngle = ClampInRange(-12, mixedYawAngle, 12);
 
                 // Build the force vector to change rotation from what it is to what it should be
-                bankingContributionV.Z = -mixedYawAngle;
+                bankingContributionV.Z = mixedYawAngle;
 
                 bankingContributionV /= m_bankingTimescale * BSParam.VehicleAngularBankingTimescaleFudge;
 
