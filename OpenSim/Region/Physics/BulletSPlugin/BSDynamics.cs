@@ -1406,7 +1406,7 @@ namespace OpenSim.Region.Physics.BulletSPlugin
 
                             // Flipping what was originally a timescale into a speed variable and then multiplying it by 2
                             //    since only computing half the distance between the angles.
-                            float verticalAttractionSpeed = Math.Min(1, pTimestep / m_verticalAttractionTimescale) * 2.0f;
+                            float verticalAttractionSpeed = Math.Min(1, pTimestep / m_verticalAttractionTimescale * 2.0f);
 
                             // Make a prediction of where the up axis will be when this is applied rather then where it is now as
                             //     this makes for a smoother adjustment and less fighting between the various forces.
