@@ -1116,17 +1116,17 @@ namespace OpenSim.Region.Physics.BulletSPlugin
                         m_VhoverTargetHeight = Math.Max(waterHeight, terrainHeight) + m_VhoverHeight;
                     }
                 }
-                if ((m_flags & VehicleFlag.HOVER_UP_ONLY) != 0)
-                {
-                    // If body is already heigher, use its height as target height
-                    if (VehiclePosition.Z > m_VhoverTargetHeight)
-                    {
-                        m_VhoverTargetHeight = VehiclePosition.Z;
-                    }
-                }
 
                 if ((m_flags & VehicleFlag.LOCK_HOVER_HEIGHT) != 0)
                 {
+                    if ((m_flags & VehicleFlag.HOVER_UP_ONLY) != 0)
+                    {
+                        // If body is already heigher, use its height as target height
+                        if (VehiclePosition.Z > m_VhoverTargetHeight)
+                        {
+                            m_VhoverTargetHeight = VehiclePosition.Z;
+                        }
+                    }
                     if (Math.Abs(VehiclePosition.Z - m_VhoverTargetHeight) > 0.2f)
                     {
                         Vector3 pos = VehiclePosition;
@@ -1144,13 +1144,16 @@ namespace OpenSim.Region.Physics.BulletSPlugin
                     float verticalCorrection = verticalError / m_VhoverTimescale;
                     verticalCorrection *= m_VhoverEfficiency;
 
-                    hpos.Z += verticalCorrection;
-                    VehiclePosition = hpos;
+                    if ((m_flags & VehicleFlag.HOVER_UP_ONLY) == 0 || verticalCorrection > 0)
+                    {
+                        hpos.Z += verticalCorrection;
+                        VehiclePosition = hpos;
 
-                    // Since we are hovering, we need to do the opposite of falling -- get rid of world Z
-                    Vector3 vel = VehicleVelocity;
-                    vel.Z = 0f;
-                    VehicleVelocity = vel;
+                        // Since we are hovering, we need to do the opposite of falling -- get rid of world Z
+                        Vector3 vel = VehicleVelocity;
+                        vel.Z = 0f;
+                        VehicleVelocity = vel;
+                    }
 
                     /*
                     float verticalCorrectionVelocity = verticalError / m_VhoverTimescale;
