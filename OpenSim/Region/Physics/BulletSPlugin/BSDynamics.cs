@@ -302,11 +302,11 @@ namespace OpenSim.Region.Physics.BulletSPlugin
                 case Vehicle.TYPE_NONE:
                     m_linearMotorTimescale = 120;
                     m_linearMotorDecayTimescale = 120;
-                    m_linearFrictionTimescale = new Vector3(0, 0, 0);
+                    m_linearFrictionTimescale = new Vector3(120, 120, 120);
 
                     m_angularMotorDecayTimescale = 120;
                     m_angularMotorTimescale = 120;
-                    m_angularFrictionTimescale = new Vector3(0, 0, 0);
+                    m_angularFrictionTimescale = new Vector3(120, 120, 120);
 
                     m_VhoverHeight = 0;
                     m_VhoverEfficiency = 0;
@@ -341,7 +341,7 @@ namespace OpenSim.Region.Physics.BulletSPlugin
                     m_angularFrictionTimescale = new Vector3(1000, 1000, 1000);
 
                     m_VhoverHeight = 0;
-                    m_VhoverEfficiency = 10;    // TODO: this looks wrong!!
+                    m_VhoverEfficiency = 1;
                     m_VhoverTimescale = 10;
                     m_VehicleBuoyancy = 0;
 
