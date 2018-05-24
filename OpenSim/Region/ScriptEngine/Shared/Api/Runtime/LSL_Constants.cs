@@ -596,6 +596,22 @@ namespace OpenSim.Region.ScriptEngine.Shared.ScriptBase
         public const int OBJECT_PHYSICS = 21;
         public const int OBJECT_PHANTOM = 22;
         public const int OBJECT_TEMP_ON_REZ = 23;
+        public const int OBJECT_RENDER_WEIGHT = 24;
+        public const int OBJECT_HOVER_HEIGHT = 25;
+        public const int OBJECT_BODY_SHAPE_TYPE = 26;
+        public const int OBJECT_LAST_OWNER_ID = 27;
+        public const int OBJECT_CLICK_ACTION = 28;
+        public const int OBJECT_OMEGA = 29;
+        public const int OBJECT_PRIM_COUNT = 30;
+        public const int OBJECT_TOTAL_INVENTORY_COUNT = 31;
+        public const int OBJECT_REZZER_KEY = 32;
+        public const int OBJECT_GROUP_TAG = 33;
+        public const int OBJECT_TEMP_ATTACHED = 34;
+        public const int OBJECT_ATTACHED_SLOTS_AVAILABLE = 35;
+        public const int OBJECT_CREATION_TIME = 36;
+        public const int OBJECT_SELECT_COUNT = 37;
+        public const int OBJECT_SIT_COUNT = 38;
+
 
         // Pathfinding types
         public const int OPT_OTHER = -1;
