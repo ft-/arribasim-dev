@@ -12510,12 +12510,33 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                                 }
                                 break;
 
+                            case ScriptBaseClass.OBJECT_TOTAL_INVENTORY_COUNT:
+                                List<SceneObjectGroup> invAttachments = av.GetAttachments();
+                                int invcount = 0;
+                                try
+                                {
+                                    foreach (SceneObjectGroup Attachment in invAttachments)
+                                    {
+                                        SceneObjectPart[] parts = Attachment.Parts;
+                                        int nparts = parts.Count();
+                                        for (int i = 0; i < nparts; i++)
+                                            invcount += parts[i].Inventory.Count;
+                                    }
+                                }
+                                catch { };
+                                ret.Add(new LSL_Integer(invcount));
+                                break;
+
                             case ScriptBaseClass.OBJECT_OMEGA:
                                 ret.Add(new LSL_Vector(av.AngularVelocity));
                                 break;
 
                             case ScriptBaseClass.OBJECT_GROUP_TAG:
                                 ret.Add(new LSL_String(av.Grouptitle));
+                                break;
+
+                            case ScriptBaseClass.OBJECT_REZZER_KEY:
+                                ret.Add(id);
                                 break;
 
                             default:
@@ -12703,7 +12724,12 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                                 break;
 
                             case ScriptBaseClass.OBJECT_TOTAL_INVENTORY_COUNT:
-                                ret.Add(new LSL_Integer(obj.Inventory.Count));
+                                int count = 0;
+                                foreach(SceneObjectPart part in obj.ParentGroup.Parts)
+                                {
+                                    count += part.Inventory.Count;
+                                }
+                                ret.Add(new LSL_Integer(count));
                                 break;
 
                             case ScriptBaseClass.OBJECT_GROUP_TAG:
@@ -12712,6 +12738,17 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                             case ScriptBaseClass.OBJECT_SIT_COUNT:
                                 ret.Add(new LSL_Integer(obj.ParentGroup.GetSittingAvatarsCount()));
+                                break;
+
+                            case ScriptBaseClass.OBJECT_TEMP_ATTACHED:
+                                if (obj.ParentGroup.IsAttachment && obj.ParentGroup.FromItemID == UUID.Zero)
+                                {
+                                    ret.Add(new LSL_Integer(1));
+                                }
+                                else
+                                {
+                                    ret.Add(new LSL_Integer(0));
+                                }
                                 break;
 
                             default:
