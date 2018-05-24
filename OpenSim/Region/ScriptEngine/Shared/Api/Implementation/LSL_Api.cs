@@ -12536,7 +12536,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                                 break;
 
                             case ScriptBaseClass.OBJECT_REZZER_KEY:
-                                ret.Add(id);
+                                ret.Add(new LSL_Key(id));
                                 break;
 
                             default:
