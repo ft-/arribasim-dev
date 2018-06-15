@@ -2007,19 +2007,33 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             if (UUID.TryParse(id, out key))
             {
                 UserAccount account = World.UserAccountService.GetUserAccount(World.RegionInfo.ScopeID, key);
-                if (null == account)
-                {
-                    return "";
-                }
-                else
+                if (account != null)
                 {
                     return account.Name;
                 }
+
+                if (m_ScriptEngine.World.GridUserService != null)
+                {
+                    GridUserInfo uInfo = m_ScriptEngine.World.GridUserService.GetGridUserInfo(key.ToString());
+
+                    if (uInfo != null)
+                    {
+                        UUID userUUID; 
+                        string gridURL; 
+                        string firstName; 
+                        string lastName; 
+                        string tmp;
+
+                        if (Util.ParseUniversalUserIdentifier(uInfo.UserID, out userUUID, out gridURL, out firstName, out lastName, out tmp))
+                        {
+                            string grid = new Uri(gridURL).Authority;
+                            return firstName + "." + lastName + " @" + grid;
+                        }
+                    }
+                }
             }
-            else
-            {
-                return "";
-            }
+
+            return "";
         }
 
         private enum InfoType
