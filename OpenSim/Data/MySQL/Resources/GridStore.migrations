@@ -31,7 +31,7 @@ CREATE TABLE `regions` (
   KEY `regionName` (`regionName`),
   KEY `regionHandle` (`regionHandle`),
   KEY `overrideHandles` (`eastOverrideHandle`,`westOverrideHandle`,`southOverrideHandle`,`northOverrideHandle`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=FIXED COMMENT='Rev. 3';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Rev. 3';
 
 :VERSION 2
 
