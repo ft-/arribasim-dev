@@ -183,7 +183,7 @@ namespace OpenSim.Services.Connectors
             InventoryCollection inventory = new InventoryCollection();
             inventory.Folders = new List<InventoryFolderBase>();
             inventory.Items = new List<InventoryItemBase>();
-            inventory.UserID = principalID;
+            inventory.OwnerID = principalID;
 
             try
             {
@@ -196,15 +196,17 @@ namespace OpenSim.Services.Connectors
                 if (!CheckReturn(ret))
                     return null;
 
-                Dictionary<string,object> folders =
-                        (Dictionary<string,object>)ret["FOLDERS"];
-                Dictionary<string,object> items =
-                        (Dictionary<string,object>)ret["ITEMS"];
+                Dictionary<string,object> folders = ret.ContainsKey("FOLDERS") ?
+                    (Dictionary<string,object>)ret["FOLDERS"] : null;
+                Dictionary<string,object> items = ret.ContainsKey("ITEMS") ?
+                    (Dictionary<string, object>)ret["ITEMS"] : null;
 
-                foreach (Object o in folders.Values) // getting the values directly, we don't care about the keys folder_i
-                    inventory.Folders.Add(BuildFolder((Dictionary<string, object>)o));
-                foreach (Object o in items.Values) // getting the values directly, we don't care about the keys item_i
-                    inventory.Items.Add(BuildItem((Dictionary<string, object>)o));
+                if (folders != null)
+                    foreach (Object o in folders.Values) // getting the values directly, we don't care about the keys folder_i
+                        inventory.Folders.Add(BuildFolder((Dictionary<string, object>)o));
+                if (items != null)
+                    foreach (Object o in items.Values) // getting the values directly, we don't care about the keys item_i
+                        inventory.Items.Add(BuildItem((Dictionary<string, object>)o));
             }
             catch (Exception e)
             {
@@ -212,6 +214,87 @@ namespace OpenSim.Services.Connectors
             }
 
             return inventory;
+        }
+        
+        public virtual InventoryCollection[] GetMultipleFoldersContent(UUID principalID, UUID[] folderIDs)
+        {
+            InventoryCollection[] inventoryArr = new InventoryCollection[folderIDs.Length];
+            // m_log.DebugFormat("[XXX]: In GetMultipleFoldersContent {0}", String.Join(",", folderIDs));
+            try
+            {
+                Dictionary<string, object> resultSet = MakeRequest("GETMULTIPLEFOLDERSCONTENT",
+                        new Dictionary<string, object> {
+                            { "PRINCIPAL", principalID.ToString() },
+                            { "FOLDERS", String.Join(",", folderIDs) },
+                            { "COUNT", folderIDs.Length.ToString() }
+                        });
+
+                if (!CheckReturn(resultSet))
+                    return null;
+
+                int i = 0;
+                foreach (KeyValuePair<string, object> kvp in resultSet)
+                {
+                    InventoryCollection inventory = new InventoryCollection();
+                    if (kvp.Key.StartsWith("F_"))
+                    {
+                        UUID fid = UUID.Zero;
+                        if (UUID.TryParse(kvp.Key.Substring(2), out fid) && fid == folderIDs[i])
+                        {
+                            inventory.Folders = new List<InventoryFolderBase>();
+                            inventory.Items = new List<InventoryItemBase>();
+
+                            Dictionary<string, object> ret = (Dictionary<string, object>)kvp.Value;
+
+                            if (ret.ContainsKey("FID"))
+                            {
+                                if (!UUID.TryParse(ret["FID"].ToString(), out inventory.FolderID))
+                                    m_log.WarnFormat("[XINVENTORY SERVICES CONNECTOR]: Could not parse folder id {0}", ret["FID"].ToString());
+                            }
+                            else
+                                m_log.WarnFormat("[XINVENTORY SERVICES CONNECTOR]: FID key not present in response");
+
+                            inventory.Version = 0;
+                            if (ret.ContainsKey("VERSION"))
+                                uint.TryParse(ret["VERSION"].ToString(), out inventory.Version);
+                            if (ret.ContainsKey("OWNER"))
+                                UUID.TryParse(ret["OWNER"].ToString(), out inventory.OwnerID);
+
+                            //m_log.DebugFormat("[XXX]: Received {0} ({1}) {2} {3}", inventory.FolderID, fid, inventory.Version, inventory.OwnerID);
+
+                            Dictionary<string, object> folders =
+                                    (Dictionary<string, object>)ret["FOLDERS"];
+                            Dictionary<string, object> items =
+                                    (Dictionary<string, object>)ret["ITEMS"];
+
+                            foreach (Object o in folders.Values) // getting the values directly, we don't care about the keys folder_i
+                            {
+                                inventory.Folders.Add(BuildFolder((Dictionary<string, object>)o));
+                            }
+                            foreach (Object o in items.Values) // getting the values directly, we don't care about the keys item_i
+                            {
+                                inventory.Items.Add(BuildItem((Dictionary<string, object>)o));
+                            }
+
+                            inventoryArr[i] = inventory;
+                        }
+                        else
+                        {
+                            m_log.WarnFormat("[XINVENTORY SERVICES CONNECTOR]: Folder id does not match. Expected {0} got {1}",
+                                folderIDs[i], fid);
+                            m_log.WarnFormat("[XINVENTORY SERVICES CONNECTOR]: {0} {1}", String.Join(",", folderIDs), String.Join(",", resultSet.Keys));
+                        }
+
+                        i += 1;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                m_log.WarnFormat("[XINVENTORY SERVICES CONNECTOR]: Exception in GetMultipleFoldersContent: {0}", e.Message);
+            }
+
+            return inventoryArr;
         }
 
         public List<InventoryItemBase> GetFolderItems(UUID principalID, UUID folderID)
@@ -303,9 +386,13 @@ namespace OpenSim.Services.Connectors
 
         public bool AddItem(InventoryItemBase item)
         {
+            if (item.Description == null)
+                item.Description = String.Empty;
             if (item.CreatorData == null)
                 item.CreatorData = String.Empty;
-            Dictionary<string,object> ret = MakeRequest("ADDITEM",
+            if (item.CreatorId == null)
+                item.CreatorId = String.Empty;
+            Dictionary<string, object> ret = MakeRequest("ADDITEM",
                     new Dictionary<string,object> {
                         { "AssetID", item.AssetID.ToString() },
                         { "AssetType", item.AssetType.ToString() },
@@ -422,6 +509,64 @@ namespace OpenSim.Services.Connectors
             }
 
             return null;
+        }
+
+        public virtual InventoryItemBase[] GetMultipleItems(UUID principalID, UUID[] itemIDs)
+        {
+            //m_log.DebugFormat("[XXX]: In GetMultipleItems {0}", String.Join(",", itemIDs));
+
+            InventoryItemBase[] itemArr = new InventoryItemBase[itemIDs.Length];
+            // Try to get them from the cache
+            List<UUID> pending = new List<UUID>();
+            InventoryItemBase item = null;
+            int i = 0;
+            foreach (UUID id in itemIDs)
+            {
+                pending.Add(id);
+            }
+
+            if (pending.Count == 0) // we're done, everything was in the cache
+                return itemArr;
+
+            try
+            {
+                Dictionary<string, object> resultSet = MakeRequest("GETMULTIPLEITEMS",
+                        new Dictionary<string, object> {
+                            { "PRINCIPAL", principalID.ToString() },
+                            { "ITEMS", String.Join(",", pending.ToArray()) },
+                            { "COUNT", pending.Count.ToString() }
+                        });
+
+                if (!CheckReturn(resultSet))
+                {
+                    if (i == 0)
+                        return null;
+                    else
+                        return itemArr;
+                }
+
+                // carry over index i where we left above
+                foreach (KeyValuePair<string, object> kvp in resultSet)
+                {
+                    InventoryCollection inventory = new InventoryCollection();
+                    if (kvp.Key.StartsWith("item_"))
+                    {
+                        if (kvp.Value is Dictionary<string, object>)
+                        {
+                            item = BuildItem((Dictionary<string, object>)kvp.Value);
+                            itemArr[i++] = item;
+                        }
+                        else
+                            itemArr[i++] = null;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                m_log.WarnFormat("[XINVENTORY SERVICES CONNECTOR]: Exception in GetMultipleItems: {0}", e.Message);
+            }
+
+            return itemArr;
         }
 
         public InventoryFolderBase GetFolder(InventoryFolderBase folder)

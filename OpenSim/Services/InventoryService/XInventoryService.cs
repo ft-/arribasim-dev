@@ -292,7 +292,7 @@ namespace OpenSim.Services.InventoryService
             //
             //m_log.DebugFormat("[XINVENTORY SERVICE]: Fetch contents for folder {0}", folderID.ToString());
             InventoryCollection inventory = new InventoryCollection();
-            inventory.UserID = principalID;
+            inventory.OwnerID = principalID;
             inventory.Folders = new List<InventoryFolderBase>();
             inventory.Items = new List<InventoryItemBase>();
 
@@ -316,7 +316,26 @@ namespace OpenSim.Services.InventoryService
                 inventory.Items.Add(ConvertToOpenSim(i));
             }
 
+            InventoryFolderBase f = new InventoryFolderBase(folderID, principalID);
+            f = GetFolder(f);
+            if (f != null)
+            {
+                inventory.Version = f.Version;
+                inventory.OwnerID = f.Owner;
+            }
+            inventory.FolderID = folderID;
+
             return inventory;
+        }
+
+        public virtual InventoryCollection[] GetMultipleFoldersContent(UUID principalID, UUID[] folderIDs)
+        {
+            InventoryCollection[] multiple = new InventoryCollection[folderIDs.Length];
+            int i = 0;
+            foreach (UUID fid in folderIDs)
+                multiple[i++] = GetFolderContent(principalID, fid);
+
+            return multiple;
         }
         
         public virtual List<InventoryItemBase> GetFolderItems(UUID principalID, UUID folderID)
@@ -590,6 +609,21 @@ namespace OpenSim.Services.InventoryService
                 return null;
 
             return ConvertToOpenSim(items[0]);
+        }
+
+        public virtual InventoryItemBase[] GetMultipleItems(UUID userID, UUID[] ids)
+        {
+            InventoryItemBase[] items = new InventoryItemBase[ids.Length];
+            int i = 0;
+            InventoryItemBase item = new InventoryItemBase();
+            item.Owner = userID;
+            foreach (UUID id in ids)
+            {
+                item.ID = id;
+                items[i++] = GetItem(item);
+            }
+
+            return items;
         }
 
         public virtual InventoryFolderBase GetFolder(InventoryFolderBase folder)

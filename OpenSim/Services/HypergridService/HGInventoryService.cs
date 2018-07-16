@@ -156,7 +156,21 @@ namespace OpenSim.Services.HypergridService
         //public InventoryCollection GetFolderContent(UUID principalID, UUID folderID)
         //{
         //}
-     
+
+        public override InventoryCollection[] GetMultipleFoldersContent(UUID principalID, UUID[] folderIDs)
+        {
+            List<InventoryCollection> list = new List<InventoryCollection>();
+            foreach(UUID folderID in folderIDs)
+            {
+                InventoryCollection collection = GetFolderContent(principalID, folderID);
+                if(collection != null)
+                {
+                    list.Add(collection);
+                }
+            }
+            return list.ToArray();
+        }
+        
         //public List<InventoryItemBase> GetFolderItems(UUID principalID, UUID folderID)
         //{
         //}
