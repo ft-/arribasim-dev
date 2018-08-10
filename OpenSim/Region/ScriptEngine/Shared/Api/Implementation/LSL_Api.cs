@@ -7604,14 +7604,17 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             }
             tempFloat = 66.66667f * (revolutions - 1.0f);
             shapeBlock.PathRevolutions = (byte)tempFloat;
-            // limits on radiusoffset depend on revolutions and hole size (how?) seems like the maximum range is 0 to 1
-            if (radiusoffset < 0f)
+            // limits on radiusoffset depend on revolutions and hole size
+            float taper_y_magnitude = (float)Math.Abs(taper_a.y);
+            if (radiusoffset * taper_a.y < 0)
             {
-                radiusoffset = 0f;
+                taper_y_magnitude = 0;
             }
-            if (radiusoffset > 1f)
+            float holesize_y_mag = (float)Math.Abs(holesize.y);
+            float max_radius_mag = 1f - holesize_y_mag * (1f - taper_y_magnitude) / (1f - holesize_y_mag);
+            if(Math.Abs(radiusoffset) > max_radius_mag)
             {
-                radiusoffset = 1f;
+                radiusoffset = Math.Sign(radiusoffset) * max_radius_mag;
             }
             tempFloat = 100.0f * radiusoffset;
             shapeBlock.PathRadiusOffset = (sbyte)tempFloat;
