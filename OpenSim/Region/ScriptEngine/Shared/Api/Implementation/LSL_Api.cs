@@ -7626,6 +7626,15 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             {
                 skew = 0.95f;
             }
+            float min_skew_mag = (float)(1f - 1f / (revolutions * holesize.x + 1f));
+            if(Math.Abs(revolutions - 1.0) < 0.001)
+            {
+                min_skew_mag = 0f;
+            }
+            if(Math.Abs(skew) < min_skew_mag)
+            {
+                skew = min_skew_mag * Math.Sign(skew);
+            }
             tempFloat = 100.0f * skew;
             shapeBlock.PathSkew = (sbyte)tempFloat;
 
