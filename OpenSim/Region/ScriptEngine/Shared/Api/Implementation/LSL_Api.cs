@@ -7618,14 +7618,6 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             }
             tempFloat = 100.0f * radiusoffset;
             shapeBlock.PathRadiusOffset = (sbyte)tempFloat;
-            if (skew < -0.95f)
-            {
-                skew = -0.95f;
-            }
-            if (skew > 0.95f)
-            {
-                skew = 0.95f;
-            }
             float min_skew_mag = (float)(1f - 1f / (revolutions * holesize.x + 1f));
             if(Math.Abs(revolutions - 1.0) < 0.001)
             {
@@ -7634,6 +7626,14 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             if(Math.Abs(skew) < min_skew_mag)
             {
                 skew = min_skew_mag * Math.Sign(skew);
+            }
+            if (skew < -0.95f)
+            {
+                skew = -0.95f;
+            }
+            if (skew > 0.95f)
+            {
+                skew = 0.95f;
             }
             tempFloat = 100.0f * skew;
             shapeBlock.PathSkew = (sbyte)tempFloat;
