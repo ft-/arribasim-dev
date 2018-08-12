@@ -12340,7 +12340,12 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         public LSL_Integer llGetObjectPrimCount(string object_id)
         {
             m_host.AddScriptLPS(1);
-            SceneObjectPart part = World.GetSceneObjectPart(new UUID(object_id));
+            UUID id;
+            if(!UUID.TryParse(object_id, out id))
+            {
+                return 0;
+            }
+            SceneObjectPart part = World.GetSceneObjectPart(id);
             if (part == null)
             {
                 return 0;
