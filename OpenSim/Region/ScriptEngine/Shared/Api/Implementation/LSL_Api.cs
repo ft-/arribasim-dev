@@ -12583,7 +12583,8 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                                 ret.Add(new LSL_String(obj.Description));
                                 break;
                             case ScriptBaseClass.OBJECT_POS:
-                                ret.Add(new LSL_Vector(obj.AbsolutePosition.X, obj.AbsolutePosition.Y, obj.AbsolutePosition.Z));
+                                Vector3 objWorldPos = obj.WorldPosition;
+                                ret.Add(new LSL_Vector(objWorldPos.X, objWorldPos.Y, objWorldPos.Z));
                                 break;
                             case ScriptBaseClass.OBJECT_ROT:
                                 {
