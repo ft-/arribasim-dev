@@ -12773,7 +12773,14 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                                 break;
 
                             case ScriptBaseClass.OBJECT_REZZER_KEY:
-                                ret.Add(new LSL_Key(obj.ParentGroup.FromPartID.ToString()));
+                                if (obj.ParentGroup.FromPartID != UUID.Zero)
+                                {
+                                    ret.Add(new LSL_Key(obj.ParentGroup.FromPartID.ToString()));
+                                }
+                                else
+                                {
+                                    ret.Add(new LSL_Key(obj.OwnerID.ToString()));
+                                }
                                 break;
 
                             default:
