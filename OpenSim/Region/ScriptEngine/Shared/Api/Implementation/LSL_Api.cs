@@ -12772,6 +12772,10 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                                 }
                                 break;
 
+                            case ScriptBaseClass.OBJECT_REZZER_KEY:
+                                ret.Add(new LSL_Key(obj.ParentGroup.FromPartID.ToString()));
+                                break;
+
                             default:
                                 // Invalid or unhandled constant.
                                 ret.Add(new LSL_Integer(ScriptBaseClass.OBJECT_UNKNOWN_DETAIL));
