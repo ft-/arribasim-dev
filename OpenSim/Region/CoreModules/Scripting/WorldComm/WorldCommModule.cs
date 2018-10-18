@@ -429,23 +429,17 @@ namespace OpenSim.Region.CoreModules.Scripting.WorldComm
                     in m_listenerManager.GetListeners(UUID.Zero, channel,
                     name, id, msg))
             {
-                // Dont process if this message is from yourself!
-                if (li.GetHostID().Equals(id))
+                UUID hostID = li.GetHostID();
+                if (hostID.Equals(id) || !hostID.Equals(target))
                     continue;
 
                 SceneObjectPart sPart = m_scene.GetSceneObjectPart(
-                        li.GetHostID());
+                        hostID);
                 if (sPart == null)
                     continue;
 
-                if (li.GetHostID().Equals(target))
-                {
-                    QueueMessage(new ListenerInfo(li, name, id, msg));
-                    break;
-                }
+                QueueMessage(new ListenerInfo(li, name, id, msg));
             }
-
-            return;
         }
 
         protected void QueueMessage(ListenerInfo li)
