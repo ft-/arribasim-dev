@@ -3905,14 +3905,6 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                                 part.Shape.LightEntry = false;
                             }
                         }
-
-                        if (part.Shape != null && (part.Shape.SculptType == (byte)SculptType.Mesh))
-                        {
-                            // Ensure that mesh has at least 8 valid faces
-                            part.Shape.ProfileBegin = 12500;
-                            part.Shape.ProfileEnd = 0;
-                            part.Shape.ProfileHollow = 27500;
-                        }
                     }
     
                     #region UpdateFlags to packet type conversion
@@ -5356,6 +5348,30 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             update.PCode = data.Shape.PCode;
             update.ProfileBegin = data.Shape.ProfileBegin;
             update.ProfileCurve = data.Shape.ProfileCurve;
+
+            ushort profileBegin = data.Shape.ProfileBegin;
+            ushort profileHollow = data.Shape.ProfileHollow;
+
+            if (data.Shape.SculptType == (byte)SculptType.Mesh) 
+            {
+                // filter out U's hack
+                update.ProfileCurve = (byte)(data.Shape.ProfileCurve & 0x0f);
+                // fix broken values
+                if (profileBegin == 1)
+                {
+                    profileBegin = 9375;
+                }
+                if (profileHollow == 1)
+                {
+                    profileHollow = 27500;
+                }
+                // fix torus hole size Y on Circle since that otherwise triggers the setRatio hole size check
+                if (update.ProfileCurve == (byte)ProfileShape.Circle && update.PathScaleY < 150)
+                {
+                    update.PathScaleY = 150;
+                }
+            }
+
             update.ProfileEnd = data.Shape.ProfileEnd;
             update.ProfileHollow = data.Shape.ProfileHollow;
             update.PSBlock = data.ParticleSystem ?? Utils.EmptyBytes;
