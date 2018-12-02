@@ -399,7 +399,7 @@ namespace OpenSim.Region.CoreModules.Scripting.HttpRequest
             get { return _reqID; }
             set { _reqID = value; }
         }
-        public WebRequest Request;
+        public HttpWebRequest Request;
         public string ResponseBody;
         public List<string> ResponseMetadata;
         public Dictionary<string, string> ResponseHeaders;
@@ -416,7 +416,7 @@ namespace OpenSim.Region.CoreModules.Scripting.HttpRequest
             try
             {
                 ServicePointManagerTimeoutSupport.ResetHosts();
-                Request = WebRequest.Create(Url);
+                Request = (HttpWebRequest)WebRequest.Create(Url);
                 Request.Method = HttpMethod;
                 Request.ContentType = HttpMIMEType;
 
@@ -457,17 +457,26 @@ namespace OpenSim.Region.CoreModules.Scripting.HttpRequest
                 if (ResponseHeaders != null)
                 {
                     foreach (KeyValuePair<string, string> entry in ResponseHeaders)
-                        if (entry.Key.ToLower().Equals("user-agent") && Request is HttpWebRequest)
-                            ((HttpWebRequest)Request).UserAgent = entry.Value;
+                    {
+                        if (entry.Key.Equals("user-agent", StringComparison.OrdinalIgnoreCase))
+                        {
+                            Request.UserAgent = entry.Value;
+                        }
                         else
+                        {
                             Request.Headers[entry.Key] = entry.Value;
+                        }
+                    }
                 }
 
                 // Encode outbound data
                 if (!string.IsNullOrEmpty(OutboundBody))
                 {
                     byte[] data = Util.UTF8.GetBytes(OutboundBody);
-
+                    if(data.Length < 4096)
+                    {
+                        Request.ServicePoint.Expect100Continue = false;
+                    }
                     Request.ContentLength = data.Length;
                     using (Stream bstream = Request.GetRequestStream())
                         bstream.Write(data, 0, data.Length);
@@ -475,7 +484,7 @@ namespace OpenSim.Region.CoreModules.Scripting.HttpRequest
 
                 try
                 {
-                    IAsyncResult result = (IAsyncResult)Request.BeginGetResponse(ResponseCallback, null);
+                    IAsyncResult result = Request.BeginGetResponse(ResponseCallback, null);
 
                     ThreadPool.RegisterWaitForSingleObject(
                         result.AsyncWaitHandle, new WaitOrTimerCallback(TimeoutCallback), null, HttpTimeout, true);
