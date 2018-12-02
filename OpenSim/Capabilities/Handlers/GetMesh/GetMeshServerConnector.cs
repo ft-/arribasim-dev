@@ -26,7 +26,7 @@
  */
 
 using Nini.Config;
-using OpenMetaverse;
+using OpenSim.Capabilities.Handlers.GetAssets;
 using OpenSim.Framework.Servers.HttpServer;
 using OpenSim.Server.Base;
 using OpenSim.Server.Handlers.Base;
@@ -43,34 +43,33 @@ namespace OpenSim.Capabilities.Handlers
         public GetMeshServerConnector(IConfigSource config, IHttpServer server, string configName) :
                 base(config, server, configName)
         {
-            if (configName != String.Empty)
+            if (configName != string.Empty)
                 m_ConfigName = configName;
 
             IConfig serverConfig = config.Configs[m_ConfigName];
             if (serverConfig == null)
-                throw new Exception(String.Format("No section '{0}' in config file", m_ConfigName));
+                throw new Exception(string.Format("No section '{0}' in config file", m_ConfigName));
 
-            string assetService = serverConfig.GetString("AssetService", String.Empty);
+            string assetService = serverConfig.GetString("AssetService", string.Empty);
 
-            if (assetService == String.Empty)
+            if (assetService == string.Empty)
                 throw new Exception("No AssetService in config file");
 
-            Object[] args = new Object[] { config };
-            m_AssetService =
-                    ServerUtils.LoadPlugin<IAssetService>(assetService, args);
+            object[] args = new object[] { config };
+            m_AssetService = ServerUtils.LoadPlugin<IAssetService>(assetService, args);
 
             if (m_AssetService == null)
-                throw new Exception(String.Format("Failed to load AssetService from {0}; config is {1}", assetService, m_ConfigName));
+                throw new Exception(string.Format("Failed to load AssetService from {0}; config is {1}", assetService, m_ConfigName));
 
             string rurl = serverConfig.GetString("GetMeshRedirectURL");
 
             server.AddStreamHandler(
-                new GetTextureHandler("/CAPS/GetMesh/" /*+ UUID.Random() */, m_AssetService, "GetMesh", null, rurl));
+                new GetAssetsHandler("/CAPS/GetMesh/" /*+ UUID.Random() */, m_AssetService, "GetMesh", null, rurl));
 
             rurl = serverConfig.GetString("GetMesh2RedirectURL");
 
             server.AddStreamHandler(
-                new GetTextureHandler("/CAPS/GetMesh2/" /*+ UUID.Random() */, m_AssetService, "GetMesh2", null, rurl));
+                new GetAssetsHandler("/CAPS/GetMesh2/" /*+ UUID.Random() */, m_AssetService, "GetMesh2", null, rurl));
         }
     }
 }

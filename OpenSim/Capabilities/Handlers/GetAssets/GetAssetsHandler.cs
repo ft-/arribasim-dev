@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) Contributors, http://opensimulator.org/
  * See CONTRIBUTORS.TXT for a full list of copyright holders.
  *
@@ -27,30 +27,38 @@
 
 using log4net;
 using OpenMetaverse;
-using OpenMetaverse.Imaging;
 using OpenSim.Framework;
 using OpenSim.Framework.Servers.HttpServer;
 using OpenSim.Services.Interfaces;
-using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Reflection;
 using System.Web;
 
-namespace OpenSim.Capabilities.Handlers
+namespace OpenSim.Capabilities.Handlers.GetAssets
 {
-    public class GetMeshHandler : BaseStreamHandler
+    public sealed class GetAssetsHandler : BaseStreamHandler
     {
-        private static readonly ILog m_log =
-            LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
-        private IAssetService m_assetService;
+        private readonly string m_RedirectURL;
+        private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+        private readonly IAssetService m_assetService;
 
-        // TODO: Change this to a config option
-        private string m_RedirectURL = null;
+        private static readonly Dictionary<string, AssetType> m_QueryTypes = new Dictionary<string, AssetType>
+        {
+            ["texture_id"] = AssetType.Texture,
+            ["sound_id"] = AssetType.Sound,
+            ["callcard_id"] = AssetType.CallingCard,
+            ["landmark_id"] = AssetType.Landmark,
+            ["clothing_id"] = AssetType.Clothing,
+            ["notecard_id"] = AssetType.Notecard,
+            ["bodypart_id"] = AssetType.Bodypart,
+            ["animatn_id"] = AssetType.Animation,
+            ["gesture_id"] = AssetType.Gesture,
+            ["mesh_id"] = AssetType.Mesh
+        };
 
-        public GetMeshHandler(string path, IAssetService assService, string name, string description, string redirectURL)
+        public GetAssetsHandler(string path, IAssetService assService, string name, string description, string redirectURL)
             : base("GET", path, name, description)
         {
             m_assetService = assService;
@@ -61,77 +69,94 @@ namespace OpenSim.Capabilities.Handlers
 
         protected override byte[] ProcessRequest(string path, Stream request, IOSHttpRequest httpRequest, IOSHttpResponse httpResponse)
         {
-            // Try to parse the texture ID from the request URL
             NameValueCollection query = HttpUtility.ParseQueryString(httpRequest.Url.Query);
-            string textureStr = query.GetOne("mesh_id");
+            string idstr = string.Empty;
+            string assettypestr = string.Empty;
+            AssetType assetType = AssetType.Unknown;
+            UUID assetid;
+
+            foreach (KeyValuePair<string, AssetType> kvp in m_QueryTypes)
+            {
+                idstr = query.GetOne(kvp.Key);
+                if (idstr != null)
+                {
+                    assetType = kvp.Value;
+                    assettypestr = kvp.Key;
+                    break;
+                }
+            }
+
+            if (assetType == AssetType.Unknown)
+            {
+                m_log.Error("[GETASSET]: Cannot fetch asset without valid type");
+                httpResponse.StatusCode = (int)System.Net.HttpStatusCode.NotFound;
+                return null;
+            }
 
             if (m_assetService == null)
             {
-                m_log.Error("[GETMESH]: Cannot fetch mesh " + textureStr + " without an asset service");
+                m_log.Error($"[GETASSET]: Cannot fetch {assettypestr} {idstr} without an asset service");
                 httpResponse.StatusCode = (int)System.Net.HttpStatusCode.NotFound;
             }
 
-            UUID meshID;
-            if (!String.IsNullOrEmpty(textureStr) && UUID.TryParse(textureStr, out meshID))
+            if (UUID.TryParse(idstr, out assetid))
             {
-                // OK, we have an array with preferred formats, possibly with only one entry
-
                 httpResponse.StatusCode = (int)System.Net.HttpStatusCode.NotFound;
-                AssetBase mesh;
+                AssetBase asset;
 
-                if (!String.IsNullOrEmpty(m_RedirectURL))
+                if (!string.IsNullOrEmpty(m_RedirectURL))
                 {
                     // Only try to fetch locally cached meshes. Misses are redirected
-                    mesh = m_assetService.GetCached(meshID.ToString());
+                    asset = m_assetService.GetCached(assetid.ToString());
 
-                    if (mesh != null)
+                    if (asset != null)
                     {
-                        if (mesh.Type != (sbyte)AssetType.Mesh)
+                        if (asset.Type != (sbyte)AssetType.Mesh)
                         {
                             httpResponse.StatusCode = (int)System.Net.HttpStatusCode.NotFound;
                         }
-                        WriteMeshData(httpRequest, httpResponse, mesh);
+                        WriteData(httpRequest, httpResponse, asset);
                     }
                     else
                     {
-                        string textureUrl = m_RedirectURL + "?mesh_id="+ meshID.ToString();
-                        m_log.Debug("[GETMESH]: Redirecting mesh request to " + textureUrl);
+                        string redirectUrl = $"{m_RedirectURL}?{assettypestr}={assetid}";
+                        m_log.Debug("[GETASSET]: Redirecting mesh request to " + redirectUrl);
                         httpResponse.StatusCode = (int)OSHttpStatusCode.RedirectMovedPermanently;
-                        httpResponse.RedirectLocation = textureUrl;
+                        httpResponse.RedirectLocation = redirectUrl;
                         return null;
                     }
                 }
                 else // no redirect
                 {
                     // try the cache
-                    mesh = m_assetService.GetCached(meshID.ToString());
+                    asset = m_assetService.GetCached(assetid.ToString());
 
-                    if (mesh == null)
+                    if (asset == null)
                     {
                         // Fetch locally or remotely. Misses return a 404
-                        mesh = m_assetService.Get(meshID.ToString());
+                        asset = m_assetService.Get(assetid.ToString());
 
-                        if (mesh != null)
+                        if (asset != null)
                         {
-                            if (mesh.Type != (sbyte)AssetType.Mesh)
+                            if (asset.Type != (sbyte)assetType)
                             {
                                 httpResponse.StatusCode = (int)System.Net.HttpStatusCode.NotFound;
                                 return null;
                             }
-                            WriteMeshData(httpRequest, httpResponse, mesh);
+                            WriteData(httpRequest, httpResponse, asset);
                             return null;
                         }
-                   }
-                   else // it was on the cache
-                   {
-                       if (mesh.Type != (sbyte)AssetType.Mesh)
-                       {
-                           httpResponse.StatusCode = (int)System.Net.HttpStatusCode.NotFound;
-                           return null;
-                       }
-                       WriteMeshData(httpRequest, httpResponse, mesh);
-                       return null;
-                   }
+                    }
+                    else // it was on the cache
+                    {
+                        if (asset.Type != (sbyte)assetType)
+                        {
+                            httpResponse.StatusCode = (int)System.Net.HttpStatusCode.NotFound;
+                            return null;
+                        }
+                        WriteData(httpRequest, httpResponse, asset);
+                        return null;
+                    }
                 }
 
                 // not found
@@ -140,17 +165,17 @@ namespace OpenSim.Capabilities.Handlers
             }
             else
             {
-                m_log.Warn("[GETTEXTURE]: Failed to parse a mesh_id from GetMesh request: " + httpRequest.Url);
+                m_log.Warn($"[GETASSET]: Failed to parse a {assettypestr} from GetAsset request: {httpRequest.Url}");
             }
 
             return null;
         }
 
-        private void WriteMeshData(IOSHttpRequest request, IOSHttpResponse response, AssetBase texture)
+        private void WriteData(IOSHttpRequest request, IOSHttpResponse response, AssetBase asset)
         {
             string range = request.Headers.GetOne("Range");
 
-            if (!String.IsNullOrEmpty(range))
+            if (!string.IsNullOrEmpty(range))
             {
                 // Range request
                 int start, end;
@@ -158,11 +183,11 @@ namespace OpenSim.Capabilities.Handlers
                 {
                     // Before clamping start make sure we can satisfy it in order to avoid
                     // sending back the last byte instead of an error status
-                    if (start >= texture.Data.Length)
+                    if (start >= asset.Data.Length)
                     {
                         response.StatusCode = (int)System.Net.HttpStatusCode.PartialContent;
-                        response.AddHeader("Content-Range", String.Format("bytes */{0}", texture.Data.Length));
-                        response.ContentType = texture.Metadata.ContentType;
+                        response.AddHeader("Content-Range", string.Format("bytes */{0}", asset.Data.Length));
+                        response.ContentType = asset.Metadata.ContentType;
                     }
                     else
                     {
@@ -171,39 +196,39 @@ namespace OpenSim.Capabilities.Handlers
                         if (end == -1)
                             end = int.MaxValue;
 
-                        end = Utils.Clamp(end, 0, texture.Data.Length - 1);
+                        end = Utils.Clamp(end, 0, asset.Data.Length - 1);
                         start = Utils.Clamp(start, 0, end);
                         int len = end - start + 1;
 
-                        if (0 == start && len == texture.Data.Length)
+                        if (0 == start && len == asset.Data.Length)
                         {
                             response.StatusCode = (int)System.Net.HttpStatusCode.OK;
                         }
                         else
                         {
                             response.StatusCode = (int)System.Net.HttpStatusCode.PartialContent;
-                            response.AddHeader("Content-Range", String.Format("bytes {0}-{1}/{2}", start, end, texture.Data.Length));
+                            response.AddHeader("Content-Range", string.Format("bytes {0}-{1}/{2}", start, end, asset.Data.Length));
                         }
-                        
+
                         response.ContentLength = len;
-                        response.ContentType = "application/vnd.ll.mesh";
-    
-                        response.Body.Write(texture.Data, start, len);
+                        response.ContentType = asset.Metadata.ContentType;
+
+                        response.Body.Write(asset.Data, start, len);
                     }
                 }
                 else
                 {
-                    m_log.Warn("[GETMESH]: Malformed Range header: " + range);
+                    m_log.Warn("[GETASSET]: Malformed Range header: " + range);
                     response.StatusCode = (int)System.Net.HttpStatusCode.BadRequest;
                 }
             }
-            else 
+            else
             {
                 // Full content request
                 response.StatusCode = (int)System.Net.HttpStatusCode.OK;
-                response.ContentLength = texture.Data.Length;
-                response.ContentType = "application/vnd.ll.mesh";
-                response.Body.Write(texture.Data, 0, texture.Data.Length);
+                response.ContentLength = asset.Data.Length;
+                response.ContentType = asset.Metadata.ContentType;
+                response.Body.Write(asset.Data, 0, asset.Data.Length);
             }
         }
 
@@ -230,7 +255,7 @@ namespace OpenSim.Capabilities.Handlers
 
                 if (rangeValues.Length == 2)
                 {
-                    if (!Int32.TryParse(rangeValues[0], out start))
+                    if (!int.TryParse(rangeValues[0], out start))
                         return false;
 
                     string rawEnd = rangeValues[1];
@@ -240,7 +265,7 @@ namespace OpenSim.Capabilities.Handlers
                         end = -1;
                         return true;
                     }
-                    else if (Int32.TryParse(rawEnd, out end))
+                    else if (int.TryParse(rawEnd, out end))
                     {
                         return true;
                     }
