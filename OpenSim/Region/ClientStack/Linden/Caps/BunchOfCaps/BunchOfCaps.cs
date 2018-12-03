@@ -42,6 +42,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
+using System.Xml;
 using Caps = OpenSim.Framework.Capabilities.Caps;
 using OSDArray = OpenMetaverse.StructuredData.OSDArray;
 using OSDMap = OpenMetaverse.StructuredData.OSDMap;
@@ -96,7 +97,9 @@ namespace OpenSim.Region.ClientStack.Linden
         private static readonly string m_getObjectPhysicsDataPath = "0101/";
         /* 0102 - 0103 RESERVED */
         private static readonly string m_UpdateAgentInformationPath = "0500/";
-        
+
+        private static readonly string m_CreateInventoryCategoryPath = "4711/";
+
         // These are callbacks which will be setup by the scene so that we can update scene data when we
         // receive capability calls
         public NewInventoryItem AddNewInventoryItem = null;
@@ -218,32 +221,11 @@ namespace OpenSim.Region.ClientStack.Linden
                     "CopyInventoryFromNotecard",
                     new RestStreamHandler(
                         "POST", capsBase + m_copyFromNotecardPath, CopyInventoryFromNotecard, "CopyInventoryFromNotecard", null));
-             
-                // As of RC 1.22.9 of the Linden client this is
-                // supported
 
-                //m_capsHandlers["WebFetchInventoryDescendents"] =new RestStreamHandler("POST", capsBase + m_fetchInventoryPath, FetchInventoryDescendentsRequest);
-
-                // justincc: I've disabled the CAPS service for now to fix problems with selecting textures, and
-                // subsequent inventory breakage, in the edit object pane (such as mantis 1085).  This requires
-                // enhancements (probably filling out the folder part of the LLSD reply) to our CAPS service,
-                // but when I went on the Linden grid, the
-                // simulators I visited (version 1.21) were, surprisingly, no longer supplying this capability.  Instead,
-                // the 1.19.1.4 client appeared to be happily flowing inventory data over UDP
-                //
-                // This is very probably just a temporary measure - once the CAPS service appears again on the Linden grid
-                // we will be
-                // able to get the data we need to implement the necessary part of the protocol to fix the issue above.
-                //                m_capsHandlers["FetchInventoryDescendents"] =
-                //                    new RestStreamHandler("POST", capsBase + m_fetchInventoryPath, FetchInventoryRequest);
-
-                // m_capsHandlers["FetchInventoryDescendents"] =
-                //     new LLSDStreamhandler<LLSDFetchInventoryDescendents, LLSDInventoryDescendents>("POST",
-                //                                                                                    capsBase + m_fetchInventory,
-                //                                                                                    FetchInventory));
-                // m_capsHandlers["RequestTextureDownload"] = new RestStreamHandler("POST",
-                //                                                                  capsBase + m_requestTexture,
-                //                                                                  RequestTexture);
+                m_HostCapsObj.RegisterHandler(
+                    "CreateInventoryCategory",
+                    new RestStreamHandler(
+                        "POST", capsBase + m_CreateInventoryCategoryPath, CreateInventoryCategory, "CreateInventoryCategory", null));
             }
             catch (Exception e)
             {
@@ -833,6 +815,92 @@ namespace OpenSim.Region.ClientStack.Linden
             return String.Empty;
         }
 
+        public string CreateInventoryCategory(string request, string path, string param,
+                                             IOSHttpRequest httpRequest, IOSHttpResponse httpResponse)
+        {
+            if (m_Scene.InventoryService == null)
+            {
+                httpResponse.StatusCode = (int)System.Net.HttpStatusCode.ServiceUnavailable;
+                httpResponse.StatusDescription = "Service not avaiable";
+                return "";
+            }
+
+            ScenePresence sp = m_Scene.GetScenePresence(m_HostCapsObj.AgentID);
+            if (sp == null || sp.IsDeleted)
+            {
+                httpResponse.StatusCode = (int)System.Net.HttpStatusCode.ServiceUnavailable;
+                httpResponse.StatusDescription = "Retry later";
+                httpResponse.AddHeader("Retry-After", "30");
+                return "";
+            }
+
+            Hashtable hash = (Hashtable)LLSD.LLSDDeserialize(Utils.StringToBytes(request));
+
+            UUID folderID;
+            UUID parentID;
+            string folderName;
+            int folderType;
+
+            try
+            { 
+                folderID = (UUID)hash["folder_id"];
+                parentID = (UUID)hash["parent_id"];
+                folderName = (string)hash["name"];
+                folderType = (int)hash["type"];
+
+                InventoryFolderBase folder = new InventoryFolderBase(folderID, folderName, m_HostCapsObj.AgentID, (short)folderType, parentID, 1);
+                if (!m_Scene.InventoryService.AddFolder(folder))
+                {
+                    throw new Exception();
+                }
+            }
+            catch
+            {
+                httpResponse.StatusCode = (int)System.Net.HttpStatusCode.BadRequest;
+                httpResponse.StatusDescription = "Error";
+                return "";
+            }
+
+            using (var ms = new MemoryStream())
+            {
+                using (var w = new XmlTextWriter(ms, Util.UTF8NoBomEncoding))
+                {
+                    w.WriteStartElement("map");
+
+                    w.WriteStartElement("key");
+                    w.WriteValue("folder_id");
+                    w.WriteEndElement();
+                    w.WriteStartElement("uuid");
+                    w.WriteValue(folderID);
+                    w.WriteEndElement();
+
+                    w.WriteStartElement("key");
+                    w.WriteValue("name");
+                    w.WriteEndElement();
+                    w.WriteStartElement("string");
+                    w.WriteValue(folderName);
+                    w.WriteEndElement();
+
+                    w.WriteStartElement("key");
+                    w.WriteValue("parent_id");
+                    w.WriteEndElement();
+                    w.WriteStartElement("uuid");
+                    w.WriteValue(parentID);
+                    w.WriteEndElement();
+
+                    w.WriteStartElement("key");
+                    w.WriteValue("type");
+                    w.WriteEndElement();
+                    w.WriteStartElement("integer");
+                    w.WriteValue(folderType);
+                    w.WriteEndElement();
+
+                    w.WriteEndElement();
+                }
+
+                return Util.UTF8NoBomEncoding.GetString(ms.ToArray());
+            }
+        }
 
         /// <summary>
         /// Called by the notecard update handler.  Provides a URL to which the client can upload a new asset.
