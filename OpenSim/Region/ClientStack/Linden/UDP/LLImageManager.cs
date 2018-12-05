@@ -76,12 +76,6 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             Client = client;
             m_assetCache = pAssetCache;
 
-            if (pAssetCache != null)
-                m_missingImage = pAssetCache.Get("5748decc-f629-461c-9a36-a35a221fe21f");
-            
-            if (m_missingImage == null)
-                m_log.Error("[ClientView] - Couldn't set missing image asset, falling back to missing image packet. This is known to crash the client");
-
             m_j2kDecodeModule = pJ2kDecodeModule;
         }
 
@@ -101,7 +95,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
                 if (imgrequest != null)
                 {
-                    if (newRequest.DiscardLevel == -1 && newRequest.Priority == 0f)
+                    if (newRequest.DiscardLevel < 0)
                     {
                         //m_log.Debug("[TEX]: (CAN) ID=" + newRequest.RequestedAssetID);
 
@@ -168,7 +162,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                 }
                 else
                 {
-                    if (newRequest.DiscardLevel == -1 && newRequest.Priority == 0f)
+                    if (newRequest.DiscardLevel < 0)
                     {
                         //m_log.DebugFormat("[TEX]: (IGN) ID={0}: D={1}, S={2}, P={3}",
                         //    newRequest.RequestedAssetID, newRequest.DiscardLevel, newRequest.PacketNumber, newRequest.Priority);

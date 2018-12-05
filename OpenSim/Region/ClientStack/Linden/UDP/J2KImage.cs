@@ -167,7 +167,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                         //Request decode
                         m_decodeRequested = true;
 
-//                        m_log.DebugFormat("[J2KIMAGE]: Requesting decode of asset {0}", TextureID);
+                        //                        m_log.DebugFormat("[J2KIMAGE]: Requesting decode of asset {0}", TextureID);
 
                         // Do we have a jpeg decoder?
                         if (J2KDecoder != null)
@@ -193,7 +193,6 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                     // Check for missing image asset data
                     if (m_asset == null)
                     {
-                        m_log.Warn("[J2KIMAGE]: RunUpdate() called with missing asset data (no missing image texture?). Canceling texture transfer");
                         m_currentPacket = m_stopPacket;
                         return;
                     }
@@ -246,14 +245,13 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
             if (m_asset == null)
             {
-                m_log.Warn("[J2KIMAGE]: Sending ImageNotInDatabase for texture " + TextureID);
                 client.SendImageNotFound(TextureID);
                 return true;
             }
             else if (m_asset.Length <= FIRST_PACKET_SIZE)
             {
                 // We have less then one packet's worth of data
-                client.SendImageFirstPart(1, TextureID, (uint)m_asset.Length, m_asset, 2);
+                client.SendImageFirstPart(1, TextureID, (uint)m_asset.Length, m_asset, (byte)ImageCodec.J2C);
                 m_stopPacket = 0;
                 return true;
             }
@@ -411,6 +409,10 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             if (asset != null)
             {
                 assetID = asset.FullID;
+                if(asset.Type != (sbyte)AssetType.Texture)
+                {
+                    asset = null;
+                }
             }
             else if ((InventoryAccessModule != null) && (sender != InventoryAccessModule))
             {
