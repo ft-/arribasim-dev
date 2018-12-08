@@ -25,6 +25,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using OpenMetaverse;
 using OpenSim.Services.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -42,7 +43,7 @@ namespace OpenSim.Region.Framework.Interfaces
     /// <param name="savePath">The stream to which the archive was saved</param>
     /// <param name="reportedException">Contains the exception generated if the save did not succeed</param>
     public delegate void InventoryArchiveSaved(
-        Guid id, bool succeeded, UserAccount userInfo, string invPath, Stream saveStream, Exception reportedException);
+        UUID id, bool succeeded, UserAccount userInfo, string invPath, Stream saveStream, Exception reportedException);
 
     public interface IInventoryArchiverModule
     {
@@ -84,7 +85,7 @@ namespace OpenSim.Region.Framework.Interfaces
         /// <param name="invPath">The inventory path from which the inventory should be saved.</param>
         /// <param name="saveStream">The stream to which the inventory archive will be saved</param>
         /// <returns>true if the first stage of the operation succeeded, false otherwise</returns>
-        bool ArchiveInventory(Guid id, string firstName, string lastName, string invPath, string pass, Stream saveStream);
+        bool ArchiveInventory(UUID id, string firstName, string lastName, string invPath, string pass, Stream saveStream);
 
         /// <summary>
         /// Archive a user's inventory folder to the given stream
@@ -97,7 +98,7 @@ namespace OpenSim.Region.Framework.Interfaces
         /// <param name="options">Archiving options.  Currently, there are none.</param>
         /// <returns>true if the first stage of the operation succeeded, false otherwise</returns>
         bool ArchiveInventory(
-            Guid id, string firstName, string lastName, string invPath, string pass, Stream saveStream,
+            UUID id, string firstName, string lastName, string invPath, string pass, Stream saveStream,
             Dictionary<string, object> options);
     }
 }

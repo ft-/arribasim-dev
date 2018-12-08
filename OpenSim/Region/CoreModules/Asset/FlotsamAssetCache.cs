@@ -783,7 +783,6 @@ namespace OpenSim.Region.CoreModules.Asset
             UuidGatherer gatherer = new UuidGatherer(m_AssetService);
 
             HashSet<UUID> uniqueUuids = new HashSet<UUID>();
-            Dictionary<UUID, sbyte> assets = new Dictionary<UUID, sbyte>();
 
             m_Scenes.ForEach(delegate(Scene s)
             {
@@ -791,7 +790,9 @@ namespace OpenSim.Region.CoreModules.Asset
 
                 s.ForEachSOG(delegate(SceneObjectGroup e)
                 {
-                    gatherer.GatherAssetUuids(e, assets);
+                    gatherer.AddForInspection(e);
+                    gatherer.GatherAll();
+                    IDictionary<UUID, sbyte> assets = gatherer.GatheredUuids;
 
                     foreach (UUID assetID in assets.Keys)
                     {

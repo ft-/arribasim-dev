@@ -69,17 +69,25 @@ namespace OpenSim.Region.CoreModules.Framework.InventoryAccess
         private AssetMetadata FetchMetadata(string url, UUID assetID)
         {
             if (string.IsNullOrEmpty(url))
+            {
                 return null;
+            }
 
             if (!url.EndsWith("/") && !url.EndsWith("="))
-                url = url + "/";
+            {
+                url += "/";
+            }
 
             AssetMetadata meta = m_scene.AssetService.GetMetadata(url + assetID.ToString());
 
             if (meta != null)
+            {
                 m_log.DebugFormat("[HG ASSET MAPPER]: Fetched metadata for asset {0} of type {1} from {2} ", assetID, meta.Type, url);
+            }
             else
+            {
                 m_log.DebugFormat("[HG ASSET MAPPER]: Unable to fetched metadata for asset {0} from {1} ", assetID, url);
+            }
 
             return meta;
         }
@@ -91,10 +99,14 @@ namespace OpenSim.Region.CoreModules.Framework.InventoryAccess
             if (asset == null)
             {
                 if (string.IsNullOrEmpty(url))
+                {
                     return null;
+                }
 
                 if (!url.EndsWith("/") && !url.EndsWith("="))
-                    url = url + "/";
+                {
+                    url += "/";
+                }
 
                 asset = m_scene.AssetService.Get(url + assetID.ToString());
 
@@ -114,7 +126,9 @@ namespace OpenSim.Region.CoreModules.Framework.InventoryAccess
                 return false;
 
             if (!url.EndsWith("/") && !url.EndsWith("="))
-                url = url + "/";
+            {
+                url += "/";
+            }
 
             if (asset == null)
             {
@@ -124,7 +138,9 @@ namespace OpenSim.Region.CoreModules.Framework.InventoryAccess
 
             // See long comment in AssetCache.AddAsset
             if (asset.Temporary || asset.Local)
+            {
                 return true;
+            }
 
             // We need to copy the asset into a new asset, because
             // we need to set its ID to be URL+UUID, so that the
@@ -137,17 +153,22 @@ namespace OpenSim.Region.CoreModules.Framework.InventoryAccess
 
             AdjustIdentifiers(asset1.Metadata);
             if (asset1.Metadata.Type == (sbyte)AssetType.Object)
+            {
                 asset1.Data = AdjustIdentifiers(asset.Data);
+            }
             else
+            {
                 asset1.Data = asset.Data;
+            }
 
             string id = m_scene.AssetService.Store(asset1);
-            if (String.IsNullOrEmpty(id))
+            if (string.IsNullOrEmpty(id))
             {
                 m_log.DebugFormat("[HG ASSET MAPPER]: Asset server {0} did not accept {1}", url, asset.ID);
                 return false;
             }
-            else {
+            else
+            {
                 m_log.DebugFormat("[HG ASSET MAPPER]: Posted copy of asset {0} from local asset server to {1}", asset1.ID, url);
                 return true;
             }
@@ -172,9 +193,11 @@ namespace OpenSim.Region.CoreModules.Framework.InventoryAccess
             {
                 UUID uuid = UUID.Zero;
                 UUID.TryParse(meta.CreatorID, out uuid);
-                UserAccount creator = m_scene.UserAccountService.GetUserAccount(m_scene.RegionInfo.ScopeID, uuid); 
+                UserAccount creator = m_scene.UserAccountService.GetUserAccount(m_scene.RegionInfo.ScopeID, uuid);
                 if (creator != null)
+                {
                     meta.CreatorID = m_HomeURI + ";" + creator.FirstName + " " + creator.LastName;
+                }
             }
         }
 
@@ -188,14 +211,11 @@ namespace OpenSim.Region.CoreModules.Framework.InventoryAccess
         {
             XmlDocument doc = new XmlDocument();
             doc.LoadXml(xml);
-            XmlNodeList sops = doc.GetElementsByTagName("SceneObjectPart");
-
-            foreach (XmlNode sop in sops)
+            foreach (XmlNode sop in doc.GetElementsByTagName("SceneObjectPart"))
             {
                 UserAccount creator = null;
                 bool hasCreatorData = false;
-                XmlNodeList nodes = sop.ChildNodes;
-                foreach (XmlNode node in nodes)
+                foreach (XmlNode node in sop.ChildNodes)
                 {
                     if (node.Name == "CreatorID")
                     {
@@ -204,7 +224,9 @@ namespace OpenSim.Region.CoreModules.Framework.InventoryAccess
                         creator = m_scene.UserAccountService.GetUserAccount(m_scene.RegionInfo.ScopeID, uuid);
                     }
                     if (node.Name == "CreatorData" && node.InnerText != null && node.InnerText != string.Empty)
+                    {
                         hasCreatorData = true;
+                    }
 
                     //if (node.Name == "OwnerID")
                     //{
@@ -250,24 +272,33 @@ namespace OpenSim.Region.CoreModules.Framework.InventoryAccess
 
             AssetMetadata meta = FetchMetadata(userAssetURL, assetID);
             if (meta == null)
+            {
                 return;
+            }
 
-            // The act of gathering UUIDs downloads some assets from the remote server
-            // but not all...
             Dictionary<UUID, sbyte> ids = new Dictionary<UUID, sbyte>();
             HGUuidGatherer uuidGatherer = new HGUuidGatherer(m_scene.AssetService, userAssetURL);
-            uuidGatherer.GatherAssetUuids(assetID, meta.Type, ids);
+            uuidGatherer.AddForInspection(assetID);
+            uuidGatherer.GatherAll();
             m_log.DebugFormat("[HG ASSET MAPPER]: Preparing to get {0} assets", ids.Count);
             bool success = true;
-            foreach (UUID uuid in ids.Keys)
+            foreach (UUID uuid in uuidGatherer.GatheredUuids.Keys)
+            {
                 if (FetchAsset(userAssetURL, uuid) == null)
+                {
                     success = false;
+                }
+            }
 
             // maybe all pieces got here...
             if (!success)
+            {
                 m_log.DebugFormat("[HG ASSET MAPPER]: Problems getting item {0} from asset server {1}", assetID, userAssetURL);
+            }
             else
+            {
                 m_log.DebugFormat("[HG ASSET MAPPER]: Successfully got item {0} from asset server {1}", assetID, userAssetURL);
+            }
         }
 
 
@@ -284,20 +315,25 @@ namespace OpenSim.Region.CoreModules.Framework.InventoryAccess
                 return;
             }
 
-            Dictionary<UUID, sbyte> ids = new Dictionary<UUID, sbyte>();
             HGUuidGatherer uuidGatherer = new HGUuidGatherer(m_scene.AssetService, string.Empty);
-            uuidGatherer.GatherAssetUuids(asset.FullID, asset.Type, ids);
+            uuidGatherer.AddForInspection(assetID);
+            uuidGatherer.GatherAll();
 
             // Check which assets already exist in the destination server
 
             string url = userAssetURL;
             if (!url.EndsWith("/") && !url.EndsWith("="))
-                url = url + "/";
+            {
+                url += "/";
+            }
 
+            IDictionary<UUID, sbyte> ids = uuidGatherer.GatheredUuids;
             string[] remoteAssetIDs = new string[ids.Count];
             int i = 0;
             foreach (UUID id in ids.Keys)
+            {
                 remoteAssetIDs[i++] = url + id.ToString();
+            }
 
             bool[] exist = m_scene.AssetService.AssetsExist(remoteAssetIDs);
 
@@ -306,7 +342,9 @@ namespace OpenSim.Region.CoreModules.Framework.InventoryAccess
             foreach (UUID id in ids.Keys)
             {
                 if (exist[i])
+                {
                     existSet.Add(id.ToString());
+                }
                 ++i;
             }
 
@@ -320,18 +358,28 @@ namespace OpenSim.Region.CoreModules.Framework.InventoryAccess
                 {
                     asset = m_scene.AssetService.Get(uuid.ToString());
                     if (asset == null)
+                    {
                         m_log.DebugFormat("[HG ASSET MAPPER]: Could not find asset {0}", uuid);
+                    }
                     else
+                    {
                         success &= PostAsset(userAssetURL, asset);
+                    }
                 }
                 else
+                {
                     m_log.DebugFormat("[HG ASSET MAPPER]: Didn't post asset {0} because it already exists in asset server {1}", uuid, userAssetURL);
+                }
             }
 
             if (!success)
+            {
                 m_log.DebugFormat("[HG ASSET MAPPER]: Problems sending asset {0} with children to asset server {1}", assetID, userAssetURL);
+            }
             else
+            {
                 m_log.DebugFormat("[HG ASSET MAPPER]: Successfully sent asset {0} with children to asset server {1}", assetID, userAssetURL);
+            }
         }
 
         #endregion
