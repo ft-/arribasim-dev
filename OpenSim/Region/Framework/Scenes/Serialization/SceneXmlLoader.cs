@@ -161,57 +161,45 @@ namespace OpenSim.Region.Framework.Scenes.Serialization
         // Called here only. Should be private?
         public static void SavePrimListToXml2(EntityBase[] entityList, string fileName)
         {
-            FileStream file = new FileStream(fileName, FileMode.Create);
-            try
+            using (FileStream file = new FileStream(fileName, FileMode.Create))
             {
-                StreamWriter stream = new StreamWriter(file);
-                try
+                using (StreamWriter stream = new StreamWriter(file))
                 {
                     SavePrimListToXml2(entityList, stream, Vector3.Zero, Vector3.Zero);
                 }
-                finally
-                {
-                    stream.Close();
-                }
-            }
-            finally
-            {
-                file.Close();
             }
         }
 
-        // Called here only. Should be private?
-        public static void SavePrimListToXml2(EntityBase[] entityList, TextWriter stream, Vector3 min, Vector3 max)
+        private static void SavePrimListToXml2(EntityBase[] entityList, TextWriter stream, Vector3 min, Vector3 max)
         {
-            XmlTextWriter writer = new XmlTextWriter(stream);
-
-            int primCount = 0;
-            stream.WriteLine("<scene>\n");
-
-            foreach (EntityBase ent in entityList)
+            using (XmlTextWriter writer = new XmlTextWriter(stream))
             {
-                if (ent is SceneObjectGroup)
+
+                int primCount = 0;
+                writer.WriteStartElement("scene");
+
+                foreach (EntityBase ent in entityList)
                 {
-                    SceneObjectGroup g = (SceneObjectGroup)ent;
-                    if (!min.Equals(Vector3.Zero) || !max.Equals(Vector3.Zero))
+                    if (ent is SceneObjectGroup)
                     {
-                        Vector3 pos = g.RootPart.WorldPosition;
-                        if (min.X > pos.X || min.Y > pos.Y || min.Z > pos.Z)
-                            continue;
-                        if (max.X < pos.X || max.Y < pos.Y || max.Z < pos.Z)
-                            continue;
+                        SceneObjectGroup g = (SceneObjectGroup)ent;
+                        if (!min.Equals(Vector3.Zero) || !max.Equals(Vector3.Zero))
+                        {
+                            Vector3 pos = g.RootPart.WorldPosition;
+                            if (min.X > pos.X || min.Y > pos.Y || min.Z > pos.Z)
+                                continue;
+                            if (max.X < pos.X || max.Y < pos.Y || max.Z < pos.Z)
+                                continue;
+                        }
+
+                        SceneObjectSerializer.SOGToXml2(writer, (SceneObjectGroup)ent, new Dictionary<string, object>());
+
+                        primCount++;
                     }
-
-                    //stream.WriteLine(SceneObjectSerializer.ToXml2Format(g));
-                    SceneObjectSerializer.SOGToXml2(writer, (SceneObjectGroup)ent, new Dictionary<string,object>());
-                    stream.WriteLine();
-
-                    primCount++;
                 }
-            }
 
-            stream.WriteLine("</scene>\n");
-            stream.Flush();
+                writer.WriteEndElement();
+            }
         }
 
         #endregion

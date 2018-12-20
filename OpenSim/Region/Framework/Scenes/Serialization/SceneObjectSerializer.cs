@@ -1297,9 +1297,9 @@ namespace OpenSim.Region.Framework.Scenes.Serialization
 
         public static void SOGToXml2(XmlTextWriter writer, SceneObjectGroup sog, Dictionary<string, object>options)
         {
-            writer.WriteStartElement(String.Empty, "SceneObjectGroup", String.Empty);
+            writer.WriteStartElement("SceneObjectGroup");
             SOPToXml2(writer, sog.RootPart, options);
-            writer.WriteStartElement(String.Empty, "OtherParts", String.Empty);
+            writer.WriteStartElement("OtherParts");
 
             sog.ForEachPart(delegate(SceneObjectPart sop)
             {
@@ -1313,7 +1313,7 @@ namespace OpenSim.Region.Framework.Scenes.Serialization
             {
                 Byte[] data = sog.RootPart.KeyframeMotion.Serialize();
 
-                writer.WriteStartElement(String.Empty, "KeyframeMotion", String.Empty);
+                writer.WriteStartElement("KeyframeMotion");
                 writer.WriteBase64(data, 0, data.Length);
                 writer.WriteEndElement();
             }

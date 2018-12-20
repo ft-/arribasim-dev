@@ -75,34 +75,12 @@ namespace OpenSim.Region.Framework.Interfaces
         void SavePrimsToXml2(Scene scene, string fileName);
 
         /// <summary>
-        /// Save prims in the xml2 format, optionally specifying a bounding box for which
-        /// prims should be saved.  If both min and max vectors are Vector3.Zero, then all prims
-        /// are exported.
-        /// </summary>
-        /// <param name="scene"></param>
-        /// <param name="stream"></param>
-        /// <param name="min"></param>
-        /// <param name="max"></param>
-        void SavePrimsToXml2(Scene scene, TextWriter stream, Vector3 min, Vector3 max);
-
-        /// <summary>
         /// Save a set of prims in the xml2 format
         /// </summary>
         /// <param name="entityList"></param>
         /// <param name="fileName"></param>
         void SavePrimListToXml2(EntityBase[] entityList, string fileName);
 
-        /// <summary>
-        /// Save a set of prims in the xml2 format, optionally specifying a bounding box for which
-        /// prims should be saved.  If both min and max vectors are Vector3.Zero, then all prims
-        /// are exported.
-        /// </summary>
-        /// <param name="entityList"></param>
-        /// <param name="stream"></param>
-        /// <param name="min"></param>
-        /// <param name="max"></param>
-        void SavePrimListToXml2(EntityBase[] entityList, TextWriter stream, Vector3 min, Vector3 max);
-        
         void SaveNamedPrimsToXml2(Scene scene, string primName, string fileName);
             
         /// <summary>

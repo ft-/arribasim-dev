@@ -159,11 +159,6 @@ namespace OpenSim.Region.CoreModules.World.Serialiser
             SceneXmlLoader.SavePrimListToXml2(entityList, fileName);
         }
 
-        public void SavePrimListToXml2(EntityBase[] entityList, TextWriter stream, Vector3 min, Vector3 max)
-        {
-            SceneXmlLoader.SavePrimListToXml2(entityList, stream, min, max);
-        }
-
         public List<string> SerialiseRegion(Scene scene, string saveDir)
         {
             List<string> results = new List<string>();
