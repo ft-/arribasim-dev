@@ -4,7 +4,7 @@ bin\Prebuild.exe /target nant
 bin\Prebuild.exe /target vs2010
 
 setlocal ENABLEEXTENSIONS
-set KEY_NAME="HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\MSBuild\ToolsVersions\4.0"
+set KEY_NAME="HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\MSBuild\ToolsVersions\14.0"
 set VALUE_NAME=MSBuildToolsPath
 
 rem We have to use grep or find to locate the correct line, because reg query spits
