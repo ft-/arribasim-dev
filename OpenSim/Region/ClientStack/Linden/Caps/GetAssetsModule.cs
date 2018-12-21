@@ -55,7 +55,7 @@ namespace OpenSim.Region.ClientStack.LindenCaps
             new CapsData{ Name = "GetTexture" },
             new CapsData{ Name = "GetMesh" },
             new CapsData{ Name = "GetMesh2" },
-            new CapsData{ Name = "ViewerAsset", CfgName = "GetAsset" },
+            //new CapsData{ Name = "ViewerAsset", CfgName = "GetAsset" },
         };
 
         private bool m_enabled;
