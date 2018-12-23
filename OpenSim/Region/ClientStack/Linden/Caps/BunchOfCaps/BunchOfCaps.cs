@@ -871,7 +871,7 @@ namespace OpenSim.Region.ClientStack.Linden
                     w.WriteValue("folder_id");
                     w.WriteEndElement();
                     w.WriteStartElement("uuid");
-                    w.WriteValue(folderID);
+                    w.WriteValue(folderID.ToString());
                     w.WriteEndElement();
 
                     w.WriteStartElement("key");
@@ -885,7 +885,7 @@ namespace OpenSim.Region.ClientStack.Linden
                     w.WriteValue("parent_id");
                     w.WriteEndElement();
                     w.WriteStartElement("uuid");
-                    w.WriteValue(parentID);
+                    w.WriteValue(parentID.ToString());
                     w.WriteEndElement();
 
                     w.WriteStartElement("key");
