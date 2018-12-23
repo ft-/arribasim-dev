@@ -865,6 +865,7 @@ namespace OpenSim.Region.ClientStack.Linden
             {
                 using (var w = new XmlTextWriter(ms, Util.UTF8NoBomEncoding))
                 {
+                    w.WriteStartElement("llsd");
                     w.WriteStartElement("map");
 
                     w.WriteStartElement("key");
@@ -895,6 +896,7 @@ namespace OpenSim.Region.ClientStack.Linden
                     w.WriteValue(folderType);
                     w.WriteEndElement();
 
+                    w.WriteEndElement();
                     w.WriteEndElement();
                 }
 
