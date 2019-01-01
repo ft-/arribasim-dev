@@ -239,7 +239,6 @@ namespace OpenSim.Framework
                 HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
                 request.Method = method;
                 request.Timeout = timeout;
-                request.KeepAlive = false;
                 request.MaximumAutomaticRedirections = 10;
                 request.ReadWriteTimeout = timeout / 4;
                 request.Headers[OSHeaderRequestID] = reqnum.ToString();
@@ -426,7 +425,6 @@ namespace OpenSim.Framework
                 HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(url);
                 request.Method = "POST";
                 request.Timeout = timeout;
-                request.KeepAlive = false;
                 request.MaximumAutomaticRedirections = 10;
                 request.ReadWriteTimeout = timeout / 4;
                 request.Headers[OSHeaderRequestID] = reqnum.ToString();

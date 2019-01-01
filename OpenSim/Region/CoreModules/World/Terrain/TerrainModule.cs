@@ -447,7 +447,6 @@ namespace OpenSim.Region.CoreModules.World.Terrain
             // request.Credentials = credentials;
 
             request.ContentLength = 0;
-            request.KeepAlive = false;
 
             WebResponse response = request.GetResponse();
             Stream file = response.GetResponseStream();

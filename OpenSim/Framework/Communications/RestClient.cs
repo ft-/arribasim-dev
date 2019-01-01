@@ -338,7 +338,6 @@ namespace OpenSim.Framework.Communications
             lock (_lock)
             {
                 _request = (HttpWebRequest)WebRequest.Create(buildUri());
-                _request.KeepAlive = false;
                 _request.ContentType = "application/xml";
                 _request.Timeout = 200000;
                 _request.Method = RequestMethod;
@@ -403,7 +402,6 @@ namespace OpenSim.Framework.Communications
         {
             ServicePointManagerTimeoutSupport.ResetHosts();
             _request = (HttpWebRequest)WebRequest.Create(buildUri());
-            _request.KeepAlive = false;
             _request.ContentType = "application/xml";
             _request.Timeout = 900000;
             _request.Method = RequestMethod;

@@ -109,8 +109,6 @@ namespace OpenSim.Region.OptionalModules.Avatar.XmlRpcGroups
 
         private string m_groupsServerURI = string.Empty;
 
-        private bool m_disableKeepAlive = false;
-
         private string m_groupReadKey  = string.Empty;
         private string m_groupWriteKey = string.Empty;
 
@@ -168,8 +166,6 @@ namespace OpenSim.Region.OptionalModules.Avatar.XmlRpcGroups
                     m_connectorEnabled = false;
                     return;
                 }
-
-                m_disableKeepAlive = groupsConfig.GetBoolean("XmlRpcDisableKeepAlive", false);
 
                 m_groupReadKey = groupsConfig.GetString("XmlRpcServiceReadKey", string.Empty);
                 m_groupWriteKey = groupsConfig.GetString("XmlRpcServiceWriteKey", string.Empty);
@@ -966,7 +962,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.XmlRpcGroups
                 parameters.Add(param);
 
                 ConfigurableKeepAliveXmlRpcRequest req;
-                req = new ConfigurableKeepAliveXmlRpcRequest(function, parameters, m_disableKeepAlive);
+                req = new ConfigurableKeepAliveXmlRpcRequest(function, parameters);
 
                 try
                 {
@@ -1100,7 +1096,6 @@ namespace Nwc.XmlRpc
     {
         private XmlRpcRequestSerializer _serializer = new XmlRpcRequestSerializer();
         private XmlRpcResponseDeserializer _deserializer = new XmlRpcResponseDeserializer();
-        private bool _disableKeepAlive = true;
 
         public string RequestResponse = String.Empty;
 
@@ -1108,11 +1103,10 @@ namespace Nwc.XmlRpc
         /// <param name="methodName"><c>String</c> designating the <i>object.method</i> on the server the request
         /// should be directed to.</param>
         /// <param name="parameters"><c>ArrayList</c> of XML-RPC type parameters to invoke the request with.</param>
-        public ConfigurableKeepAliveXmlRpcRequest(String methodName, IList parameters, bool disableKeepAlive)
+        public ConfigurableKeepAliveXmlRpcRequest(String methodName, IList parameters)
         {
             MethodName = methodName;
             _params = parameters;
-            _disableKeepAlive = disableKeepAlive;
         }
 
         /// <summary>Send the request to the server.</summary>
@@ -1128,7 +1122,6 @@ namespace Nwc.XmlRpc
             request.Method = "POST";
             request.ContentType = "text/xml";
             request.AllowWriteStreamBuffering = true;
-            request.KeepAlive = !_disableKeepAlive;
 
             using (Stream stream = request.GetRequestStream())
             {

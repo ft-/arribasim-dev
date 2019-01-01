@@ -517,7 +517,6 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.FreeSwitchVoice
             HttpWebRequest forwardreq = (HttpWebRequest)WebRequest.Create(forwardaddress);
             forwardreq.Method = method;
             forwardreq.ContentType = contenttype;
-            forwardreq.KeepAlive = false;
 
             if (method == "POST")
             {
