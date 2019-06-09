@@ -35,7 +35,6 @@ using OpenSim.Region.Framework.Scenes;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Threading;
 using ThreadedClasses;
 
 namespace OpenSim.Region.CoreModules.Agent.Xfer
