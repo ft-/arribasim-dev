@@ -35,6 +35,8 @@ using OpenSim.Region.Framework.Scenes;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Threading;
+using ThreadedClasses;
 
 namespace OpenSim.Region.CoreModules.Agent.Xfer
 {
@@ -42,8 +44,8 @@ namespace OpenSim.Region.CoreModules.Agent.Xfer
     public class XferModule : INonSharedRegionModule, IXfer
     {
         private Scene m_scene;
-        private Dictionary<string, FileData> NewFiles = new Dictionary<string, FileData>();
-        private Dictionary<ulong, XferDownLoad> Transfers = new Dictionary<ulong, XferDownLoad>();
+        private readonly Dictionary<string, FileData> RequestedFiles = new Dictionary<string, FileData>();
+        private readonly RwLockedDictionary<ulong, XferDownLoad> Transfers = new RwLockedDictionary<ulong, XferDownLoad>();
 
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
@@ -115,19 +117,21 @@ namespace OpenSim.Region.CoreModules.Agent.Xfer
         /// <returns></returns>
         public bool AddNewFile(string fileName, byte[] data)
         {
-            lock (NewFiles)
+            lock(RequestedFiles)
             {
-                if (NewFiles.ContainsKey(fileName))
+                FileData fileData;
+                if(RequestedFiles.TryGetValue(fileName, out fileData))
                 {
-                    NewFiles[fileName].Count++;
-                    NewFiles[fileName].Data = data;
+                    ++fileData.Count;
+                    fileData.Data = data;
                 }
                 else
                 {
-                    FileData fd = new FileData();
-                    fd.Count = 1;
-                    fd.Data = data;
-                    NewFiles.Add(fileName, fd);
+                    RequestedFiles.Add(fileName, new FileData
+                    {
+                        Count = 1,
+                        Data = data
+                    });
                 }
             }
 
@@ -135,6 +139,29 @@ namespace OpenSim.Region.CoreModules.Agent.Xfer
         }
 
         #endregion
+
+        private void RemoveOrDecrement(string fileName)
+        {
+            lock(RequestedFiles)
+            {
+                FileData fileData;
+                if(RequestedFiles.TryGetValue(fileName, out fileData))
+                {
+                    if(--fileData.Count <= 0)
+                    {
+                        RequestedFiles.Remove(fileName);
+                    }
+                }
+            }
+        }
+
+        private bool TryGetFile(string fileName, out FileData fileData)
+        {
+            lock(RequestedFiles)
+            {
+                return RequestedFiles.TryGetValue(fileName, out fileData);
+            }
+        }
 
         public void NewClient(IClientAPI client)
         {
@@ -151,83 +178,50 @@ namespace OpenSim.Region.CoreModules.Agent.Xfer
         /// <param name="fileName"></param>
         public void RequestXfer(IClientAPI remoteClient, ulong xferID, string fileName)
         {
-            lock (NewFiles)
+            FileData fileDataEntry;
+            if (TryGetFile(fileName, out fileDataEntry))
             {
-                if (NewFiles.ContainsKey(fileName))
+                if (!Transfers.ContainsKey(xferID))
                 {
-                    if (!Transfers.ContainsKey(xferID))
+                    byte[] fileData = fileDataEntry.Data;
+                    XferDownLoad transaction = new XferDownLoad(fileName, fileData, xferID, remoteClient);
+
+                    Transfers.Add(xferID, transaction);
+
+                    if (transaction.StartSend())
                     {
-                        byte[] fileData = NewFiles[fileName].Data;
-                        XferDownLoad transaction = new XferDownLoad(fileName, fileData, xferID, remoteClient);
-
-                        Transfers.Add(xferID, transaction);
-
-                        if (transaction.StartSend())
-                            RemoveXferData(xferID);
-
-                        // The transaction for this file is either complete or on its way
-                        RemoveOrDecrement(fileName);
-
+                        RemoveXferData(xferID);
                     }
+
+                    // The transaction for this file is either complete or on its way
+                    RemoveOrDecrement(fileName);
+
                 }
-                else
-                    m_log.WarnFormat("[Xfer]: {0} not found", fileName);
-                
             }
+            else
+                m_log.WarnFormat("[Xfer]: {0} not found", fileName);
         }
 
         public void AckPacket(IClientAPI remoteClient, ulong xferID, uint packet)
         {
-            lock (NewFiles)  // This is actually to lock Transfers
+            XferDownLoad dl;
+            if (Transfers.TryGetValue(xferID, out dl))
             {
-                if (Transfers.ContainsKey(xferID))
+                if (dl.AckPacket(packet))
                 {
-                    XferDownLoad dl = Transfers[xferID];
-                    if (Transfers[xferID].AckPacket(packet))
-                    {
-                        RemoveXferData(xferID);
-                        RemoveOrDecrement(dl.FileName);
-                    }
+                    RemoveXferData(xferID);
                 }
             }
         }
 
         private void RemoveXferData(ulong xferID)
         {
-            // NewFiles must be locked!
-            if (Transfers.ContainsKey(xferID))
-            {
-                XferModule.XferDownLoad xferItem = Transfers[xferID];
-                //string filename = xferItem.FileName;
-                Transfers.Remove(xferID);
-                xferItem.Data = new byte[0]; // Clear the data
-                xferItem.DataPointer = 0;
-
-            }
+            Transfers.Remove(xferID);
         }
 
         public void AbortXfer(IClientAPI remoteClient, ulong xferID)
         {
-            lock (NewFiles)
-            {
-                if (Transfers.ContainsKey(xferID))
-                    RemoveOrDecrement(Transfers[xferID].FileName);
-
-                RemoveXferData(xferID);
-            }
-        }
-
-        private void RemoveOrDecrement(string fileName)
-        {
-            // NewFiles must be locked
-
-            if (NewFiles.ContainsKey(fileName))
-            {
-                if (NewFiles[fileName].Count == 1)
-                    NewFiles.Remove(fileName);
-                else
-                    NewFiles[fileName].Count--;
-            }
+            RemoveXferData(xferID);
         }
 
         #region Nested type: XferDownLoad
@@ -238,7 +232,7 @@ namespace OpenSim.Region.CoreModules.Agent.Xfer
             private bool complete;
             public byte[] Data = new byte[0];
             public int DataPointer = 0;
-            public string FileName = String.Empty;
+            public string FileName = string.Empty;
             public uint Packet = 0;
             public uint Serial = 1;
             public ulong XferID = 0;
