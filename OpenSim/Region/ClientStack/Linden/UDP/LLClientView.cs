@@ -2249,10 +2249,11 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             OutPacket(sendXfer, ThrottleOutPacketType.Asset);
         }
 
-        public void SendAbortXferPacket(ulong xferID)
+        public void SendAbortXferPacket(ulong xferID, int result)
         {
             AbortXferPacket xferItem = (AbortXferPacket)PacketPool.Instance.GetPacket(PacketType.AbortXfer);
             xferItem.XferID.ID = xferID;
+            xferItem.XferID.Result = result;
             OutPacket(xferItem, ThrottleOutPacketType.Asset);
         }
 
