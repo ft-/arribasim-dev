@@ -1131,7 +1131,7 @@ namespace OpenSim.Region.OptionalModules.Agent.InternetRelayClientView.Server
             
         }
 
-        public void SendAbortXferPacket(ulong xferID)
+        public void SendAbortXferPacket(ulong xferID, int result)
         {
             
         }

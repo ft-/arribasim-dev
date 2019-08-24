@@ -787,7 +787,7 @@ namespace OpenSim.Region.OptionalModules.World.NPC
         public virtual void SendXferPacket(ulong xferID, uint packet, byte[] data)
         {
         }
-        public virtual void SendAbortXferPacket(ulong xferID)
+        public virtual void SendAbortXferPacket(ulong xferID, int result)
         {
 
         }

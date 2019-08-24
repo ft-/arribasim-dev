@@ -33,6 +33,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Text;
 using System.Xml;
 using PermissionMask = OpenSim.Framework.PermissionMask;
 
@@ -1023,11 +1024,12 @@ namespace OpenSim.Region.Framework.Scenes
 
         public class InventoryStringBuilder
         {
-            public string BuildString = String.Empty;
+            private readonly StringBuilder m_StringBuilder = new StringBuilder();
+            public string BuildString => m_StringBuilder.ToString();
 
             public InventoryStringBuilder(UUID folderID, UUID parentID)
             {
-                BuildString += "\tinv_object\t0\n\t{\n";
+                m_StringBuilder.Append("\tinv_object\t0\n\t{\n");
                 AddNameValueLine("obj_id", folderID.ToString());
                 AddNameValueLine("parent_id", parentID.ToString());
                 AddNameValueLine("type", "category");
@@ -1037,42 +1039,40 @@ namespace OpenSim.Region.Framework.Scenes
 
             public void AddItemStart()
             {
-                BuildString += "\tinv_item\t0\n";
+                m_StringBuilder.Append("\tinv_item\t0\n");
                 AddSectionStart();
             }
 
             public void AddPermissionsStart()
             {
-                BuildString += "\tpermissions 0\n";
+                m_StringBuilder.Append("\tpermissions 0\n");
                 AddSectionStart();
             }
 
             public void AddSaleStart()
             {
-                BuildString += "\tsale_info\t0\n";
+                m_StringBuilder.Append("\tsale_info\t0\n");
                 AddSectionStart();
             }
 
             protected void AddSectionStart()
             {
-                BuildString += "\t{\n";
+                m_StringBuilder.Append("\t{\n");
             }
 
             public void AddSectionEnd()
             {
-                BuildString += "\t}\n";
+                m_StringBuilder.Append("\t}\n");
             }
 
             public void AddLine(string addLine)
             {
-                BuildString += addLine;
+                m_StringBuilder.Append(addLine);
             }
 
             public void AddNameValueLine(string name, string value)
             {
-                BuildString += "\t\t";
-                BuildString += name + "\t";
-                BuildString += value + "\n";
+                m_StringBuilder.AppendFormat("\t\t{0}\t{1}\n", name, value);
             }
 
             public void Close()
